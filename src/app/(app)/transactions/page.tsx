@@ -1,11 +1,13 @@
 import { ListIcon, SearchXIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Amount } from "@/components/app-data";
 import { PageHeader } from "@/components/layout/page-header";
 import { Pagination } from "@/components/pagination";
 import { EmptyState } from "@/components/states";
 import { ExportMenu } from "@/components/transactions/export-menu";
 import { NewTransactionButton } from "@/components/transactions/new-transaction-button";
+import { OpenNewFromUrl } from "@/components/transactions/open-new-from-url";
 import { TransactionFilterBar } from "@/components/transactions/transaction-filters";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { loadPageContext } from "@/lib/server/page-context";
@@ -25,6 +27,9 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
 
   return (
     <>
+      <Suspense>
+        <OpenNewFromUrl />
+      </Suspense>
       <PageHeader
         title="Transactions"
         description={

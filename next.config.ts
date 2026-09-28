@@ -37,7 +37,17 @@ const nextConfig: NextConfig = {
   // Native / filesystem-dependent packages stay out of the server bundle.
   serverExternalPackages: ["pdfkit", "exceljs"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The service worker is re-checked on every load so updates apply immediately.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, max-age=0, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
+      },
+    ];
   },
 };
 

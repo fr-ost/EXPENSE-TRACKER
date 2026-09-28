@@ -1,6 +1,7 @@
 import { FileSpreadsheetIcon, FileTextIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
+import { InstallAppCard } from "@/components/pwa/install-app";
 import { CategoriesManager } from "@/components/settings/categories-manager";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { SessionsList } from "@/components/settings/security-section";
@@ -61,6 +62,13 @@ export default async function SettingsPage() {
           </div>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader title="App" />
+        <div className="px-5 pb-6 pt-4 sm:px-6">
+          <InstallAppCard />
+        </div>
+      </Card>
 
       <Card>
         <CardHeader title="Your data" description="Download everything you have recorded. Exports are generated on demand and never stored." />

@@ -59,10 +59,15 @@ export function proxy(request: NextRequest) {
   const loginUrl = new URL("/login", request.url);
   const replayable = request.method === "GET" || request.method === "HEAD";
   if (replayable && pathname !== "/" && pathname !== "/lock") loginUrl.searchParams.set("next", `${pathname}${search}`);
+  // A message shared into the app while signed out: land on the import page after signing in.
+  if (pathname === "/sms/share") loginUrl.searchParams.set("next", "/sms");
   // 303 turns a POST (e.g. a share into the app) into a GET of the sign-in page.
   return NextResponse.redirect(loginUrl, replayable ? 307 : 303);
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|robots.txt|manifest.webmanifest).*)"],
+  // Static and app-install files are public: they contain no data.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|robots.txt|manifest.webmanifest|sw.js|offline.html|icons/).*)",
+  ],
 };

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Offline · Hisab</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #ffffff;
+        color: #0e0e12;
+        font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main { width: 100%; max-width: 340px; text-align: center; }
+      svg { width: 48px; height: 48px; display: block; margin: 0 auto 20px; }
+      h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+      p { margin: 0 0 24px; color: #4f4f5c; }
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 44px;
+        padding: 0 20px;
+        border-radius: 10px;
+        background: #0e0e12;
+        color: #ffffff;
+        font-weight: 500;
+        text-decoration: none;
+      }
+      a:focus-visible { outline: 3px solid rgba(61, 99, 221, 0.35); outline-offset: 2px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg viewBox="0 0 512 512" aria-hidden="true">
+        <rect width="512" height="512" rx="116" fill="#0e0e12" />
+        <g fill="none" stroke="#fff" stroke-width="54" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M144 118V390" />
+          <path d="M144 292c0-52 32-82 76-82s74 30 74 82v98" />
+        </g>
+        <circle cx="374" cy="372" r="32" fill="#2fbf71" />
+      </svg>
+      <h1>You're offline</h1>
+      <p>Hisab needs a connection to show your ledger. Nothing is stored on this device.</p>
+      <a href="/dashboard">Try again</a>
+    </main>
+  </body>
+</html>

@@ -1,14 +1,19 @@
 import { APP_NAME } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
-/** The mark: ledger lines settling into a balance. */
+/**
+ * The mark: a lowercase "h" with an emerald full stop — the books, balanced.
+ * Same drawing as the app icons (scripts/generate-icons.mjs).
+ */
 export function BrandMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" className={cn("size-8", className)} aria-hidden>
-      <rect width="32" height="32" rx="9" fill="var(--ink)" />
-      <rect x="8" y="9.5" width="16" height="2.6" rx="1.3" fill="#fff" />
-      <rect x="8" y="14.7" width="11" height="2.6" rx="1.3" fill="#fff" opacity="0.72" />
-      <rect x="8" y="19.9" width="6" height="2.6" rx="1.3" fill="#fff" opacity="0.44" />
+    <svg viewBox="0 0 512 512" className={cn("size-8", className)} aria-hidden>
+      <rect width="512" height="512" rx="116" fill="var(--ink)" />
+      <g fill="none" stroke="#fff" strokeWidth="54" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M144 118V390" />
+        <path d="M144 292c0-52 32-82 76-82s74 30 74 82v98" />
+      </g>
+      <circle cx="374" cy="372" r="32" fill="#2fbf71" />
     </svg>
   );
 }

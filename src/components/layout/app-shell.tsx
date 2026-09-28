@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 import { signOut } from "@/components/auth/sign-out-button";
 import { BrandLockup, BrandMark } from "@/components/brand";
+import { InstallMoreItem, InstallRailButton, InstallSidebarButton } from "@/components/pwa/install-app";
 import { useTransactionSheet } from "@/components/transactions/transaction-sheet";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/misc";
@@ -83,6 +84,7 @@ export function AppShell({ autoLockMinutes, children }: { autoLockMinutes: numbe
             </Link>
           ))}
           <div className="my-2 h-px bg-border" />
+          <InstallMoreItem />
           <button onClick={lockNow} className="flex h-12 items-center gap-3 rounded-lg px-3 text-body font-medium text-text-secondary hover:bg-surface-muted">
             <LockKeyholeIcon className="size-5" />
             Lock now
@@ -128,6 +130,7 @@ function Sidebar({ pathname, onAdd, onLock }: { pathname: string; onAdd: () => v
         ))}
       </nav>
       <div className="flex flex-col gap-0.5 border-t border-border px-3 py-3">
+        <InstallSidebarButton />
         <SidebarLink item={SETTINGS_NAV} active={isActivePath(pathname, SETTINGS_NAV.href)} />
         <button
           onClick={onLock}
@@ -204,6 +207,7 @@ function Rail({ pathname, onAdd, onLock }: { pathname: string; onAdd: () => void
         {PRIMARY_NAV.map(railLink)}
       </nav>
       <div className="mt-auto flex flex-col items-center gap-1">
+        <InstallRailButton />
         {railLink(SETTINGS_NAV)}
         <Tooltip content="Lock now" side="right">
           <button onClick={onLock} aria-label="Lock now" className="flex size-11 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-muted hover:text-text">

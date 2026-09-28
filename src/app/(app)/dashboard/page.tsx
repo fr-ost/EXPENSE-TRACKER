@@ -5,6 +5,7 @@ import { BudgetProgress } from "@/components/dashboard/budget-progress";
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
 import { Greeting } from "@/components/dashboard/greeting";
 import { Onboarding } from "@/components/dashboard/onboarding";
+import { InstallBanner } from "@/components/pwa/install-app";
 import { SpendingBreakdown } from "@/components/dashboard/spending-breakdown";
 import { SummaryStrip } from "@/components/dashboard/summary-strip";
 import { CashflowChart } from "@/components/charts/cashflow-chart";
@@ -72,6 +73,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
           <NewTransactionButton className="hidden sm:inline-flex" label="New" />
         </div>
       </header>
+
+      <InstallBanner />
 
       <DashboardHero total={totalBalance(accounts, currency)} foreign={foreign} />
 
