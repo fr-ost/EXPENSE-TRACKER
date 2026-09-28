@@ -279,6 +279,12 @@ export const recurringInput = z
   });
 export type RecurringInput = z.infer<typeof recurringInput>;
 
+export const createRecurringInput = z.object({
+  rule: recurringInput,
+  /** Also post occurrences between a past start date and today. */
+  backfill: z.boolean().default(false),
+});
+
 // ---------------------------------------------------------------------------
 // Auth & settings
 // ---------------------------------------------------------------------------

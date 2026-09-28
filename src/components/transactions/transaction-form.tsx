@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownIcon, ArrowRightIcon, ArrowUpDownIcon, StickyNoteIcon } from "lucide-react";
+import { ArrowRightIcon, ArrowUpDownIcon, StickyNoteIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import * as React from "react";
 import { useAppData, useFormatMoney } from "@/components/app-data";
@@ -33,12 +33,14 @@ export function TransactionFields({
   errors,
   accounts,
   autoFocusAmount,
+  dateLabel = "Date",
 }: {
   draft: TransactionDraft;
   update: (patch: Partial<TransactionDraft>) => void;
   errors: Record<string, string>;
   accounts: AccountSummary[];
   autoFocusAmount?: boolean;
+  dateLabel?: string;
 }) {
   const { categories, today } = useAppData();
   const format = useFormatMoney();
@@ -133,7 +135,7 @@ export function TransactionFields({
             onChange={(accountId) => update({ accountId })}
             error={errors.accountId}
           />
-          <DateField value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} />
+          <DateField label={dateLabel} value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} />
         </div>
       )}
 
@@ -166,7 +168,7 @@ export function TransactionFields({
 
       {draft.type === "TRANSFER" && (
         <>
-          <DateField value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} />
+          <DateField label={dateLabel} value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} />
           <div className="rounded-lg border border-border bg-surface-subtle p-4">
             <label className="flex items-start justify-between gap-4">
               <span className="flex flex-col gap-0.5">
@@ -235,7 +237,7 @@ export function TransactionFields({
 
       {draft.type === "TRANSFER" && source && destination && draft.amount && (
         <p className="flex flex-wrap items-center gap-1.5 rounded-md bg-surface-muted px-3 py-2 text-small text-text-secondary">
-          <ArrowDownIcon className="size-3.5 rotate-[-90deg]" />
+          <ArrowRightIcon className="size-3.5" />
           {source.name} −{format(draft.amount, { currency: source.currency })}
           <span className="text-text-quaternary">·</span>
           {destination.name} +

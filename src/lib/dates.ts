@@ -200,3 +200,22 @@ export function formatRelativeDay(value: ISODate, today: ISODate): string {
   const sameYear = value.slice(0, 4) === today.slice(0, 4);
   return sameYear ? formatDate(value, "weekdayShort") : formatDate(value, "medium");
 }
+
+function ordinal(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+}
+
+/** "Monthly on the 3rd", "Weekly on Monday", "Yearly on 3 June". */
+export function describeSchedule(frequency: "WEEKLY" | "MONTHLY" | "YEARLY", startDate: ISODate): string {
+  const { day } = parseISODate(startDate);
+  switch (frequency) {
+    case "WEEKLY":
+      return `Weekly on ${formatDate(startDate, "long").split(",")[0]}`;
+    case "MONTHLY":
+      return day >= 29 ? `Monthly on the ${ordinal(day)} (or the month's last day)` : `Monthly on the ${ordinal(day)}`;
+    case "YEARLY":
+      return `Yearly on ${day} ${formatDate(startDate, "monthLong")}`;
+  }
+}

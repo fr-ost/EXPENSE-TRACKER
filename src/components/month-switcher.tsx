@@ -9,11 +9,14 @@ export function MonthSwitcher({
   current,
   basePath,
   extraParams = {},
+  max,
 }: {
   month: MonthKey;
   current: MonthKey;
   basePath: string;
   extraParams?: Record<string, string>;
+  /** Latest selectable month (defaults to the current month). */
+  max?: MonthKey;
 }) {
   const href = (target: MonthKey) => {
     const params = new URLSearchParams(extraParams);
@@ -23,7 +26,7 @@ export function MonthSwitcher({
   };
   const prev = shiftMonth(month, -1);
   const next = shiftMonth(month, 1);
-  const atCurrent = month >= current;
+  const atCurrent = month >= (max ?? current);
   const button = "inline-flex size-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-muted hover:text-text";
 
   return (

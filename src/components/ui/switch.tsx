@@ -9,7 +9,7 @@ export function Switch({ className, ...props }: React.ComponentProps<typeof Swit
     <SwitchPrimitive.Root
       className={cn(
         "peer inline-flex h-6 w-10 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 ease-out",
-        "bg-surface-sunken data-[state=checked]:bg-ink",
+        "bg-surface-sunken data-[state=checked]:bg-accent",
         "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)] disabled:opacity-45",
         className,
       )}
