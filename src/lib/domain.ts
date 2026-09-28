@@ -5,6 +5,9 @@
 
 export const APP_NAME = "Hisab";
 
+/** The owner's name, used in the greeting until changed in Settings. */
+export const OWNER_NAME = "Shahriar Ahmed";
+
 export const TRANSACTION_TYPES = ["INCOME", "EXPENSE", "TRANSFER", "ADJUSTMENT"] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 

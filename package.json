@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "prisma migrate deploy && tsx scripts/bootstrap.ts && next start",
+    "start": "prisma migrate deploy && next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
@@ -13,12 +13,9 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
-    "bootstrap": "tsx scripts/bootstrap.ts",
-    "hash-password": "tsx scripts/hash-password.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@node-rs/argon2": "2.2.1",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "class-variance-authority": "0.7.1",
@@ -39,7 +36,6 @@
     "server-only": "0.0.1",
     "sonner": "2.0.8",
     "tailwind-merge": "3.7.0",
-    "tsx": "4.23.15",
     "vaul": "1.1.2",
     "zod": "4.6.5"
   },

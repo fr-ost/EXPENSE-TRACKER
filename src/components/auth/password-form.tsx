@@ -7,21 +7,24 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { api, errorMessage } from "@/lib/api-client";
+import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 
 export function PasswordForm({
   endpoint,
   submitLabel,
   redirectTo,
+  notice,
 }: {
   endpoint: "/api/auth/login" | "/api/auth/unlock";
   submitLabel: string;
   redirectTo: string;
+  /** Shown above the field until the first attempt (e.g. why you were signed out). */
+  notice?: string;
 }) {
   const router = useRouter();
   const [password, setPassword] = React.useState("");
   const [visible, setVisible] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(notice ?? null);
   const [pending, setPending] = React.useState(false);
   const [done, setDone] = React.useState(false);
   const shake = useAnimationControls();
@@ -38,6 +41,11 @@ export function PasswordForm({
       router.replace(redirectTo);
       router.refresh();
     } catch (err) {
+      if (err instanceof ApiClientError && (err.code === "signed_out" || (endpoint === "/api/auth/unlock" && err.code === "unauthorized"))) {
+        // The session is gone (too many wrong passwords, or it expired): sign in again.
+        window.location.replace(err.code === "signed_out" ? "/login?reason=signed-out" : "/login");
+        return;
+      }
       setError(errorMessage(err));
       setPassword("");
       setPending(false);

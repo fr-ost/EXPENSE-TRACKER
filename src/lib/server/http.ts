@@ -90,16 +90,17 @@ export function authed<P extends Record<string, string> = Record<string, never>>
   };
 }
 
-/** Best-effort client IP. Prefers the header set by the platform's edge proxy. */
+/**
+ * Best-effort client IP, for rate limiting. Railway's edge strips any
+ * client-sent X-Forwarded-For and puts the connecting IP first, while
+ * X-Real-IP can hold a CDN address, so the leftmost X-Forwarded-For entry
+ * wins. (Behind a proxy that doesn't do this, the per-IP limit can be
+ * sidestepped; the global limit still applies.)
+ */
 export function clientIp(request: Request): string {
+  const first = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (first) return first.slice(0, 64);
   const realIp = request.headers.get("x-real-ip")?.trim();
   if (realIp) return realIp.slice(0, 64);
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    // The last hop is appended by the nearest (trusted) proxy; earlier entries
-    // are client-controlled.
-    const parts = forwarded.split(",").map((p) => p.trim()).filter(Boolean);
-    if (parts.length) return parts[parts.length - 1].slice(0, 64);
-  }
   return "unknown";
 }

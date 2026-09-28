@@ -53,41 +53,46 @@ enum NumberFormat {
   INTERNATIONAL
 }
 
-/// Exactly one row may exist (enforced by the unique `singleton` column plus a
-/// CHECK constraint). There is no sign-up path anywhere in the application.
+/// The owner. Exactly one row may exist (enforced by the unique `singleton`
+/// column plus a CHECK constraint); it is created on first sign-in. There is
+/// no sign-up path anywhere in the application, and the password is not stored
+/// here: it is the ADMIN_PASSWORD environment variable.
 model User {
-  id                String       @id @default(cuid())
-  singleton         Boolean      @unique @default(true)
-  displayName       String       @default("") @db.VarChar(60)
-  passwordHash      String
-  baseCurrency      String       @default("BDT") @db.Char(3)
-  timezone          String       @default("Asia/Dhaka") @db.VarChar(64)
-  numberFormat      NumberFormat @default(SOUTH_ASIAN)
+  id              String       @id @default(cuid())
+  singleton       Boolean      @unique @default(true)
+  displayName     String       @default("") @db.VarChar(60)
+  baseCurrency    String       @default("BDT") @db.Char(3)
+  timezone        String       @default("Asia/Dhaka") @db.VarChar(64)
+  numberFormat    NumberFormat @default(SOUTH_ASIAN)
   /// Minutes of inactivity before the app locks. 0 disables auto-lock.
-  autoLockMinutes   Int          @default(15)
-  passwordChangedAt DateTime     @default(now())
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  sessions          Session[]
+  autoLockMinutes Int          @default(15)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  sessions        Session[]
 }
 
 /// Server-side session. `id` is the SHA-256 of the cookie token, so a database
 /// leak does not yield usable session cookies.
 model Session {
-  id         String    @id @db.Char(64)
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt  DateTime  @default(now())
-  expiresAt  DateTime
-  lastSeenAt DateTime  @default(now())
-  lockedAt   DateTime?
-  userAgent  String?   @db.VarChar(255)
+  id            String    @id @db.Char(64)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// HMAC of `id` keyed with the password the session was created with, so
+  /// changing ADMIN_PASSWORD signs out every session.
+  credential    String    @db.Char(64)
+  createdAt     DateTime  @default(now())
+  expiresAt     DateTime
+  lastSeenAt    DateTime  @default(now())
+  lockedAt      DateTime?
+  /// Wrong passwords entered on the lock screen; the session ends after 5.
+  failedUnlocks Int       @default(0)
+  userAgent     String?   @db.VarChar(255)
 
   @@index([userId])
   @@index([expiresAt])
 }
 
-/// Login / unlock attempts, used for brute-force protection. Stored in the
+/// Sign-in attempts, used for brute-force protection. Stored in the
 /// database so limits survive restarts and redeploys.
 model LoginAttempt {
   id        String   @id @default(cuid())
@@ -151,6 +156,8 @@ model Transaction {
   type           TransactionType
   amount         Decimal               @db.Decimal(14, 2)
   date           DateTime              @db.Date
+  /// Local time of day ("HH:MM") when known, e.g. from a bank SMS.
+  time           String?               @db.Char(5)
   accountId      String
   account        Account               @relation("TransactionAccount", fields: [accountId], references: [id], onDelete: Restrict)
   toAccountId    String?

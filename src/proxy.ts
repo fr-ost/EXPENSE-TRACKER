@@ -11,22 +11,26 @@ const PUBLIC_PAGES = new Set(["/login"]);
 const PUBLIC_API = new Set(["/api/auth/login", "/api/auth/logout", "/api/health"]);
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-function expectedHost(request: NextRequest): string | null {
-  return request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-}
-
-/** Reject cross-site state-changing requests. */
+/**
+ * Reject cross-site state-changing requests. Browsers send Sec-Fetch-Site,
+ * which doesn't depend on how the platform rewrites Host headers; the Origin
+ * comparison covers older browsers. Requests with neither (curl, scripts)
+ * aren't CSRF — they can't ride on a victim's cookies.
+ */
 function isCrossSite(request: NextRequest): boolean {
-  const origin = request.headers.get("origin");
-  if (origin) {
-    try {
-      return new URL(origin).host !== expectedHost(request);
-    } catch {
-      return true;
-    }
-  }
   const fetchSite = request.headers.get("sec-fetch-site");
-  return fetchSite !== null && fetchSite !== "same-origin" && fetchSite !== "none";
+  if (fetchSite) return fetchSite !== "same-origin" && fetchSite !== "none";
+
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return true;
+  }
+  const hosts = [request.headers.get("x-forwarded-host"), request.headers.get("host"), request.nextUrl.host];
+  return !hosts.some((host) => host?.split(",")[0].trim().toLowerCase() === originHost.toLowerCase());
 }
 
 export function proxy(request: NextRequest) {

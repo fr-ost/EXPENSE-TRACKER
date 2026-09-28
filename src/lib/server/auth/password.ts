@@ -1,29 +1,49 @@
-import { hash, verify } from "@node-rs/argon2";
+import "server-only";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { AppError } from "../errors";
 
 /**
- * Argon2id (the library default algorithm) with OWASP's recommended
- * parameters: 19 MiB memory, 2 iterations, 1 degree of parallelism.
+ * The password is a plain environment variable, ADMIN_PASSWORD (a Railway
+ * service variable). It is never stored in the database, logged, or sent to
+ * the browser. Surrounding whitespace is ignored, so a stray space or newline
+ * pasted into the variable doesn't lock you out.
  */
-const OPTIONS = { memoryCost: 19_456, timeCost: 2, parallelism: 1 } as const;
-
-// A valid hash of a random value, used to spend the same time verifying when
-// there is no user row, so response timing does not reveal setup state.
-const DUMMY_HASH =
-  "$argon2id$v=19$m=19456,t=2,p=1$udqqYNpZhMc3YfBNclcrpw$TIVOSopUcCiYnHbv6EZuc72uiP7uM0GQW/C1RsdyIRE";
-
-export function hashPassword(password: string): Promise<string> {
-  return hash(password, OPTIONS);
+export function adminPassword(): string | null {
+  const value = process.env.ADMIN_PASSWORD?.trim();
+  return value ? value : null;
 }
 
-export async function verifyPassword(passwordHash: string | null | undefined, password: string): Promise<boolean> {
-  try {
-    const ok = await verify(passwordHash ?? DUMMY_HASH, password);
-    return ok && !!passwordHash;
-  } catch {
-    return false;
+export function requireAdminPassword(): string {
+  const password = adminPassword();
+  if (!password) {
+    throw new AppError(
+      503,
+      "not_configured",
+      "Sign-in isn't set up yet. Add an ADMIN_PASSWORD variable to the server, then redeploy.",
+    );
   }
+  return password;
 }
 
-export function isArgon2Hash(value: string): boolean {
-  return /^\$argon2(id|i|d)\$v=\d+\$m=\d+,t=\d+,p=\d+\$[A-Za-z0-9+/]+\$[A-Za-z0-9+/]+$/.test(value);
+function digest(value: string): Buffer {
+  return createHash("sha256").update(value, "utf8").digest();
+}
+
+/** Constant-time comparison; hashing first makes both sides the same length. */
+export function passwordMatches(candidate: string, expected: string): boolean {
+  return timingSafeEqual(digest(candidate.trim()), digest(expected));
+}
+
+/**
+ * Binds a session to the password it was created with. When ADMIN_PASSWORD
+ * changes, every existing session stops matching and is signed out.
+ */
+export function sessionCredential(sessionId: string, password: string): string {
+  return createHmac("sha256", password).update(sessionId).digest("hex");
+}
+
+export function credentialMatches(stored: string, sessionId: string, password: string): boolean {
+  const expected = Buffer.from(sessionCredential(sessionId, password), "utf8");
+  const actual = Buffer.from(stored, "utf8");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }

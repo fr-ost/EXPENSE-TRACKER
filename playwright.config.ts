@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_DATABASE_URL, E2E_PORT } from "./tests/e2e/env";
+import { E2E_DATABASE_URL, E2E_PASSWORD, E2E_PORT } from "./tests/e2e/env";
 
 /**
  * End-to-end tests run against a production build on an isolated database
@@ -30,6 +30,6 @@ export default defineConfig({
     url: `http://localhost:${E2E_PORT}/login`,
     reuseExistingServer: false,
     timeout: 120_000,
-    env: { DATABASE_URL: E2E_DATABASE_URL, NODE_ENV: "production" },
+    env: { DATABASE_URL: E2E_DATABASE_URL, ADMIN_PASSWORD: E2E_PASSWORD, NODE_ENV: "production" },
   },
 });

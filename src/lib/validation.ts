@@ -301,14 +301,6 @@ export const passwordInput = z.object({
   password: z.string().min(1, "Enter your password").max(256),
 });
 
-export const changePasswordInput = z
-  .object({
-    currentPassword: z.string().min(1, "Enter your current password").max(256),
-    newPassword: z.string().min(12, "Use at least 12 characters").max(256),
-    confirmPassword: z.string(),
-  })
-  .refine((v) => v.newPassword === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords don't match" });
-
 export const settingsInput = z.object({
   displayName: z.string().trim().max(60),
   baseCurrency: z.enum(CURRENCY_CODES),

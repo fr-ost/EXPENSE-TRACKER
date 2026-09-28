@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   // Native / filesystem-dependent packages stay out of the server bundle.
-  serverExternalPackages: ["@node-rs/argon2", "pdfkit", "exceljs"],
+  serverExternalPackages: ["pdfkit", "exceljs"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

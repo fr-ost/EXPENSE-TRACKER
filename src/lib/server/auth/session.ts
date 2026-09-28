@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { SESSION_COOKIE } from "@/lib/auth-cookie";
 import { prisma } from "../db";
+import { adminPassword, credentialMatches, requireAdminPassword, sessionCredential } from "./password";
 
 export { SESSION_COOKIE };
 
@@ -38,20 +39,28 @@ function hashToken(token: string): string {
 
 export async function createSession(userId: string, userAgent: string | null) {
   const token = randomBytes(32).toString("base64url");
+  const id = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS);
+  const credential = sessionCredential(id, requireAdminPassword());
   await prisma.session.create({
-    data: { id: hashToken(token), userId, expiresAt, userAgent: userAgent?.slice(0, 255) ?? null },
+    data: { id, userId, credential, expiresAt, userAgent: userAgent?.slice(0, 255) ?? null },
   });
   return { token, expiresAt };
 }
 
 /**
- * Resolve a cookie token to a session. Expired sessions are deleted. A session
- * idle for longer than the user's auto-lock period becomes locked server-side,
- * so closing the tab does not bypass the lock.
+ * Resolve a cookie token to a session. Expired sessions, and sessions created
+ * with a different password, are deleted. A session idle for longer than the
+ * user's auto-lock period becomes locked server-side, so closing the tab does
+ * not bypass the lock.
  */
 export async function readSession(token: string | undefined | null): Promise<SessionState | null> {
   if (!token || token.length > 100) return null;
+  // Without a configured password nobody is signed in (sessions are kept, so
+  // restoring the same variable brings them back).
+  const password = adminPassword();
+  if (!password) return null;
+
   const id = hashToken(token);
   const session = await prisma.session.findUnique({
     where: { id },
@@ -60,7 +69,11 @@ export async function readSession(token: string | undefined | null): Promise<Ses
   if (!session) return null;
 
   const now = Date.now();
-  if (session.expiresAt.getTime() <= now || now - session.lastSeenAt.getTime() > SESSION_IDLE_TIMEOUT_MS) {
+  if (
+    session.expiresAt.getTime() <= now ||
+    now - session.lastSeenAt.getTime() > SESSION_IDLE_TIMEOUT_MS ||
+    !credentialMatches(session.credential, id, password)
+  ) {
     await prisma.session.deleteMany({ where: { id } });
     return null;
   }
@@ -88,7 +101,7 @@ export async function lockSession(id: string): Promise<void> {
 }
 
 export async function unlockSession(id: string): Promise<void> {
-  await prisma.session.update({ where: { id }, data: { lockedAt: null, lastSeenAt: new Date() } });
+  await prisma.session.update({ where: { id }, data: { lockedAt: null, lastSeenAt: new Date(), failedUnlocks: 0 } });
 }
 
 export async function deleteSession(id: string): Promise<void> {

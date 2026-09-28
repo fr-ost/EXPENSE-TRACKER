@@ -1,25 +1,55 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { hashPassword, isArgon2Hash, verifyPassword } from "@/lib/server/auth/password";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { adminPassword, passwordMatches } from "@/lib/server/auth/password";
+import { attemptUnlock, checkLoginPassword, MAX_UNLOCK_ATTEMPTS } from "@/lib/server/auth/password-check";
 import { beginPasswordAttempt, checkPasswordAttempt, markPasswordAttemptSuccessful } from "@/lib/server/auth/rate-limit";
 import { createSession, lockSession, readSession, touchSession, unlockSession } from "@/lib/server/auth/session";
 import { prisma } from "@/lib/server/db";
+import { ensureOwner } from "@/lib/server/settings";
 
 async function makeUser(autoLockMinutes = 15) {
   await prisma.user.deleteMany();
-  const user = await prisma.user.create({ data: { passwordHash: await hashPassword("a-long-test-password"), autoLockMinutes } });
+  const user = await prisma.user.create({ data: { autoLockMinutes } });
   return user.id;
 }
 
 const ago = (ms: number) => new Date(Date.now() - ms);
+const TEST_PASSWORD = "test-pass-1";
 
-describe("passwords", () => {
-  it("hashes with Argon2id and verifies", async () => {
-    const hash = await hashPassword("correct horse battery staple");
-    expect(hash.startsWith("$argon2id$")).toBe(true);
-    expect(isArgon2Hash(hash)).toBe(true);
-    expect(await verifyPassword(hash, "correct horse battery staple")).toBe(true);
-    expect(await verifyPassword(hash, "wrong")).toBe(false);
-    expect(await verifyPassword(null, "anything")).toBe(false);
+afterEach(() => {
+  process.env.ADMIN_PASSWORD = TEST_PASSWORD;
+});
+
+describe("password", () => {
+  it("comes from ADMIN_PASSWORD, ignoring surrounding whitespace", () => {
+    process.env.ADMIN_PASSWORD = "  7a9k \n";
+    expect(adminPassword()).toBe("7a9k");
+    expect(passwordMatches("7a9k", "7a9k")).toBe(true);
+    expect(passwordMatches(" 7a9k ", "7a9k")).toBe(true);
+    expect(passwordMatches("7A9K", "7a9k")).toBe(false);
+    expect(passwordMatches("", "7a9k")).toBe(false);
+    process.env.ADMIN_PASSWORD = "   ";
+    expect(adminPassword()).toBeNull();
+  });
+
+  it("accepts the right password and creates the owner on first sign-in", async () => {
+    await prisma.session.deleteMany();
+    await prisma.loginAttempt.deleteMany();
+    await prisma.user.deleteMany();
+    await expect(checkLoginPassword("192.0.2.1", "nope")).rejects.toMatchObject({ status: 401 });
+    expect(await prisma.user.count()).toBe(0);
+    const id = await checkLoginPassword("192.0.2.1", TEST_PASSWORD);
+    const owner = await prisma.user.findUniqueOrThrow({ where: { id } });
+    expect(owner.displayName).toBe("Shahriar Ahmed");
+    // Concurrent first sign-ins still end with exactly one owner.
+    await prisma.user.deleteMany();
+    const ids = await Promise.all([ensureOwner(), ensureOwner(), ensureOwner()]);
+    expect(new Set(ids.map((o) => o.id)).size).toBe(1);
+    expect(await prisma.user.count()).toBe(1);
+  });
+
+  it("refuses to sign anyone in when ADMIN_PASSWORD is missing", async () => {
+    delete process.env.ADMIN_PASSWORD;
+    await expect(checkLoginPassword("192.0.2.2", "")).rejects.toMatchObject({ status: 503 });
   });
 });
 
@@ -65,6 +95,41 @@ describe("sessions", () => {
     const session = await readSession(token);
     await lockSession(session!.id);
     expect((await readSession(token))?.locked).toBe(true);
+  });
+
+  it("signs out every session when ADMIN_PASSWORD changes", async () => {
+    const userId = await makeUser();
+    const { token } = await createSession(userId, "test");
+    expect(await readSession(token)).not.toBeNull();
+
+    // Removing the variable signs nobody in, but keeps the sessions.
+    delete process.env.ADMIN_PASSWORD;
+    expect(await readSession(token)).toBeNull();
+    process.env.ADMIN_PASSWORD = TEST_PASSWORD;
+    expect(await readSession(token)).not.toBeNull();
+
+    process.env.ADMIN_PASSWORD = "a-new-password";
+    expect(await readSession(token)).toBeNull();
+    expect(await prisma.session.count()).toBe(0);
+  });
+
+  it("limits wrong passwords on the lock screen per session, then signs out", async () => {
+    const userId = await makeUser();
+    const { token } = await createSession(userId, "test");
+    const { id } = (await readSession(token))!;
+    await lockSession(id);
+
+    expect(await attemptUnlock(id, "wrong")).toEqual({ status: "incorrect", remaining: MAX_UNLOCK_ATTEMPTS - 1 });
+    expect(await attemptUnlock(id, TEST_PASSWORD)).toEqual({ status: "unlocked" });
+    expect((await readSession(token))?.locked).toBe(false);
+
+    // The counter restarts after a successful unlock.
+    await lockSession(id);
+    const results = await Promise.all(Array.from({ length: MAX_UNLOCK_ATTEMPTS + 3 }, () => attemptUnlock(id, "wrong")));
+    expect(results.filter((r) => r.status === "incorrect")).toHaveLength(MAX_UNLOCK_ATTEMPTS - 1);
+    expect(results.some((r) => r.status === "signed_out")).toBe(true);
+    expect(await readSession(token)).toBeNull();
+    expect(await attemptUnlock(id, TEST_PASSWORD)).toEqual({ status: "signed_out" });
   });
 
   it("expires sessions after the absolute lifetime or 7 idle days", async () => {

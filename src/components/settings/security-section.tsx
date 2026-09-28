@@ -5,69 +5,9 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/misc";
-import { api, ApiClientError, errorMessage } from "@/lib/api-client";
+import { api, errorMessage } from "@/lib/api-client";
 import type { SessionInfo } from "@/lib/types";
-import { changePasswordInput, fieldErrorsOf } from "@/lib/validation";
-
-export function ChangePasswordForm() {
-  const [values, setValues] = React.useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const [pending, setPending] = React.useState(false);
-  const router = useRouter();
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    const parsed = changePasswordInput.safeParse(values);
-    if (!parsed.success) return setErrors(fieldErrorsOf(parsed.error));
-    setPending(true);
-    try {
-      const result = await api<{ revokedSessions: number }>("/api/settings/password", { body: parsed.data });
-      toast.success("Password changed", {
-        description: result.revokedSessions ? `Signed out ${result.revokedSessions} other session${result.revokedSessions === 1 ? "" : "s"}.` : undefined,
-      });
-      setValues({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      setErrors({});
-      router.refresh();
-    } catch (error) {
-      if (error instanceof ApiClientError) setErrors(error.fieldErrors);
-      toast.error(errorMessage(error));
-    } finally {
-      setPending(false);
-    }
-  }
-
-  const bind = (key: keyof typeof values) => ({
-    value: values[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-      setValues((v) => ({ ...v, [key]: e.target.value }));
-      setErrors((err) => ({ ...err, [key]: "" }));
-    },
-  });
-
-  return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-      <Field label="Current password" error={errors.currentPassword}>
-        <Input type="password" autoComplete="current-password" {...bind("currentPassword")} />
-      </Field>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="New password" hint="At least 12 characters. A passphrase is ideal." error={errors.newPassword}>
-          <Input type="password" autoComplete="new-password" {...bind("newPassword")} />
-        </Field>
-        <Field label="Repeat new password" error={errors.confirmPassword}>
-          <Input type="password" autoComplete="new-password" {...bind("confirmPassword")} />
-        </Field>
-      </div>
-      <div className="flex justify-end">
-        <Button type="submit" loading={pending} disabled={!values.currentPassword || !values.newPassword}>
-          Change password
-        </Button>
-      </div>
-    </form>
-  );
-}
 
 export function SessionsList({ sessions }: { sessions: SessionInfo[] }) {
   const router = useRouter();

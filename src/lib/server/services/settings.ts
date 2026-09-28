@@ -4,35 +4,10 @@ import type { SessionInfo } from "@/lib/types";
 import type { SettingsInput } from "@/lib/validation";
 import { prisma } from "../db";
 import { invalid } from "../errors";
-import { hashPassword } from "../auth/password";
-import { checkPassword } from "../auth/password-check";
-import { deleteOtherSessions } from "../auth/session";
 
 export async function updateSettings(input: SettingsInput) {
   if (!isValidTimeZone(input.timezone)) throw invalid("Choose a valid timezone.", { timezone: "Unknown timezone." });
   await prisma.user.updateMany({ data: input });
-}
-
-/**
- * Change the password (rate limited like login). Every other session is
- * signed out; the current one stays.
- */
-export async function changePassword(options: {
-  ip: string;
-  sessionId: string;
-  currentPassword: string;
-  newPassword: string;
-}): Promise<{ revokedSessions: number }> {
-  const userId = await checkPassword(options.ip, options.currentPassword).catch((error) => {
-    if (error?.code === "invalid_credentials") throw invalid("Your current password is incorrect.", { currentPassword: "Incorrect password." });
-    throw error;
-  });
-  if (options.currentPassword === options.newPassword) {
-    throw invalid("Choose a new password.", { newPassword: "The new password must be different." });
-  }
-  const passwordHash = await hashPassword(options.newPassword);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash, passwordChangedAt: new Date() } });
-  return { revokedSessions: await deleteOtherSessions(userId, options.sessionId) };
 }
 
 function ago(date: Date): string {
