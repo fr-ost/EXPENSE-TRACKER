@@ -59,7 +59,15 @@ export function SelectContent({
   );
 }
 
-export function SelectItem({ className, children, ...props }: React.ComponentProps<typeof SelectPrimitive.Item>) {
+export function SelectItem({
+  className,
+  children,
+  trailing,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Item> & {
+  /** Shown in the list only, not in the closed trigger. */
+  trailing?: React.ReactNode;
+}) {
   return (
     <SelectPrimitive.Item
       className={cn(
@@ -72,6 +80,7 @@ export function SelectItem({ className, children, ...props }: React.ComponentPro
       <SelectPrimitive.ItemText asChild>
         <span className="flex min-w-0 items-center gap-2 truncate">{children}</span>
       </SelectPrimitive.ItemText>
+      {trailing && <span className="ml-auto shrink-0 pl-3 text-small text-text-tertiary">{trailing}</span>}
       <SelectPrimitive.ItemIndicator className="absolute right-2.5">
         <CheckIcon className="size-4 text-text" />
       </SelectPrimitive.ItemIndicator>

@@ -136,6 +136,32 @@ function groupDigits(digits: string, grouping: GroupingStyle): string {
   return `${groups.join(",")},${lastThree}`;
 }
 
+/**
+ * Sanitise keyboard input for an amount field: digits and one decimal point,
+ * at most 2 decimals and 12 integer digits. Returns the raw string (no
+ * grouping) — it is never converted to a float.
+ */
+export function sanitizeAmountInput(input: string): string {
+  let cleaned = input.replace(/[^\d.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  if (firstDot !== -1) {
+    cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+  }
+  let [whole, fraction] = cleaned.split(".") as [string, string | undefined];
+  whole = whole.replace(/^0+(?=\d)/, "").slice(0, 12);
+  if (fraction !== undefined) fraction = fraction.slice(0, 2);
+  if (whole === "" && fraction !== undefined) whole = "0";
+  return fraction === undefined ? whole : `${whole}.${fraction}`;
+}
+
+/** Group the digits of a raw amount for display ("1234567.5" → "12,34,567.5"). */
+export function groupAmountInput(raw: string, grouping: GroupingStyle): string {
+  if (!raw) return raw;
+  const [whole, fraction] = raw.split(".");
+  const grouped = groupDigits(whole || "0", grouping);
+  return fraction === undefined ? grouped : `${grouped}.${fraction}`;
+}
+
 export function formatMoney(value: Money | bigint, options: FormatMoneyOptions = {}): string {
   const { currency = "BDT", grouping = "SOUTH_ASIAN", decimals = "auto", sign = "negative", plain = false } = options;
   const minor = toMinor(value);

@@ -150,6 +150,7 @@ export const ICON_KEYS = [
   "arrow-left-right",
   "wallet",
   "vault",
+  "scale",
 ] as const;
 export type IconKey = (typeof ICON_KEYS)[number];
 
@@ -158,3 +159,12 @@ export function isIconKey(value: string | null | undefined): value is IconKey {
 }
 
 export const AUTO_LOCK_OPTIONS = [0, 1, 5, 10, 15, 30, 60] as const;
+
+/**
+ * Expense recognition — the TypeScript twin of the "ExpenseEntry" SQL view.
+ * A transaction is spending when it is an expense, or a transfer the user
+ * explicitly flagged "count as expense". Plain transfers never are.
+ */
+export function isRecognizedExpense(type: TransactionType, countAsExpense: boolean): boolean {
+  return type === "EXPENSE" || (type === "TRANSFER" && countAsExpense);
+}

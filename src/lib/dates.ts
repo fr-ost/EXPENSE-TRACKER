@@ -145,28 +145,50 @@ export function monthKeysOfYear(year: number): MonthKey[] {
 }
 
 // ---------------------------------------------------------------------------
-// Formatting (dates are UTC-midnight values, so format in UTC)
+// Formatting — deterministic (no Intl), so server and browser render the same
+// text regardless of their ICU versions.
 // ---------------------------------------------------------------------------
 
-const formatters = {
-  short: new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }),
-  medium: new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }),
-  long: new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }),
-  weekdayShort: new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }),
-  monthYear: new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }),
-  monthShortYear: new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }),
-  monthShort: new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }),
-  monthLong: new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }),
-};
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export type DateStyle = keyof typeof formatters;
+export type DateStyle = "short" | "medium" | "long" | "weekdayShort" | "monthYear" | "monthShortYear" | "monthShort" | "monthLong";
 
 export function formatDate(value: ISODate, style: DateStyle = "medium"): string {
-  return formatters[style].format(toUTC(value));
+  const { year, month, day } = parseISODate(value);
+  const monthLong = MONTHS[month - 1];
+  const monthShort = monthLong.slice(0, 3);
+  const weekday = WEEKDAYS[toUTC(value).getUTCDay()];
+  switch (style) {
+    case "short":
+      return `${day} ${monthShort}`;
+    case "medium":
+      return `${day} ${monthShort} ${year}`;
+    case "long":
+      return `${weekday}, ${day} ${monthLong} ${year}`;
+    case "weekdayShort":
+      return `${weekday.slice(0, 3)}, ${day} ${monthShort}`;
+    case "monthYear":
+      return `${monthLong} ${year}`;
+    case "monthShortYear":
+      return `${monthShort} ${year}`;
+    case "monthShort":
+      return monthShort;
+    case "monthLong":
+      return monthLong;
+  }
 }
 
 export function formatMonth(key: MonthKey, style: "long" | "short" = "long"): string {
   return formatDate(monthStart(key), style === "long" ? "monthYear" : "monthShortYear");
+}
+
+/** "today", "yesterday" or "on 22 Sep" — for use inside a sentence. */
+export function describeDay(value: ISODate, today: ISODate): string {
+  const diff = diffInDays(today, value);
+  if (diff === 0) return "today";
+  if (diff === 1) return "yesterday";
+  return `on ${formatDate(value, value.slice(0, 4) === today.slice(0, 4) ? "short" : "medium")}`;
 }
 
 /** "Today", "Yesterday", or a formatted date, relative to `today`. */

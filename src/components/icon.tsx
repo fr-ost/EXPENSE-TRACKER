@@ -30,6 +30,7 @@ import {
   PlaneIcon,
   ReceiptIcon,
   RepeatIcon,
+  ScaleIcon,
   ShirtIcon,
   ShoppingBagIcon,
   ShoppingCartIcon,
@@ -93,6 +94,7 @@ const ICONS: Record<IconKey, LucideIcon> = {
   "arrow-left-right": ArrowLeftRightIcon,
   wallet: WalletIcon,
   vault: VaultIcon,
+  scale: ScaleIcon,
 };
 
 export function paletteVar(color: string | null | undefined): string {

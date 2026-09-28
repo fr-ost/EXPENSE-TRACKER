@@ -65,13 +65,13 @@
   --palette-slate: #64748b;
   --palette-gray: #8b8d98;
 
-  /* Charts */
+  /* Charts — income/spending pair validated for colour-vision deficiency
+     (worst adjacent CVD ΔE 21). Comparison series use the muted gray. */
   --chart-income: #2e9e62;
-  --chart-expense: #0e0e12;
-  --chart-savings: #3d63dd;
+  --chart-expense: #3a7bd5;
   --chart-grid: #f0f0f3;
   --chart-axis: #9a9aa6;
-  --chart-muted: #d9d9df;
+  --chart-muted: #c9c9d1;
 
   /* Radius */
   --radius-xs: 6px;
