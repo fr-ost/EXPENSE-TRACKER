@@ -121,7 +121,11 @@ export function SmsImporter() {
             label: "Undo",
             onClick: () => {
               void Promise.all(addedIds.map((id) => api(`/api/transactions/${id}`, { method: "DELETE" }).catch(() => undefined))).then(() => {
-                setItems((list) => list.map((i) => (i.addedIds.some((id) => addedIds.includes(id)) ? { ...i, status: "review", addedIds: [] } : i)));
+                setItems((list) =>
+                  list.map((i) =>
+                    i.addedIds.some((id) => addedIds.includes(id)) ? { ...i, status: i.issues.length ? "review" : "ready", addedIds: [] } : i,
+                  ),
+                );
                 toast("Removed");
                 router.refresh();
               });
@@ -146,23 +150,34 @@ export function SmsImporter() {
         return;
       }
       setAnalyzing(true);
-      const remembered = loadRememberedAccounts();
-      const provisional = messages.map((m) => buildItem(m, { accounts, categories, today, remembered }));
-      let checks: CheckResult[] | null = null;
+      let built: SmsItem[];
       try {
-        const response = await api<{ results: CheckResult[] }>("/api/sms/check", {
-          body: { items: provisional.map((item) => ({ text: item.text, description: item.draft.description })) },
+        const remembered = loadRememberedAccounts();
+        const context = { accounts, categories, today, remembered };
+        // One unreadable message never blocks the rest.
+        const readable = messages.flatMap((text) => {
+          try {
+            return [{ text, item: buildItem(text, context) }];
+          } catch {
+            return [];
+          }
         });
-        checks = response.results;
-      } catch {
-        // Offline or failed: still show what was read; adding checks for duplicates again anyway.
+        let checks: CheckResult[] | null = null;
+        try {
+          const response = await api<{ results: CheckResult[] }>("/api/sms/check", {
+            body: { items: readable.map(({ item }) => ({ text: item.text, description: item.draft.description })) },
+          });
+          checks = response.results;
+        } catch {
+          // Offline or failed: still show what was read; adding checks for duplicates again anyway.
+        }
+        built = readable.map(({ text, item }, i) => (checks ? buildItem(text, { ...context, check: checks[i] }) : item));
+        if (readable.length < messages.length) toast.error(`${messages.length - readable.length} message(s) couldn't be read.`);
+      } finally {
+        setAnalyzing(false);
       }
-      const built = checks
-        ? messages.map((m, i) => buildItem(m, { accounts, categories, today, remembered, check: checks![i] }))
-        : provisional;
       setItems((list) => [...built, ...list]);
       setText("");
-      setAnalyzing(false);
 
       const ready = built.filter((item) => item.status === "ready");
       if (auto && autoAdd && ready.length) {
@@ -185,9 +200,16 @@ export function SmsImporter() {
   React.useEffect(() => {
     const hash = window.location.hash;
     if (!hash.startsWith("#shared=")) return;
-    const shared = decodeURIComponent(hash.slice("#shared=".length));
     window.history.replaceState(null, "", window.location.pathname);
-    if (shared.trim()) void analyze(shared, { auto: true });
+    let shared = "";
+    try {
+      shared = decodeURIComponent(hash.slice("#shared=".length));
+    } catch {
+      return; // A malformed link: nothing to read.
+    }
+    // Not cancelled on cleanup: the fragment is already consumed, and Strict
+    // Mode's second effect run would otherwise drop the message.
+    window.setTimeout(() => void analyze(shared, { auto: true }), 0);
     // Run once, on arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -223,7 +245,7 @@ export function SmsImporter() {
   async function undo(item: SmsItem) {
     try {
       await Promise.all(item.addedIds.map((id) => api(`/api/transactions/${id}`, { method: "DELETE" })));
-      patchItem(item.id, { status: "review", addedIds: [] });
+      patchItem(item.id, { status: item.issues.length ? "review" : "ready", addedIds: [] });
       toast("Removed");
       router.refresh();
     } catch (error) {

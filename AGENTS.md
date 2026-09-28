@@ -18,4 +18,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   the init migration and `isRecognizedExpense` in `src/lib/domain.ts`.
 - Transaction entry rules live in `resolveEntry` (`src/lib/server/services/transactions.ts`).
 - Every page calls `loadPageContext()`; every API handler is wrapped in `authed()`.
+- The password is the `ADMIN_PASSWORD` env var (plain text, compared in
+  constant time); nothing about it is stored. Sessions carry an HMAC keyed
+  with it (`Session.credential`), so changing it signs everyone out. The owner
+  row is created on first sign-in (`ensureOwner`).
+- SMS import: the parser (`src/lib/sms/parse.ts`) is pure and client-side;
+  account/category suggestions live in `src/components/sms/sms-suggest.ts`;
+  the server (`src/lib/server/services/sms.ts`) re-validates through
+  `resolveEntry`, keys each message `sms:<fingerprint>:<part>` and flags likely
+  duplicates via the `LedgerEntry` view. Add new message formats as parser
+  tests first (`tests/unit/sms-parse.test.ts`).
+- The service worker (`public/sw.js`) must never cache pages or API responses.
+  Icons are rendered from one drawing: `node scripts/generate-icons.mjs`.
+- Rate limiting keys on the leftmost `X-Forwarded-For` (Railway). Next.js fills
+  that header from the socket when absent, so e2e tests simulate clients with it.
 - Checks: `npm run lint && npm run typecheck && npm test`; e2e: `npm run build && npm run test:e2e`.

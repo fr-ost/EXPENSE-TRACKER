@@ -10,26 +10,105 @@ pleasant to use every day, on a phone or a desktop.
 - **Accounts** — cash, bank, bKash / Nagad, cards, exchanges; any currency.
   Balances are always derived from the ledger, never typed in.
 - **Transactions** — expenses, income and transfers, with fast entry
-  (`N` on desktop, the ＋ tab on phones), historical back-filling, search,
-  filters, sorting, pagination, and CSV / Excel export of any filtered view.
+  (`N` on desktop, the ＋ tab on phones), an optional time of day, historical
+  back-filling, search, filters, sorting, pagination, and CSV / Excel export
+  of any filtered view.
+- **Import from SMS** — paste bank or bKash / Nagad / Rocket messages (or
+  share them to the installed app on Android): Hisab reads the amount, bank,
+  type, date and time and adds them — never the same message twice.
 - **Transfers that can count as spending** — money moves once between
   accounts; optionally it is also recognised as an expense (e.g. support sent
   to family) without being double counted.
 - **Family / Personal / Other** classification on every expense, with its own
   analytics.
-- **Dashboard** — total balance, the month at a glance with deltas, cash flow,
-  spending pace, where the money went, budgets, recent activity.
+- **Dashboard** — a time-of-day greeting, total balance, the month at a glance
+  with deltas, cash flow, spending pace, where the money went, budgets,
+  recent activity.
 - **Budgets** — monthly per category, effective-dated (changing a budget never
   rewrites past months), calm warnings at 80% / 100% / over.
 - **Recurring transactions** — weekly / monthly / yearly, posted exactly once.
 - **Reports** — monthly and yearly statements, category, family & personal,
-  income sources, savings trend, account activity; PDF and Excel exports.
+  income sources, savings trend, account activity; PDF (Bengali names
+  included) and Excel exports.
 - **Reconciliation** — compare the ledger with a physical cash count and
   record the difference as an adjustment or as an unrecorded expense/income.
-- **Private by construction** — one account, no sign-up, Argon2id password,
-  server-side sessions, inactivity lock, brute-force protection.
+- **Installable app** — install it from Chrome or Edge (desktop and Android)
+  or add it to the iPhone home screen.
+- **Private by construction** — one account, no sign-up, the password lives
+  only in a server variable, server-side sessions, inactivity lock,
+  brute-force protection.
 
 ---
+
+## Deploying to Railway
+
+1. **Create a project** and add a **PostgreSQL** database service.
+2. **Add a service from this GitHub repository.** Railway reads
+   `railway.json`: it builds with `npm run build`, and `npm start` applies the
+   database migrations and starts the app. The health check is `/api/health`.
+3. **Set two variables** on the service (Variables tab):
+
+   | Variable         | Value |
+   | ---------------- | ----- |
+   | `DATABASE_URL`   | `${{Postgres.DATABASE_URL}}` (a reference to the database) |
+   | `ADMIN_PASSWORD` | your password, as plain text — e.g. `4821` or `hisab2026` |
+
+   Any 1–10 letters or digits work; longer is safer. Surrounding spaces are
+   ignored.
+4. **Deploy**, then **Settings → Networking → Generate domain**, open it and
+   sign in. The first sign-in creates your account (named Shahriar Ahmed,
+   with Bangladeshi taka and Dhaka time — all editable in Settings).
+
+**Changing the password:** edit `ADMIN_PASSWORD` in Railway and deploy the
+change. Every signed-in device is signed out; sign in with the new password.
+That is also the answer to a forgotten password.
+
+If `ADMIN_PASSWORD` is missing, the app still starts and the sign-in page
+explains what to set.
+
+## Installing the app
+
+- **Chrome or Edge (Windows, macOS, ChromeOS, Android):** use **Install app**
+  in the sidebar, the phone's **More** menu, the banner on the overview, or
+  **Settings → App**; or the install icon in the address bar.
+- **iPhone / iPad:** in Safari, tap **Share → Add to Home Screen**.
+
+The installed app opens full screen with its own icon, has shortcuts for a
+new transaction, SMS import and reports, and on Android appears in the share
+sheet: long-press a bank SMS, **Share → Hisab**, and it is added.
+
+## Importing from SMS
+
+Open **Import SMS**, paste one message or several (blank lines or one per line
+separate them), or tap **Paste**. For each message Hisab reads the amount,
+direction (money in or out), bank or wallet, account digits, date and time,
+fee, reported balance and merchant, then builds the transaction:
+
+- **Which account** — the bank or wallet name in the message, the last digits
+  of the account or card (name your accounts like `City Bank 4567`), or the
+  account you picked last time for that bank.
+- **What kind** — payments and purchases are expenses, deposits and salary are
+  income. Cash outs and ATM withdrawals are **transfers to your Cash
+  account**, and money moved from your bank to bKash is a transfer too, so
+  nothing is counted as spending twice. Fees become separate expenses.
+- **Category** — from the merchant (Daraz → Shopping, Foodpanda → Food…), or
+  whatever you chose last time for the same description.
+
+With **Add automatically when certain** on, messages that clearly match one
+of your accounts are added as soon as you paste them (with Undo). Anything
+uncertain waits for a quick review with the normal transaction fields.
+
+The same message is never added twice (on any device), and a message that
+looks like something already recorded — typed in by hand, or the other side
+of a transfer imported from the other bank's SMS — is flagged instead of
+added. OTPs, adverts, failed transactions and reminders are skipped. When the
+newest message for an account reports a balance, Hisab shows whether its own
+balance agrees.
+
+Works with bKash, Nagad, Rocket, Upay and alerts from Bangladeshi banks and
+cards (DBBL, City, BRAC, EBL, Islami Bank, Standard Chartered and ~40 more),
+in English or Bengali. The original message is kept in the transaction's
+notes.
 
 ## Financial rules
 
@@ -66,20 +145,24 @@ A single Next.js 16 (App Router) application with PostgreSQL via Prisma 7.
 | -------------- | -------- |
 | Money          | `NUMERIC(14,2)` in Postgres; decimal strings over the wire; `bigint` minor units for any arithmetic in TypeScript (`src/lib/money.ts`). Floats are used only to draw charts. |
 | Ledger         | No stored balances. Views expand transactions into signed per-account movements; Postgres sums them in milliseconds for a personal data set. |
-| Invariants     | CHECK constraints make invalid rows impossible (transfer to the same account, expense without category, zero/negative amounts…). Entry rules that need other rows (opening dates, category kinds, currencies) live in one function, `resolveEntry`, run under row locks. |
+| Invariants     | CHECK constraints make invalid rows impossible (transfer to the same account, expense without category, zero/negative amounts, malformed times…). Entry rules that need other rows (opening dates, category kinds, currencies) live in one function, `resolveEntry`, run under row locks. |
 | Reads / writes | Server Components read through a service layer (`src/lib/server/services`). Writes go through REST route handlers under `/api`, then the client refreshes server data in place — no full reloads. |
-| Idempotency    | Each "new transaction" sheet carries an idempotency key; retries and double clicks return the original row. Recurring occurrences are unique per (rule, date) and posted under `FOR UPDATE SKIP LOCKED`. |
-| Dates          | Calendar dates (`DATE`), "today" resolved in your timezone (Settings), deterministic formatting so server and browser always agree. |
+| Idempotency    | Each "new transaction" sheet carries an idempotency key; retries and double clicks return the original row. SMS imports use a key derived from the message text. Recurring occurrences are unique per (rule, date) and posted under `FOR UPDATE SKIP LOCKED`. |
+| Dates          | Calendar dates (`DATE`) plus an optional time of day, "today" resolved in your timezone (Settings), deterministic formatting so server and browser always agree. |
+| SMS            | The parser (`src/lib/sms`) is pure TypeScript and runs in the browser as you paste; the server re-validates every entry and checks for duplicates. |
 | UI             | Tailwind CSS v4 design tokens (`src/app/globals.css`), shadcn/ui-style primitives on Radix (`src/components/ui`), Motion, Recharts, Sonner, Vaul. |
 
 ```
 prisma/                  schema + migrations (views, CHECK constraints, default categories)
-scripts/                 bootstrap (creates the account) and hash-password
-src/proxy.ts             cookie presence + CSRF origin checks (first line only)
+public/                  service worker, offline page, app icons
+scripts/generate-icons.mjs  renders every icon from the logo
+assets/fonts/            Noto Sans Bengali for PDF reports (SIL OFL)
+src/proxy.ts             cookie presence + CSRF checks (first line only)
 src/app/(app)/           authenticated pages
 src/app/api/             route handlers (all authenticated except login/logout/health)
-src/lib/server/auth/     password hashing, sessions, rate limiting, guards
-src/lib/server/services/ accounts, transactions, analytics, budgets, recurring, reports…
+src/lib/sms/             SMS parser and bank/wallet list
+src/lib/server/auth/     password check, sessions, rate limiting, guards
+src/lib/server/services/ accounts, transactions, SMS import, analytics, budgets, recurring, reports…
 src/lib/server/export/   CSV, Excel and PDF generation
 src/components/          UI, by feature
 tests/                   unit + integration (Vitest, real Postgres), e2e (Playwright)
@@ -87,24 +170,37 @@ tests/                   unit + integration (Vitest, real Postgres), e2e (Playwr
 
 ## Security
 
-- **One account, no sign-up.** The account is created only by the bootstrap
-  step from `ADMIN_PASSWORD_HASH`. Nothing in the app can create users.
-- **Password** hashed with Argon2id (19 MiB, t=2). The plaintext is never
-  stored, logged or sent anywhere but the login request.
+- **One account, no sign-up.** The owner's row is created on the first
+  successful sign-in and the database allows only one. Nothing in the app can
+  create users.
+- **Password** is the `ADMIN_PASSWORD` variable, compared in constant time.
+  It is never stored in the database, logged, or sent anywhere but the
+  sign-in request. Each session is bound to the password it was created with
+  (an HMAC of the session id), so changing the variable signs out every
+  device.
 - **Sessions** are random 256-bit tokens in an `HttpOnly`, `Secure`,
   `SameSite=Lax`, `__Host-` cookie. Only the SHA-256 of the token is stored.
-  Sessions expire after 30 days, or after 7 days unused; changing the password
-  signs out every other device.
+  Sessions expire after 30 days, or after 7 days unused.
 - **Every request is checked twice**: the proxy rejects cookie-less requests,
   and every page and API handler validates the session against the database
   itself. Unauthenticated API calls get `401`, locked sessions `423`.
 - **Lock** — "Lock now" and auto-lock after inactivity (configurable, default
-  15 minutes) are enforced on the server: a locked session cannot read any data
-  until the password is entered again, even if the tab was closed.
-- **Brute force** — 5 failed attempts per IP and 30 overall per 15 minutes
-  (stored in the database, so it survives restarts). While limited, even the
-  correct password is refused, so the limiter never reveals a correct guess.
-- **CSRF** — state-changing API requests must be same-origin and JSON.
+  15 minutes) are enforced on the server: a locked session cannot read any
+  data until the password is entered again, even if the tab was closed. Five
+  wrong passwords on the lock screen sign that session out.
+- **Brute force** — sign-in allows 5 failed attempts per client and 30 overall
+  per 15 minutes (stored in the database, so it survives restarts). While
+  limited, even the correct password is refused, so the limiter never reveals
+  a correct guess. The client address is the first `X-Forwarded-For` entry,
+  which Railway's edge sets and clients can't override. Short passwords are
+  convenient; the limits are what keep them safe.
+- **CSRF** — state-changing API requests must be same-origin (checked with
+  `Sec-Fetch-Site`, falling back to `Origin`) and JSON.
+- **Shared SMS** arrive through the URL fragment, which browsers never send to
+  a server, so message text doesn't reach access logs. Posts from other sites
+  are refused.
+- **Service worker** stores only the offline page — never pages, API
+  responses or anything else containing your data.
 - **Headers** — CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, no-referrer
   leakage, `noindex`. API responses and exports are `no-store`.
 - **Injection** — all SQL is parameterised (Prisma tagged templates); exported
@@ -116,43 +212,18 @@ Requirements: Node.js 22, PostgreSQL 14+.
 
 ```bash
 npm install                      # also generates the Prisma client
-cp .env.example .env             # then edit DATABASE_URL
-npm run hash-password            # prompts for a password (12+ chars), prints its hash
-# put the printed value in .env as ADMIN_PASSWORD_HASH (use the base64: form in
-# .env files — some loaders expand "$" characters)
-npm run db:deploy                # apply migrations (creates tables, views, default categories)
-npm run bootstrap                # create the account from ADMIN_PASSWORD_HASH
+cp .env.example .env             # then set DATABASE_URL and ADMIN_PASSWORD
+npm run db:deploy                # apply migrations (tables, views, default categories)
 npm run dev                      # http://localhost:3000
 ```
 
 Changing the schema later: edit `prisma/schema.prisma`, run
 `npm run db:migrate -- --name <change>`, and commit the generated migration.
-
-## Deploying to Railway
-
-1. **Create a project** and add a **PostgreSQL** database service.
-2. **Add a service from this GitHub repository.** Railway reads
-   `railway.json`: it builds with `npm run build` and starts with `npm start`,
-   which runs `prisma migrate deploy`, the bootstrap step, then `next start`.
-   The health check is `/api/health`.
-3. **Set the service variables** (Variables tab):
-   - `DATABASE_URL` → `${{Postgres.DATABASE_URL}}` (a reference to the database)
-   - `ADMIN_PASSWORD_HASH` → the output of `npm run hash-password` (run it on
-     your own computer; the raw `$argon2id$…` value works, and so does the
-     `base64:…` form)
-   - optionally `ADMIN_DISPLAY_NAME`, `DEFAULT_CURRENCY`, `DEFAULT_TIMEZONE`
-4. **Deploy.** The first start creates the tables and your account. Then open
-   **Settings → Networking → Generate domain** and sign in.
-
-Railway terminates HTTPS and sets `X-Real-IP`, which the rate limiter uses.
-Nothing else is needed — secrets stay in Railway variables, never in the repo.
-
-**Forgot the password?** Generate a new hash, set it as `ADMIN_PASSWORD_HASH`,
-add `FORCE_PASSWORD_RESET=true`, redeploy, sign in — then remove
-`FORCE_PASSWORD_RESET`. This also signs out every existing session.
+After changing the logo, run `node scripts/generate-icons.mjs` to re-render
+the icons.
 
 **Production build locally:** `npm run build && npm start` (uses `PORT`,
-default 3000).
+default 3000). The service worker is only registered in production builds.
 
 ## Testing
 
@@ -177,17 +248,26 @@ idempotent and concurrent creation, cross-currency transfers, account history
 protection, database CHECK constraints, monthly and yearly analytics (including
 the worked example: income 80,000 / spending 35,000 incl. a 10,000 transfer /
 transfers 20,000 / savings 45,000 / 56.25%), budgets and thresholds, recurring
-schedules and duplicate-free posting, and — end to end — authentication,
-locking, 401s on every API route (with and without a forged cookie), CSRF,
-cookie flags, security headers, open redirects, rate limiting, invalid input,
-and the phone layout.
+schedules and duplicate-free posting; the SMS parser on real message formats
+(wallets, banks, cards, Bengali, OTPs, adverts), account and category
+matching, idempotent and concurrent SMS import, duplicate detection; the
+password variable, session binding, unlock limits; and — end to end —
+authentication, locking, SMS import, 401s on every API route (with and without
+a forged cookie), CSRF, cookie flags, security headers, open redirects, rate
+limiting, invalid input, public install files, the share target, and the
+phone layout.
 
 ## Known limitations
 
 - Analytics cover the main currency only; other-currency accounts are shown
   with their own balances but not converted.
-- The per-IP login limit relies on the platform proxy's `X-Real-IP`. Without
-  such a proxy it can be spoofed; the global limit still applies.
+- SMS reading is rule-based. Formats it doesn't know yet still import after a
+  quick review; anything uncertain is never added without you.
+- Sharing an SMS into the app works on Android (Chrome's installed apps);
+  on iPhone, copy and paste instead.
+- The per-client login limit relies on the platform proxy's
+  `X-Forwarded-For` (Railway sets it). Without such a proxy it can be
+  sidestepped; the global limit still applies.
 - Recurring transactions post when the app is opened (at most once a minute
   per server). Nothing is lost if the app isn't opened for a while — missed
   occurrences are posted with their original dates the next time.

@@ -118,7 +118,7 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
         </div>
 
         {status !== "ignored" && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pl-12 text-small text-text-secondary">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:pl-12 text-small text-text-secondary">
             {draft.type === "TRANSFER" ? (
               <span className="inline-flex min-w-0 items-center gap-1">
                 <span className={cn("truncate", !source && "text-warning-text")}>{source?.name ?? "Choose account"}</span>
@@ -144,7 +144,7 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
         )}
 
         {fee && status !== "ignored" && (
-          <label className="ml-12 flex items-center justify-between gap-3 rounded-lg bg-surface-subtle px-3 py-2 text-small">
+          <label className="sm:ml-12 flex items-center justify-between gap-3 rounded-lg bg-surface-subtle px-3 py-2 text-small">
             <span className="text-text-secondary">
               Also record the <Amount value={fee.amount || "0"} currency={currency} className="font-medium text-text" /> fee as an expense
             </span>
@@ -158,7 +158,7 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
         )}
 
         {balance && (
-          <p className={cn("ml-12 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-small", balance.matches ? "text-positive-text" : "text-text-tertiary")}>
+          <p className={cn("sm:ml-12 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-small", balance.matches ? "text-positive-text" : "text-text-tertiary")}>
             {balance.matches ? (
               <>
                 <CheckCircle2Icon className="size-3.5 shrink-0" />
@@ -178,10 +178,10 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
           </p>
         )}
 
-        {status === "ignored" && parsed.ignored && <p className="pl-12 text-small text-text-secondary">{IGNORE_REASON_LABELS[parsed.ignored]}.</p>}
+        {status === "ignored" && parsed.ignored && <p className="sm:pl-12 text-small text-text-secondary">{IGNORE_REASON_LABELS[parsed.ignored]}.</p>}
 
         {status === "review" && item.issues.length > 0 && (
-          <ul className="ml-12 flex flex-col gap-1 rounded-lg bg-warning-soft px-3 py-2 text-small text-warning-text">
+          <ul className="sm:ml-12 flex flex-col gap-1 rounded-lg bg-warning-soft px-3 py-2 text-small text-warning-text">
             {item.issues.map((issue) => (
               <li key={issue} className="flex items-start gap-1.5">
                 <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
@@ -192,7 +192,7 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
         )}
 
         {status === "duplicate" && item.similar && (
-          <div className="ml-12 flex flex-col gap-2 rounded-lg bg-warning-soft px-3 py-2.5 text-small text-warning-text">
+          <div className="sm:ml-12 flex flex-col gap-2 rounded-lg bg-warning-soft px-3 py-2.5 text-small text-warning-text">
             <p>
               Looks like this is already recorded: <span className="font-medium">{item.similar.description || "a transaction"}</span> ·{" "}
               <Amount value={item.similar.amount} currency={currency} /> · {item.similar.account} · {formatDate(item.similar.date, "short")}.
@@ -208,9 +208,9 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
           </div>
         )}
 
-        {status === "error" && item.error && <p className="ml-12 rounded-lg bg-negative-soft px-3 py-2 text-small text-negative-text">{item.error}</p>}
+        {status === "error" && item.error && <p className="sm:ml-12 rounded-lg bg-negative-soft px-3 py-2 text-small text-negative-text">{item.error}</p>}
 
-        <div className="flex flex-wrap items-center gap-2 pl-12">
+        <div className="flex flex-wrap items-center gap-2 sm:pl-12">
           {pending && status !== "duplicate" && (
             <Button size="sm" onClick={() => actions.onAdd()}>
               Add
@@ -268,7 +268,7 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.18 }}
-              className="ml-12"
+              className="sm:ml-12"
             >
               <div className="relative rounded-lg border border-border bg-surface-subtle p-3 pr-10">
                 <p className="whitespace-pre-wrap break-words font-mono text-caption leading-relaxed text-text-secondary">{item.text}</p>

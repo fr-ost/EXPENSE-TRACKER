@@ -21,7 +21,7 @@ export function SelectTrigger({
     <SelectPrimitive.Trigger
       className={cn(
         inputBase,
-        "flex h-10 items-center justify-between gap-2 text-left data-[placeholder]:text-text-quaternary [&>span]:flex [&>span]:min-w-0 [&>span]:items-center [&>span]:gap-2 [&>span]:truncate",
+        "flex h-10 items-center justify-between gap-2 text-left data-[placeholder]:text-text-tertiary [&>span]:flex [&>span]:min-w-0 [&>span]:items-center [&>span]:gap-2 [&>span]:truncate",
         className,
       )}
       {...field}
