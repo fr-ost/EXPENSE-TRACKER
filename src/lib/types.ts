@@ -174,3 +174,11 @@ export interface RecurringView {
   isActive: boolean;
   postedCount: number;
 }
+
+/** A signed-in device, as shown in Settings (no session identifiers). */
+export interface SessionInfo {
+  current: boolean;
+  signedIn: string;
+  lastActive: string;
+  device: string;
+}
