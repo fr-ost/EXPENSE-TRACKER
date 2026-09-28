@@ -51,6 +51,8 @@ export interface TransactionView {
   amount: Money;
   toAmount: Money | null;
   date: ISODate;
+  /** "HH:MM" when known. */
+  time: string | null;
   description: string;
   notes: string | null;
   account: AccountRef;
@@ -59,6 +61,8 @@ export interface TransactionView {
   countAsExpense: boolean;
   scope: ExpenseScope | null;
   recurringId: string | null;
+  /** Added from a bank or wallet SMS. */
+  fromSms: boolean;
   createdAt: string;
 }
 

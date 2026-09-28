@@ -1,9 +1,10 @@
 /**
  * Calendar dates as "YYYY-MM-DD" strings.
  *
- * Transactions happen on a calendar day, not an instant, so the app never
- * stores times for them. Arithmetic uses UTC so it is immune to the server's
- * timezone; "today" is resolved in the user's configured timezone.
+ * Transactions happen on a calendar day, not an instant: the date is what
+ * counts, with an optional local time of day ("HH:MM") alongside when known.
+ * Arithmetic uses UTC so it is immune to the server's timezone; "today" is
+ * resolved in the user's configured timezone.
  */
 
 export type ISODate = string;
@@ -51,6 +52,14 @@ export function todayInTimeZone(timeZone: string, now: Date = new Date()): ISODa
   } catch {
     return now.toISOString().slice(0, 10);
   }
+}
+
+/** "14:05" → "2:05 pm" (deterministic, so server and browser agree). */
+export function formatTime(value: string): string {
+  const match = /^(\d{2}):(\d{2})/.exec(value);
+  if (!match) return value;
+  const hour = Number(match[1]);
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${match[2]} ${hour < 12 ? "am" : "pm"}`;
 }
 
 export function isValidTimeZone(timeZone: string): boolean {

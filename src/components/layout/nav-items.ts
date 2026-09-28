@@ -3,6 +3,7 @@ import {
   BarChart3Icon,
   GaugeIcon,
   HouseIcon,
+  MessageSquareTextIcon,
   RepeatIcon,
   Settings2Icon,
   WalletIcon,
@@ -18,6 +19,7 @@ export interface NavItem {
 export const PRIMARY_NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: HouseIcon },
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRightIcon },
+  { href: "/sms", label: "Import SMS", icon: MessageSquareTextIcon },
   { href: "/accounts", label: "Accounts", icon: WalletIcon },
   { href: "/budgets", label: "Budgets", icon: GaugeIcon },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon },
@@ -34,6 +36,7 @@ export const MOBILE_TABS: NavItem[] = [
 ];
 
 export const MOBILE_MORE: NavItem[] = [
+  { href: "/sms", label: "Import SMS", icon: MessageSquareTextIcon },
   { href: "/budgets", label: "Budgets", icon: GaugeIcon },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon },
   { href: "/reports", label: "Reports", icon: BarChart3Icon },

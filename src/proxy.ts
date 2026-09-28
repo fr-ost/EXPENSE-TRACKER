@@ -43,7 +43,10 @@ export function proxy(request: NextRequest) {
 
   const hasSession = request.cookies.has(SESSION_COOKIE);
   if (hasSession || PUBLIC_PAGES.has(pathname) || PUBLIC_API.has(pathname)) {
-    return NextResponse.next();
+    // Pages use this to send you back where you were after unlocking.
+    const headers = new Headers(request.headers);
+    headers.set("x-hisab-path", `${pathname}${search}`);
+    return NextResponse.next({ request: { headers } });
   }
 
   if (isApi) {
@@ -54,8 +57,10 @@ export function proxy(request: NextRequest) {
   }
 
   const loginUrl = new URL("/login", request.url);
-  if (pathname !== "/" && pathname !== "/lock") loginUrl.searchParams.set("next", `${pathname}${search}`);
-  return NextResponse.redirect(loginUrl);
+  const replayable = request.method === "GET" || request.method === "HEAD";
+  if (replayable && pathname !== "/" && pathname !== "/lock") loginUrl.searchParams.set("next", `${pathname}${search}`);
+  // 303 turns a POST (e.g. a share into the app) into a GET of the sign-in page.
+  return NextResponse.redirect(loginUrl, replayable ? 307 : 303);
 }
 
 export const config = {

@@ -64,6 +64,12 @@ export const isoDate = z
 
 export const monthKey = z.string().refine(isValidMonthKey, "Choose a valid month");
 
+/** Time of day, "HH:MM" (24-hour). */
+export const timeOfDay = z
+  .string()
+  .trim()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a time like 14:30");
+
 export const id = z.string().trim().min(1).max(64);
 
 const description = z.string().trim().max(140, "Keep it under 140 characters").default("");
@@ -81,6 +87,8 @@ const notes = z
 const baseEntry = {
   amount: positiveAmount,
   date: isoDate,
+  /** Optional; omitted on edit means "keep the current time". */
+  time: timeOfDay.nullish(),
   description,
   notes,
 };
@@ -131,8 +139,40 @@ export const transactionInput = z.discriminatedUnion("type", [expenseInput, inco
 export type TransactionInput = z.infer<typeof transactionInput>;
 
 export const createTransactionInput = z.object({
-  idempotencyKey: z.string().trim().min(8).max(64).optional(),
+  // "sms:" keys are reserved for SMS imports (they mark a row as imported).
+  idempotencyKey: z.string().trim().min(8).max(64).refine((key) => !key.startsWith("sms:")).optional(),
   transaction: transactionInput,
+});
+
+// ---------------------------------------------------------------------------
+// SMS import
+// ---------------------------------------------------------------------------
+
+const smsText = z.string().trim().min(1, "Paste a message").max(2000, "That message is too long");
+
+export const smsImportInput = z.object({
+  items: z
+    .array(
+      z.object({
+        /** The original message; its fingerprint makes the import idempotent. */
+        text: smsText,
+        transaction: transactionInput,
+        /** A fee charged with it, recorded as a separate expense. */
+        fee: expenseInput.nullish().transform((v) => v ?? null),
+        /** Add even though a similar transaction is already recorded. */
+        allowDuplicate: z.boolean().default(false),
+      }),
+    )
+    .min(1)
+    .max(50),
+});
+export type SmsImportInput = z.infer<typeof smsImportInput>;
+
+export const smsCheckInput = z.object({
+  items: z
+    .array(z.object({ text: smsText, description: z.string().trim().max(140).default("") }))
+    .min(1)
+    .max(50),
 });
 
 // ---------------------------------------------------------------------------

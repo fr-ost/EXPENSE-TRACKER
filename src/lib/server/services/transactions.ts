@@ -51,6 +51,7 @@ export interface ExistingEntry {
   accountId: string;
   toAccountId: string | null;
   categoryId: string | null;
+  time?: string | null;
 }
 
 /**
@@ -77,6 +78,7 @@ export async function resolveEntry(
   const base = {
     amount: input.amount,
     date: toDbDate(input.date),
+    time: input.time === undefined ? (existing?.time ?? null) : input.time,
     description: input.description,
     notes: input.notes,
     accountId: account.id,
@@ -169,7 +171,7 @@ export async function updateTransaction(id: string, input: TransactionInput, tod
   return prisma.$transaction(async (tx) => {
     const existing = await tx.transaction.findUnique({
       where: { id },
-      select: { type: true, accountId: true, toAccountId: true, categoryId: true },
+      select: { type: true, accountId: true, toAccountId: true, categoryId: true, time: true },
     });
     if (!existing) throw notFound("Transaction");
     if (existing.type === "ADJUSTMENT") {
@@ -231,16 +233,23 @@ export function buildTransactionWhere(filters: TransactionFilters): Prisma.Trans
   return and.length ? { AND: and } : {};
 }
 
+/** Newest first by default; within a day, entries with a time of day come in time order. */
+export const NEWEST_FIRST: Prisma.TransactionOrderByWithRelationInput[] = [
+  { date: "desc" },
+  { time: { sort: "desc", nulls: "last" } },
+  { createdAt: "desc" },
+];
+
 export function transactionOrderBy(sort: TransactionFilters["sort"]): Prisma.TransactionOrderByWithRelationInput[] {
   switch (sort) {
     case "oldest":
-      return [{ date: "asc" }, { createdAt: "asc" }];
+      return [{ date: "asc" }, { time: { sort: "asc", nulls: "first" } }, { createdAt: "asc" }];
     case "highest":
-      return [{ amount: "desc" }, { date: "desc" }];
+      return [{ amount: "desc" }, ...NEWEST_FIRST];
     case "lowest":
-      return [{ amount: "asc" }, { date: "desc" }];
+      return [{ amount: "asc" }, ...NEWEST_FIRST];
     default:
-      return [{ date: "desc" }, { createdAt: "desc" }];
+      return NEWEST_FIRST;
   }
 }
 
@@ -288,7 +297,7 @@ export async function recentTransactions(limit: number, today: ISODate): Promise
   const rows = await prisma.transaction.findMany({
     where: { date: { lte: toDbDate(today) } },
     include: transactionInclude,
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    orderBy: NEWEST_FIRST,
     take: limit,
   });
   return rows.map(toTransactionView);

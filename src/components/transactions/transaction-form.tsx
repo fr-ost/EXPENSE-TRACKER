@@ -34,6 +34,7 @@ export function TransactionFields({
   accounts,
   autoFocusAmount,
   dateLabel = "Date",
+  withTime = false,
 }: {
   draft: TransactionDraft;
   update: (patch: Partial<TransactionDraft>) => void;
@@ -41,6 +42,8 @@ export function TransactionFields({
   accounts: AccountSummary[];
   autoFocusAmount?: boolean;
   dateLabel?: string;
+  /** Offer an optional time of day next to the date (not for recurring rules). */
+  withTime?: boolean;
 }) {
   const { categories, today } = useAppData();
   const format = useFormatMoney();
@@ -57,6 +60,10 @@ export function TransactionFields({
     const category = expenseCategories.find((c) => c.id === id);
     update({ expenseCategoryId: id, scope: category?.defaultScope ?? draft.scope });
   };
+
+  const timeProps = withTime
+    ? { time: draft.time, onTimeChange: (time: string) => update({ time }), timeError: errors.time }
+    : {};
 
   const setType = (type: EntryType) => {
     const patch: Partial<TransactionDraft> = { type };
@@ -135,7 +142,7 @@ export function TransactionFields({
             onChange={(accountId) => update({ accountId })}
             error={errors.accountId}
           />
-          <DateField label={dateLabel} value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} />
+          <DateField label={dateLabel} value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} {...timeProps} />
         </div>
       )}
 
@@ -168,7 +175,7 @@ export function TransactionFields({
 
       {draft.type === "TRANSFER" && (
         <>
-          <DateField label={dateLabel} value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} />
+          <DateField label={dateLabel} value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} {...timeProps} />
           <div className="rounded-lg border border-border bg-surface-subtle p-4">
             <label className="flex items-start justify-between gap-4">
               <span className="flex flex-col gap-0.5">

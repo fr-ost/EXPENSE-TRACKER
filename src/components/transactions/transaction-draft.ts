@@ -14,6 +14,8 @@ export interface TransactionDraft {
   scope: ExpenseScope;
   countAsExpense: boolean;
   date: ISODate;
+  /** "HH:MM" or "" when not recorded. */
+  time: string;
   description: string;
   notes: string;
 }
@@ -65,6 +67,7 @@ export function newDraft(
     scope: "PERSONAL",
     countAsExpense: false,
     date: defaults.date ?? today,
+    time: "",
     description: "",
     notes: "",
   };
@@ -84,6 +87,7 @@ export function draftFromTransaction(tx: TransactionView): TransactionDraft {
     scope: tx.scope ?? "PERSONAL",
     countAsExpense: tx.countAsExpense,
     date: tx.date,
+    time: tx.time ?? "",
     description: tx.description,
     notes: tx.notes ?? "",
   };
@@ -94,6 +98,7 @@ export function draftToInput(draft: TransactionDraft, needsToAmount: boolean) {
   const common = {
     amount: draft.amount,
     date: draft.date,
+    time: draft.time || null,
     description: draft.description,
     notes: draft.notes || null,
     accountId: draft.accountId,

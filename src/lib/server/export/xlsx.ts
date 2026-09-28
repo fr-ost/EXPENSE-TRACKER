@@ -25,7 +25,7 @@ function addTransactionsSheet(workbook: ExcelJS.Workbook, rows: ExportRow[]) {
   sheet.columns = EXPORT_COLUMNS.map((c) => ({
     header: c.header,
     key: c.key,
-    width: c.key === "description" || c.key === "notes" ? 32 : c.numeric ? 16 : 16,
+    width: c.key === "description" || c.key === "notes" ? 32 : c.key === "time" ? 8 : 16,
     style: c.numeric ? { numFmt: MONEY_FORMAT } : undefined,
   }));
   styleHeader(sheet.getRow(1));

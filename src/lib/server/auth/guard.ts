@@ -1,7 +1,8 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { locked, unauthorized } from "../errors";
 import { SESSION_COOKIE, readSession, touchSession, type SessionState } from "./session";
 
@@ -17,8 +18,12 @@ export const getSession = cache(async (): Promise<SessionState | null> => {
  */
 export async function requirePageSession(): Promise<SessionState> {
   const session = await getSession();
-  if (!session) redirect("/login");
-  if (session.locked) redirect("/lock");
+  if (!session || session.locked) {
+    // Come back to this page afterwards (the proxy passes the requested path along).
+    const path = safeRedirectPath((await headers()).get("x-hisab-path"), "");
+    const next = path ? `?next=${encodeURIComponent(path)}` : "";
+    redirect(session ? `/lock${next}` : `/login${next}`);
+  }
   await touchSession(session.id);
   return session;
 }

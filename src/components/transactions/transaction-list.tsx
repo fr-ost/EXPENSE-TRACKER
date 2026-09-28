@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowRightIcon, RepeatIcon } from "lucide-react";
+import { ArrowRightIcon, MessageSquareTextIcon, RepeatIcon } from "lucide-react";
 import { motion } from "motion/react";
 import * as React from "react";
 import { Amount } from "@/components/app-data";
 import { IconBadge } from "@/components/icon";
 import { Badge } from "@/components/ui/misc";
-import { formatRelativeDay, type ISODate } from "@/lib/dates";
+import { formatRelativeDay, formatTime, type ISODate } from "@/lib/dates";
 import { SCOPE_META } from "@/lib/domain";
 import type { TransactionView } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -101,6 +101,7 @@ function TransactionRow({
         : { icon: tx.category?.icon ?? "circle-dashed", color: tx.category?.color ?? "gray" };
 
   const meta: React.ReactNode[] = [];
+  if (tx.time) meta.push(<span key="time" className="tabular">{formatTime(tx.time)}</span>);
   if (tx.type === "TRANSFER") {
     meta.push(
       <span key="route" className="inline-flex min-w-0 items-center gap-1">
@@ -140,6 +141,7 @@ function TransactionRow({
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-body font-medium text-text">{transactionTitle(tx)}</span>
           {tx.recurringId && <RepeatIcon className="size-3 shrink-0 text-text-quaternary" aria-label="Recurring" />}
+          {tx.fromSms && <MessageSquareTextIcon className="size-3 shrink-0 text-text-quaternary" aria-label="Added from SMS" />}
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-small text-text-tertiary">
           {meta.map((node, i) => (

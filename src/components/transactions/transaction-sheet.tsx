@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2Icon, WalletIcon } from "lucide-react";
+import { MessageSquareTextIcon, Trash2Icon, WalletIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -218,7 +218,17 @@ function TransactionSheet({ state, onClose }: { state: SheetState; onClose: () =
           <AdjustmentDetails transaction={editing} onDelete={() => setConfirmDelete(true)} />
         ) : (
           <form id={formId} onSubmit={submit} noValidate>
-            <TransactionFields draft={draft} update={update} errors={errors} accounts={usable} autoFocusAmount={!editing} />
+            {!editing && (
+              <Link
+                href="/sms"
+                onClick={onClose}
+                className="-mt-1 mb-4 flex items-center gap-2 rounded-lg bg-surface-subtle px-3 py-2 text-small text-text-secondary transition-colors hover:bg-surface-muted hover:text-text"
+              >
+                <MessageSquareTextIcon className="size-4 shrink-0 text-text-tertiary" />
+                Have a bank or bKash SMS? <span className="font-medium text-accent-text">Paste it instead</span>
+              </Link>
+            )}
+            <TransactionFields draft={draft} update={update} errors={errors} accounts={usable} autoFocusAmount={!editing} withTime />
             {needsTwoAccounts && (
               <p className="mt-4 text-small text-text-secondary">
                 Transfers need two accounts.{" "}

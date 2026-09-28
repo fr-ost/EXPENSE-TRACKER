@@ -32,6 +32,7 @@ function draftFromRule(rule: RecurringView): TransactionDraft {
     scope: rule.scope ?? "PERSONAL",
     countAsExpense: rule.countAsExpense,
     date: rule.startDate,
+    time: "",
     description: rule.description,
     notes: rule.notes ?? "",
   };

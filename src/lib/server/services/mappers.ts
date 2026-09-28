@@ -57,6 +57,7 @@ export function toTransactionView(row: TransactionWithRefs): TransactionView {
     amount: money(row.amount),
     toAmount: moneyOrNull(row.toAmount),
     date: fromDbDate(row.date),
+    time: row.time,
     description: row.description,
     notes: row.notes,
     account: toAccountRef(row.account),
@@ -65,6 +66,7 @@ export function toTransactionView(row: TransactionWithRefs): TransactionView {
     countAsExpense: row.countAsExpense,
     scope: row.scope,
     recurringId: row.recurringId,
+    fromSms: row.idempotencyKey?.startsWith("sms:") ?? false,
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -12,6 +12,7 @@ export const EXPORT_ROW_LIMIT = 100_000;
 
 export interface ExportRow {
   date: string;
+  time: string;
   type: string;
   /** How the row counts in reports: Income, Spending, Transfer or Adjustment. */
   countsAs: string;
@@ -30,6 +31,7 @@ export interface ExportRow {
 
 export const EXPORT_COLUMNS: Array<{ key: keyof ExportRow; header: string; numeric?: boolean }> = [
   { key: "date", header: "Date" },
+  { key: "time", header: "Time" },
   { key: "type", header: "Type" },
   { key: "countsAs", header: "Counts as" },
   { key: "description", header: "Description" },
@@ -50,11 +52,12 @@ export async function exportTransactionRows(filters: TransactionFilters): Promis
   const rows = await prisma.transaction.findMany({
     where: buildTransactionWhere(filters),
     include: transactionInclude,
-    orderBy: filters.sort ? transactionOrderBy(filters.sort) : [{ date: "asc" }, { createdAt: "asc" }],
+    orderBy: transactionOrderBy(filters.sort ?? "oldest"),
     take: EXPORT_ROW_LIMIT,
   });
   return rows.map((row) => ({
     date: fromDbDate(row.date),
+    time: row.time ?? "",
     type: TRANSACTION_TYPE_LABELS[row.type],
     countsAs:
       row.type === "INCOME"

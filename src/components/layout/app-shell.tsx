@@ -37,7 +37,7 @@ export function AppShell({ autoLockMinutes, children }: { autoLockMinutes: numbe
     const onKey = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== "n" || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable=true], [role=dialog]")) return;
+      if (target?.closest("input, textarea, select, [contenteditable=true], [role=dialog], [role=listbox], [role=menu], [role=combobox]")) return;
       event.preventDefault();
       openCreate();
     };

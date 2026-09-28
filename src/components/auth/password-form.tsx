@@ -38,7 +38,8 @@ export function PasswordForm({
     try {
       await api(endpoint, { body: { password }, handleAuth: false });
       setDone(true);
-      router.replace(redirectTo);
+      // Keep a fragment (e.g. a message shared into the app) across the redirect.
+      router.replace(`${redirectTo}${window.location.hash}`);
       router.refresh();
     } catch (err) {
       if (err instanceof ApiClientError && (err.code === "signed_out" || (endpoint === "/api/auth/unlock" && err.code === "unauthorized"))) {
