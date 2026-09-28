@@ -8,7 +8,7 @@ import { SESSION_COOKIE } from "@/lib/auth-cookie";
  */
 
 const PUBLIC_PAGES = new Set(["/login"]);
-const PUBLIC_API = new Set(["/api/auth/login", "/api/auth/logout"]);
+const PUBLIC_API = new Set(["/api/auth/login", "/api/auth/logout", "/api/health"]);
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function expectedHost(request: NextRequest): string | null {

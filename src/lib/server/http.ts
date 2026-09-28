@@ -45,15 +45,20 @@ function isCheckViolation(error: unknown): boolean {
   return /23514|check constraint/i.test(text);
 }
 
-/** Parse a JSON body against a schema. Requires a JSON content type. */
+/** No legitimate request body in this app comes close to this. */
+const MAX_BODY_BYTES = 64 * 1024;
+
+/** Parse a JSON body against a schema. Requires a JSON content type and a small body. */
 export async function readJson<T>(request: Request, schema: ZodType<T>): Promise<T> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
     throw new AppError(415, "unsupported_media_type", "Expected a JSON request body.");
   }
+  const text = await request.text();
+  if (text.length > MAX_BODY_BYTES) throw new AppError(413, "payload_too_large", "The request is too large.");
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(text);
   } catch {
     throw invalid("The request body is not valid JSON.");
   }

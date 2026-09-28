@@ -22,14 +22,22 @@ import { MAX_MINOR, toMinor } from "./money";
 const AMOUNT_INPUT = /^\d{1,12}(\.\d{1,2})?$/;
 const SIGNED_AMOUNT_INPUT = /^-?\d{1,12}(\.\d{1,2})?$/;
 
+/**
+ * Minor units, or null for malformed input. Zod 4 runs refinements even after
+ * a failed regex check, so they must never throw on bad input.
+ */
+function minorOrNull(value: string): bigint | null {
+  return SIGNED_AMOUNT_INPUT.test(value) ? toMinor(value) : null;
+}
+
 /** A strictly positive amount with at most two decimals. */
 export const positiveAmount = z
   .string({ error: "Enter an amount" })
   .trim()
   .min(1, "Enter an amount")
   .regex(AMOUNT_INPUT, "Use numbers only, with up to 2 decimals")
-  .refine((v) => toMinor(v) > 0n, "Amount must be greater than zero")
-  .refine((v) => toMinor(v) <= MAX_MINOR, "Amount is too large");
+  .refine((v) => (minorOrNull(v) ?? 1n) > 0n, "Amount must be greater than zero")
+  .refine((v) => (minorOrNull(v) ?? 0n) <= MAX_MINOR, "Amount is too large");
 
 /** Zero or positive amount (e.g. budgets, where 0 removes the budget). */
 export const nonNegativeAmount = z
@@ -37,7 +45,7 @@ export const nonNegativeAmount = z
   .trim()
   .min(1, "Enter an amount")
   .regex(AMOUNT_INPUT, "Use numbers only, with up to 2 decimals")
-  .refine((v) => toMinor(v) <= MAX_MINOR, "Amount is too large");
+  .refine((v) => (minorOrNull(v) ?? 0n) <= MAX_MINOR, "Amount is too large");
 
 /** Signed amount (opening balances can be negative, e.g. a credit card). */
 export const signedAmount = z
@@ -46,7 +54,7 @@ export const signedAmount = z
   .min(1, "Enter an amount")
   .regex(SIGNED_AMOUNT_INPUT, "Use numbers only, with up to 2 decimals")
   .refine((v) => {
-    const minor = toMinor(v);
+    const minor = minorOrNull(v) ?? 0n;
     return minor <= MAX_MINOR && minor >= -MAX_MINOR;
   }, "Amount is too large");
 
