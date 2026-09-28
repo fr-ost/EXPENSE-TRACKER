@@ -1,0 +1,227 @@
+// Hisab — private personal finance ledger.
+//
+// Money columns are NUMERIC(14,2); never floats. Account balances are NOT
+// stored: they are derived from the transaction ledger through the
+// "LedgerEntry" view (see the init migration). Invariants that Prisma cannot
+// express (CHECK constraints, views) live in the migration SQL.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AccountType {
+  CASH
+  BANK
+  MOBILE_WALLET
+  CARD
+  EXCHANGE
+  OTHER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum CategoryKind {
+  INCOME
+  EXPENSE
+}
+
+/// Who an expense was for. Drives the Family / Personal / Other analytics.
+enum ExpenseScope {
+  FAMILY
+  PERSONAL
+  OTHER
+}
+
+enum RecurrenceFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum NumberFormat {
+  SOUTH_ASIAN
+  INTERNATIONAL
+}
+
+/// Exactly one row may exist (enforced by the unique `singleton` column plus a
+/// CHECK constraint). There is no sign-up path anywhere in the application.
+model User {
+  id                String       @id @default(cuid())
+  singleton         Boolean      @unique @default(true)
+  displayName       String       @default("") @db.VarChar(60)
+  passwordHash      String
+  baseCurrency      String       @default("BDT") @db.Char(3)
+  timezone          String       @default("Asia/Dhaka") @db.VarChar(64)
+  numberFormat      NumberFormat @default(SOUTH_ASIAN)
+  /// Minutes of inactivity before the app locks. 0 disables auto-lock.
+  autoLockMinutes   Int          @default(15)
+  passwordChangedAt DateTime     @default(now())
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  sessions          Session[]
+}
+
+/// Server-side session. `id` is the SHA-256 of the cookie token, so a database
+/// leak does not yield usable session cookies.
+model Session {
+  id         String    @id @db.Char(64)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  lastSeenAt DateTime  @default(now())
+  lockedAt   DateTime?
+  userAgent  String?   @db.VarChar(255)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Login / unlock attempts, used for brute-force protection. Stored in the
+/// database so limits survive restarts and redeploys.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  ip        String   @db.VarChar(64)
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([ip, createdAt])
+}
+
+/// Where money physically lives.
+model Account {
+  id                  String                 @id @default(cuid())
+  name                String                 @unique @db.VarChar(60)
+  type                AccountType
+  currency            String                 @default("BDT") @db.Char(3)
+  openingBalance      Decimal                @default(0) @db.Decimal(14, 2)
+  openingDate         DateTime               @db.Date
+  isActive            Boolean                @default(true)
+  icon                String?                @db.VarChar(32)
+  color               String?                @db.VarChar(16)
+  sortOrder           Int                    @default(0)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  transactions        Transaction[]          @relation("TransactionAccount")
+  incomingTransfers   Transaction[]          @relation("TransferDestination")
+  recurring           RecurringTransaction[] @relation("RecurringAccount")
+  recurringIncoming   RecurringTransaction[] @relation("RecurringDestination")
+}
+
+model Category {
+  id           String                 @id @default(cuid())
+  name         String                 @db.VarChar(40)
+  kind         CategoryKind
+  /// Default classification for new expenses in this category.
+  defaultScope ExpenseScope?
+  icon         String                 @db.VarChar(32)
+  color        String                 @db.VarChar(16)
+  isArchived   Boolean                @default(false)
+  sortOrder    Int                    @default(0)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  transactions Transaction[]
+  budgets      Budget[]
+  recurring    RecurringTransaction[]
+
+  @@unique([kind, name])
+}
+
+/// One row per financial event.
+///
+/// - INCOME / EXPENSE: `accountId` is the account; `amount` > 0.
+/// - TRANSFER: `accountId` is the source, `toAccountId` the destination.
+///   `toAmount` is set only when the two accounts use different currencies.
+///   `countAsExpense` additionally recognises the amount as spending
+///   (requires a category) without moving money twice.
+/// - ADJUSTMENT: reconciliation correction; `amount` is signed and non-zero.
+model Transaction {
+  id             String                @id @default(cuid())
+  type           TransactionType
+  amount         Decimal               @db.Decimal(14, 2)
+  date           DateTime              @db.Date
+  accountId      String
+  account        Account               @relation("TransactionAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  toAccountId    String?
+  toAccount      Account?              @relation("TransferDestination", fields: [toAccountId], references: [id], onDelete: Restrict)
+  toAmount       Decimal?              @db.Decimal(14, 2)
+  categoryId     String?
+  category       Category?             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  countAsExpense Boolean               @default(false)
+  scope          ExpenseScope?
+  description    String                @default("") @db.VarChar(140)
+  notes          String?               @db.VarChar(2000)
+  recurringId    String?
+  recurring      RecurringTransaction? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+  occurrenceDate DateTime?             @db.Date
+  /// Client-generated key that makes "create" idempotent (double-submit safe).
+  idempotencyKey String?               @unique @db.VarChar(64)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@unique([recurringId, occurrenceDate])
+  @@index([date])
+  @@index([accountId, date])
+  @@index([toAccountId, date])
+  @@index([categoryId, date])
+  @@index([type, date])
+}
+
+/// Effective-dated monthly budget. The budget for month M is the row with the
+/// latest `effectiveFrom` <= M, so changing a budget never rewrites history.
+/// An amount of 0 means "no budget from this month on".
+model Budget {
+  id            String   @id @default(cuid())
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  effectiveFrom DateTime @db.Date
+  amount        Decimal  @db.Decimal(14, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([categoryId, effectiveFrom])
+}
+
+/// A rule that materialises transactions on schedule. Occurrence k falls on
+/// startDate + k periods (month-end clamped), so a rule anchored on the 31st
+/// posts on Feb 28/29 and returns to the 31st in March.
+model RecurringTransaction {
+  id              String              @id @default(cuid())
+  type            TransactionType
+  amount          Decimal             @db.Decimal(14, 2)
+  accountId       String
+  account         Account             @relation("RecurringAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  toAccountId     String?
+  toAccount       Account?            @relation("RecurringDestination", fields: [toAccountId], references: [id], onDelete: Restrict)
+  toAmount        Decimal?            @db.Decimal(14, 2)
+  categoryId      String?
+  category        Category?           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  countAsExpense  Boolean             @default(false)
+  scope           ExpenseScope?
+  description     String              @default("") @db.VarChar(140)
+  notes           String?             @db.VarChar(2000)
+  frequency       RecurrenceFrequency
+  startDate       DateTime            @db.Date
+  endDate         DateTime?           @db.Date
+  /// Index of the next occurrence to post (0-based from startDate).
+  occurrenceIndex Int                 @default(0)
+  /// Date of the next occurrence; null once the rule has run past endDate.
+  nextOccurrence  DateTime?           @db.Date
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  transactions    Transaction[]
+
+  @@index([isActive, nextOccurrence])
+}
