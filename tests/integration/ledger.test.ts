@@ -93,9 +93,10 @@ describe("ledger balances", () => {
     expect(await balance(bank)).toBe("90000.00");
     expect(await balance(familyWallet)).toBe("10000.00");
 
+    // Counted once as spending; not also reported as a plain transfer.
     const page = await listTransactions({ month: "2026-09" }, "BDT");
     expect(page.summary.expenses).toBe("10000.00");
-    expect(page.summary.transfers).toBe("10000.00");
+    expect(page.summary.transfers).toBe("0.00");
 
     // Total money across accounts is unchanged by the transfer itself.
     const accounts = await listAccounts(TODAY);

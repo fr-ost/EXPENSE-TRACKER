@@ -66,7 +66,9 @@ export interface TransactionListSummary {
   /** Totals are for accounts in the base currency. */
   currency: string;
   income: Money;
+  /** Expenses + transfers counted as expense. */
   expenses: Money;
+  /** Transfers not counted as expense. */
   transfers: Money;
 }
 
@@ -92,7 +94,7 @@ export interface PeriodSummary {
   expenses: Money;
   directExpenses: Money;
   transferExpenses: Money;
-  /** All transfers between own accounts (balance movement, not spending). */
+  /** Transfers between own accounts that are not counted as spending (pure movement). */
   transfers: Money;
   transferCount: number;
   adjustments: Money;

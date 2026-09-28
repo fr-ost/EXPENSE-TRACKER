@@ -270,7 +270,7 @@ export async function listTransactions(filters: TransactionFilters, baseCurrency
   for (const group of groups) {
     const sum = money(group._sum.amount);
     if (group.type === "INCOME") income = addMoney(income, sum);
-    if (group.type === "TRANSFER") transfers = addMoney(transfers, sum);
+    if (group.type === "TRANSFER" && !group.countAsExpense) transfers = addMoney(transfers, sum);
     if (isRecognizedExpense(group.type, group.countAsExpense)) expenses = addMoney(expenses, sum);
   }
 
