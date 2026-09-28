@@ -2,7 +2,7 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { monthEnd, monthStart, type ISODate, type MonthKey } from "@/lib/dates";
 import type { AccountType, ExpenseScope } from "@/lib/domain";
-import { compareMoney, fromMinor, percentOf, subtractMoney, toMinor, type Money } from "@/lib/money";
+import { compareMoney, fromMinor, percentOf, subtractMoney, toMinor } from "@/lib/money";
 import type { AccountActivity, CategoryTotal, DayPoint, MonthPoint, PeriodSummary, ScopeTotal } from "@/lib/types";
 import { prisma } from "../db";
 import { money } from "./mappers";

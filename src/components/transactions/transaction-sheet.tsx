@@ -143,12 +143,12 @@ function TransactionSheet({ state, onClose }: { state: SheetState; onClose: () =
       onClose();
       router.refresh();
     } catch (error) {
+      // Re-enable only on failure: after success the sheet is closing and must not submit twice.
+      setPending(false);
       if (error instanceof ApiClientError && Object.keys(error.fieldErrors).length) {
         setErrors(error.fieldErrors);
       }
       toast.error(errorMessage(error));
-    } finally {
-      setPending(false);
     }
   }
 

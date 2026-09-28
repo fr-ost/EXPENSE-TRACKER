@@ -13,7 +13,7 @@ export function DashboardHero({ total, foreign }: { total: Money; foreign: Array
       <span className="text-small font-medium text-text-tertiary">Total balance</span>
       <AnimatedAmount
         value={total}
-        className={`text-[2.75rem] font-semibold leading-none tracking-[-0.04em] sm:text-[3.5rem] ${total.startsWith("-") ? "text-negative-text" : "text-text"}`}
+        className={`text-[clamp(2.25rem,11.5vw,3.5rem)] font-semibold leading-none tracking-[-0.04em] ${total.startsWith("-") ? "text-negative-text" : "text-text"}`}
       />
       <span className="text-small text-text-tertiary">
         Across {count} {count === 1 ? "account" : "accounts"}

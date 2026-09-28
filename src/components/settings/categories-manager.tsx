@@ -18,7 +18,7 @@ export function CategoriesManager({ categories }: { categories: CategoryWithUsag
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl
           ariaLabel="Category kind"
           size="sm"

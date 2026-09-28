@@ -1,3 +1,4 @@
+import { BarChart3Icon } from "lucide-react";
 import type { Metadata } from "next";
 import { Amount } from "@/components/app-data";
 import { CashflowChart } from "@/components/charts/cashflow-chart";
@@ -6,6 +7,8 @@ import { SavingsChart } from "@/components/charts/savings-chart";
 import { PageHeader } from "@/components/layout/page-header";
 import { PeriodControls } from "@/components/reports/period-controls";
 import { AccountActivityTable, CategoryTable, Highlight, ScopeColumns, Statement } from "@/components/reports/report-sections";
+import { EmptyState } from "@/components/states";
+import { NewTransactionButton } from "@/components/transactions/new-transaction-button";
 import { Card, CardHeader } from "@/components/ui/misc";
 import { formatMonth } from "@/lib/dates";
 import { SCOPE_META } from "@/lib/domain";
@@ -23,6 +26,21 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const family = report.scopes.find((x) => x.scope === "FAMILY");
   const personal = report.scopes.find((x) => x.scope === "PERSONAL");
   const rate = s.savingsRate === null ? "—" : `${s.savingsRate.toFixed(1)}%`;
+  const empty = [s.income, s.expenses, s.transfers, s.adjustments].every((v) => v === "0.00");
+
+  if (empty) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Reports" description={report.label} actions={<PeriodControls period={period} today={today} />} />
+        <EmptyState
+          icon={<BarChart3Icon />}
+          title={`Nothing recorded in ${report.label}`}
+          description="Choose another period, or add transactions from this time — older entries are welcome and balances stay correct."
+          action={<NewTransactionButton label="Add a transaction" />}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

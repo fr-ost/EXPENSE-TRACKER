@@ -21,8 +21,9 @@
   --ink: #0e0e12;
   --ink-soft: #2a2a33;
   --text: #0e0e12;
-  --text-secondary: #5c5c69;
-  --text-tertiary: #8a8a97;
+  /* Text grays meet WCAG AA (≥ 4.5:1) on every surface they sit on. */
+  --text-secondary: #4f4f5c;
+  --text-tertiary: #6e6e7b;
   --text-quaternary: #b3b3bd;
   --border: #ebebef;
   --border-strong: #dcdce2;
@@ -70,7 +71,7 @@
   --chart-income: #2e9e62;
   --chart-expense: #3a7bd5;
   --chart-grid: #f0f0f3;
-  --chart-axis: #9a9aa6;
+  --chart-axis: #6e6e7b;
   --chart-muted: #c9c9d1;
 
   /* Radius */

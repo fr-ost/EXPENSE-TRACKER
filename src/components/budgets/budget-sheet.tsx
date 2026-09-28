@@ -51,9 +51,9 @@ export function BudgetSheet({
       onOpenChange(false);
       router.refresh();
     } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
+      // Re-enable only on failure: after success the sheet is closing and must not submit twice.
       setPending(null);
+      toast.error(errorMessage(err));
     }
   }
 

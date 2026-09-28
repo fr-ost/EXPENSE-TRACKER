@@ -15,7 +15,6 @@ export function AnimatedAmount({ value, currency, className }: { value: Money; c
   const reduceMotion = useReducedMotion();
   const exact = format(value, { currency });
   const [text, setText] = React.useState(exact);
-  const ref = React.useRef<HTMLSpanElement>(null);
   const started = React.useRef(false);
 
   React.useEffect(() => {
@@ -35,7 +34,8 @@ export function AnimatedAmount({ value, currency, className }: { value: Money; c
   }, [value, currency, exact, format, reduceMotion]);
 
   return (
-    <span ref={ref} className={cn("whitespace-nowrap", className)} aria-label={exact}>
+    <span className={cn("whitespace-nowrap", className)}>
+      <span className="sr-only">{exact}</span>
       <span aria-hidden>{text}</span>
     </span>
   );

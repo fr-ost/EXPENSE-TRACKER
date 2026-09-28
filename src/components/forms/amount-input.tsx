@@ -45,10 +45,12 @@ export function AmountInput({
         <span className="translate-y-[-2px] text-[1.75rem] font-medium text-text-tertiary">
           {currencySymbol(currency).trim()}
         </span>
-        <span className="inline-grid min-w-[1ch] max-w-[calc(100vw-7rem)]">
+        {/* The hidden text sizes the box; the input sits on top of it, so the
+            input's own intrinsic width never affects the layout. */}
+        <span className="relative inline-block min-w-[1ch] max-w-[calc(100vw-7rem)]">
           <span
             aria-hidden
-            className="invisible col-start-1 row-start-1 whitespace-pre text-[2.75rem] font-semibold tracking-[-0.03em] tabular sm:text-[3rem]"
+            className="invisible block overflow-hidden whitespace-pre text-[2.75rem] font-semibold tracking-[-0.03em] tabular sm:text-[3rem]"
           >
             {display || "0"}
           </span>
@@ -65,7 +67,7 @@ export function AmountInput({
             onChange={(e) => onChange(sanitizeAmountInput(e.target.value))}
             aria-invalid={!!error || undefined}
             aria-describedby={error ? `${id}-error` : undefined}
-            className="col-start-1 row-start-1 w-full min-w-0 bg-transparent p-0 text-center text-[2.75rem] font-semibold tracking-[-0.03em] text-inherit tabular caret-accent outline-none placeholder:text-text-quaternary focus-visible:outline-none sm:text-[3rem]"
+            className="absolute inset-0 w-full min-w-0 bg-transparent p-0 text-center text-[2.75rem] font-semibold tracking-[-0.03em] text-inherit tabular caret-accent outline-none placeholder:text-text-quaternary focus-visible:outline-none sm:text-[3rem]"
           />
         </span>
       </div>

@@ -88,10 +88,10 @@ export function AccountFormSheet({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
+      // Re-enable only on failure: after success the sheet is closing and must not submit twice.
+      setPending(false);
       if (error instanceof ApiClientError) setErrors(error.fieldErrors);
       toast.error(errorMessage(error));
-    } finally {
-      setPending(false);
     }
   }
 

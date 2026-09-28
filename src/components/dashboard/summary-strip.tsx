@@ -102,7 +102,8 @@ function Definitions({ summary }: { summary: PeriodSummary }) {
     <Popover>
       <PopoverTrigger className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-caption font-medium text-text-tertiary transition-colors hover:bg-surface-muted hover:text-text">
         <InfoIcon className="size-3.5" />
-        How these are calculated
+        <span className="hidden sm:inline">How these are calculated</span>
+        <span className="sm:hidden">Definitions</span>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80">
         <dl className="flex flex-col gap-3 text-small">

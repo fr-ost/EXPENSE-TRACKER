@@ -48,7 +48,10 @@ export function TransactionFilterBar({ filters }: { filters: TransactionFilters 
   const format = useFormatMoney();
   const { setParams, isPending } = useUrlState();
   const [query, setQuery] = React.useState(filters.q ?? "");
-  const [panelOpen, setPanelOpen] = React.useState(false);
+  const [panel, setPanel] = React.useState({ key: 0, open: false });
+  // A fresh key on every open re-initialises the panel from the current URL filters.
+  const openPanel = () => setPanel((p) => ({ key: p.key + 1, open: true }));
+  const setPanelOpen = (open: boolean) => setPanel((p) => ({ ...p, open }));
 
   // Debounced search.
   React.useEffect(() => {
@@ -110,7 +113,7 @@ export function TransactionFilterBar({ filters }: { filters: TransactionFilters 
             )
           )}
         </div>
-        <Button variant="outline" onClick={() => setPanelOpen(true)} aria-label="Filters" className="shrink-0 px-3 sm:px-4">
+        <Button variant="outline" onClick={openPanel} aria-label="Filters" className="shrink-0 px-3 sm:px-4">
           <SlidersHorizontalIcon />
           <span className="hidden sm:inline">Filters</span>
           {panelCount > 0 && (
@@ -160,7 +163,8 @@ export function TransactionFilterBar({ filters }: { filters: TransactionFilters 
       )}
 
       <FilterPanel
-        open={panelOpen}
+        key={panel.key}
+        open={panel.open}
         onOpenChange={setPanelOpen}
         filters={filters}
         today={today}
@@ -220,23 +224,6 @@ function FilterPanel({
   const [min, setMin] = React.useState(filters.min ?? "");
   const [max, setMax] = React.useState(filters.max ?? "");
   const [sort, setSort] = React.useState<SortOption>(filters.sort ?? "newest");
-
-  // Re-sync when reopened after the URL changed elsewhere (e.g. a chip was removed).
-  React.useEffect(() => {
-    if (!open) return;
-    setMode(periodModeOf(filters));
-    setMonth(filters.month ?? thisMonth);
-    setYear(String(filters.year ?? today.slice(0, 4)));
-    setFrom(filters.from ?? "");
-    setTo(filters.to ?? "");
-    setAccountId(filters.accountId ?? ANY);
-    setCategoryId(filters.categoryId ?? ANY);
-    setScope(filters.scope ?? ANY);
-    setCounted(!!filters.countedAsExpense);
-    setMin(filters.min ?? "");
-    setMax(filters.max ?? "");
-    setSort(filters.sort ?? "newest");
-  }, [open, filters, thisMonth, today]);
 
   const years = Array.from({ length: 12 }, (_, i) => String(Number(today.slice(0, 4)) - i));
   const quickMonths = [
