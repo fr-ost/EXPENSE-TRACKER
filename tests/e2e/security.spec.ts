@@ -85,7 +85,7 @@ test("cross-site and non-JSON writes are refused", async ({ request }) => {
 
 test("session cookie is HttpOnly, Secure, SameSite and host-only", async ({ request }) => {
   const response = await request.post("/api/auth/login", {
-    headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Real-IP": "198.51.100.1" },
+    headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Forwarded-For": "198.51.100.1" },
     data: { password: E2E_PASSWORD },
   });
   expect(response.status()).toBe(200);
@@ -116,6 +116,47 @@ test("post-login redirects cannot leave the site", async ({ page }) => {
   expect(new URL(page.url()).host).toBe(`localhost:${E2E_PORT}`);
 });
 
+test("app-install files are public; everything else still needs a session", async ({ request }) => {
+  for (const [url, type] of [
+    ["/manifest.webmanifest", "application/manifest+json"],
+    ["/sw.js", "javascript"],
+    ["/offline.html", "text/html"],
+    ["/icons/icon-192.png", "image/png"],
+    ["/icons/icon-maskable-512.png", "image/png"],
+    ["/favicon.ico", "image/"],
+    ["/icon.svg", "image/svg+xml"],
+    ["/apple-icon.png", "image/png"],
+  ] as const) {
+    const response = await request.get(url, { maxRedirects: 0 });
+    expect(response.status(), url).toBe(200);
+    expect(response.headers()["content-type"], url).toContain(type);
+  }
+  const worker = await request.get("/sw.js");
+  expect(worker.headers()["cache-control"]).toContain("no-cache");
+  const manifest = await (await request.get("/manifest.webmanifest")).json();
+  expect(manifest).toMatchObject({ short_name: "Hisab", display: "standalone", start_url: "/dashboard" });
+  expect(manifest.icons.some((i: { purpose?: string }) => i.purpose === "maskable")).toBe(true);
+});
+
+test("shared SMS: only from the share sheet, only with a session, never in a URL the server sees", async ({ request }) => {
+  const form = { text: "Payment Tk 350.00 to Daraz successful. TrxID X at 28/09/2026 12:00" };
+  const signedOut = await request.post("/sms/share", { multipart: form, maxRedirects: 0 });
+  expect(signedOut.status()).toBe(303);
+  expect(signedOut.headers().location).toMatch(/\/login\?next=%2Fsms$/);
+
+  const login = await request.post("/api/auth/login", {
+    headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Forwarded-For": "198.51.100.30" },
+    data: { password: E2E_PASSWORD },
+  });
+  const cookie = (login.headers()["set-cookie"] ?? "").split(";")[0];
+  const shared = await request.post("/sms/share", { multipart: form, headers: { Cookie: cookie, "Sec-Fetch-Site": "none" }, maxRedirects: 0 });
+  expect(shared.status()).toBe(303);
+  expect(shared.headers().location).toBe(`/sms#shared=${encodeURIComponent(form.text)}`);
+
+  const crossSite = await request.post("/sms/share", { multipart: form, headers: { Cookie: cookie, "Sec-Fetch-Site": "cross-site" }, maxRedirects: 0 });
+  expect(crossSite.headers().location).toBe("/sms");
+});
+
 test("the health check is public but reveals nothing", async ({ request }) => {
   const response = await request.get("/api/health");
   expect(response.status()).toBe(200);
@@ -125,7 +166,7 @@ test("the health check is public but reveals nothing", async ({ request }) => {
 test("password guessing is rate limited, and the limit hides whether a guess was right", async ({ request }) => {
   const attempt = (password: string) =>
     request.post("/api/auth/login", {
-      headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Real-IP": "203.0.113.77" },
+      headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Forwarded-For": "203.0.113.77" },
       data: { password },
     });
   for (let i = 0; i < 5; i++) expect((await attempt(`wrong-${i}`)).status()).toBe(401);
@@ -138,7 +179,7 @@ test("password guessing is rate limited, and the limit hides whether a guess was
 
 test("invalid input is a 400 with field errors, never a server error", async ({ request }) => {
   const login = await request.post("/api/auth/login", {
-    headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Real-IP": "198.51.100.9" },
+    headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Forwarded-For": "198.51.100.9" },
     data: { password: E2E_PASSWORD },
   });
   const cookie = (login.headers()["set-cookie"] ?? "").split(";")[0];

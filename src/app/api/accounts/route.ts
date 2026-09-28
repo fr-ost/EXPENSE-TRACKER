@@ -7,6 +7,6 @@ export const GET = authed(async () => json({ accounts: await listAccounts(await 
 
 export const POST = authed(async ({ request }) => {
   const input = await readJson(request, accountInput);
-  const account = await createAccount(input);
+  const account = await createAccount(input, await getToday());
   return json({ id: account.id }, 201);
 });

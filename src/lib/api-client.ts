@@ -44,8 +44,10 @@ export async function api<T = unknown>(path: string, { method = "POST", body, ha
   if (!response.ok) {
     // Full navigations on purpose: they drop every client-side copy of
     // financial data, and replace() keeps the stale page out of history.
-    if (handleAuth && response.status === 401) window.location.replace("/login");
-    if (handleAuth && response.status === 423) window.location.replace("/lock");
+    if (handleAuth && (response.status === 401 || response.status === 423)) {
+      const here = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
+      window.location.replace(`${response.status === 401 ? "/login" : "/lock"}?next=${here}`);
+    }
     throw new ApiClientError(
       data.error ?? "Something went wrong. Please try again.",
       response.status,

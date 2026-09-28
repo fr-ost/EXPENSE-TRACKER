@@ -128,3 +128,22 @@ describe("greeting and times", () => {
     expect(["00:05", "09:30", "12:00", "13:45", "23:59"].map(formatTime)).toEqual(["12:05 am", "9:30 am", "12:00 pm", "1:45 pm", "11:59 pm"]);
   });
 });
+
+describe("PDF text runs", () => {
+  it("splits Bengali from Western text and replaces what neither font can show", async () => {
+    const { textRuns } = await import("@/lib/server/export/pdf-text");
+    expect(textRuns("bKash বিকাশ", true)).toEqual([
+      { text: "bKash ", bengali: false },
+      { text: "বিকাশ", bengali: true },
+    ]);
+    expect(textRuns("Café – 🍔 中", true)).toEqual([{ text: "Café – ? ?", bengali: false }]);
+    // Without the font, Bengali degrades to "?" rather than corrupting the PDF.
+    expect(textRuns("বাজার", false)).toEqual([{ text: "?????", bengali: false }]);
+    expect(textRuns("−5.00", true)).toEqual([{ text: "-5.00", bengali: false }]);
+  });
+
+  it("accepts Bengali digits typed into amount fields", async () => {
+    const { sanitizeAmountInput } = await import("@/lib/money");
+    expect(sanitizeAmountInput("১,২৫০.৫০")).toBe("1250.50");
+  });
+});

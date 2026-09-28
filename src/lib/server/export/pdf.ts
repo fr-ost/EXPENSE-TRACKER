@@ -4,6 +4,7 @@ import { formatDate, formatMonth } from "@/lib/dates";
 import { APP_NAME, SCOPE_META, type NumberFormat } from "@/lib/domain";
 import { formatMoney, type Money } from "@/lib/money";
 import type { ReportData } from "../services/reports";
+import { BENGALI_FONT, loadBengaliFont, textRuns, type TextRun } from "./pdf-text";
 
 const INK = "#0e0e12";
 const MUTED = "#5c5c69";
@@ -30,6 +31,9 @@ export function reportPdf(report: ReportData, options: { grouping: NumberFormat;
     doc.on("error", reject);
   });
 
+  const bengali = loadBengaliFont();
+  if (bengali) doc.registerFont(BENGALI_FONT, bengali);
+
   const width = doc.page.width - MARGIN * 2;
   const bottom = () => doc.page.height - MARGIN - 24;
   // Helvetica's WinAnsi encoding has no U+2212, so use an ASCII minus here.
@@ -46,6 +50,37 @@ export function reportPdf(report: ReportData, options: { grouping: NumberFormat;
     doc.font("Helvetica-Bold").fontSize(12).fillColor(INK).text(text, MARGIN, doc.y);
     if (note) doc.font("Helvetica").fontSize(8.5).fillColor(FAINT).text(note, MARGIN, doc.y + 2);
     doc.moveDown(0.6);
+  };
+
+  /** Font ascender in points (PDFKit positions text by its top, not its baseline). */
+  const ascender = (font: string, size: number) =>
+    ((doc.font(font) as unknown as { _font: { ascender: number } })._font.ascender * size) / 1000;
+
+  /**
+   * One line of table text that may mix Bengali (names you typed) with
+   * Western text: each run in a font that has its glyphs, baselines aligned,
+   * truncated with an ellipsis to fit the cell.
+   */
+  const cellText = (text: string, x: number, y: number, cellWidth: number, align: "left" | "right", font: string, size: number) => {
+    const fontOf = (run: TextRun) => (run.bengali ? BENGALI_FONT : font);
+    const measure = (list: TextRun[]) => list.reduce((sum, run) => sum + doc.font(fontOf(run)).fontSize(size).widthOfString(run.text), 0);
+    let runs = textRuns(text, !!bengali);
+    let total = measure(runs);
+    const chars = Array.from(text);
+    while (total > cellWidth && chars.length > 1) {
+      chars.pop();
+      runs = textRuns(`${chars.join("").trimEnd()}…`, !!bengali);
+      total = measure(runs);
+    }
+    const baseline = ascender(font, size);
+    let cx = align === "right" ? x + cellWidth - total : x;
+    for (const run of runs) {
+      const runFont = fontOf(run);
+      doc.font(runFont).fontSize(size);
+      doc.text(run.text, cx, y + baseline - ascender(runFont, size), { lineBreak: false });
+      cx += doc.widthOfString(run.text);
+    }
+    doc.font(font).fontSize(size);
   };
 
   const table = (columns: Column[], rows: string[][], options: { boldLast?: boolean } = {}) => {
@@ -69,11 +104,12 @@ export function reportPdf(report: ReportData, options: { grouping: NumberFormat;
       }
       const y = doc.y;
       const bold = options.boldLast && index === rows.length - 1;
-      doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(9.5).fillColor(INK);
+      const font = bold ? "Helvetica-Bold" : "Helvetica";
+      doc.font(font).fontSize(9.5).fillColor(INK);
       let x = MARGIN;
       row.forEach((cell, i) => {
         const col = columns[i];
-        doc.text(cell, x + 2, y, { width: col.width - 4, align: col.align ?? "left", lineBreak: false, ellipsis: true });
+        cellText(cell, x + 2, y, col.width - 4, col.align ?? "left", font, 9.5);
         x += col.width;
       });
       doc.moveTo(MARGIN, y + 13.5).lineTo(MARGIN + width, y + 13.5).lineWidth(0.4).strokeColor(RULE).stroke();

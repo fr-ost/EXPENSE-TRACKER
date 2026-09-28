@@ -130,7 +130,14 @@ async function assertUniqueName(name: string, exceptId?: string) {
   if (clash) throw invalid("Choose another name.", { name: "You already have an account with this name." });
 }
 
-export async function createAccount(input: AccountInput) {
+function assertNotFuture(input: AccountInput, today?: ISODate) {
+  if (today && input.openingDate > today) {
+    throw invalid("The opening date can't be in the future.", { openingDate: "Choose today or an earlier date." });
+  }
+}
+
+export async function createAccount(input: AccountInput, today?: ISODate) {
+  assertNotFuture(input, today);
   await assertUniqueName(input.name);
   const last = await prisma.account.aggregate({ _max: { sortOrder: true } });
   return prisma.account.create({
@@ -149,7 +156,8 @@ export async function createAccount(input: AccountInput) {
   });
 }
 
-export async function updateAccount(id: string, input: AccountInput) {
+export async function updateAccount(id: string, input: AccountInput, today?: ISODate) {
+  assertNotFuture(input, today);
   await assertUniqueName(input.name, id);
   return prisma.$transaction(async (tx) => {
     // Lock the row so a concurrent transaction insert can't slip in between

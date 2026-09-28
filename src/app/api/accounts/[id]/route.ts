@@ -9,7 +9,7 @@ export const GET = authed<Params>(async ({ params }) => json({ account: await ge
 
 export const PUT = authed<Params>(async ({ request, params }) => {
   const input = await readJson(request, accountInput);
-  await updateAccount(params.id, input);
+  await updateAccount(params.id, input, await getToday());
   return json({ id: params.id });
 });
 

@@ -30,7 +30,8 @@ test("a wrong password is rejected without detail", async ({ page }) => {
 
 test("first run: add an account, then an expense updates the balance in place", async ({ page }) => {
   await signIn(page);
-  await expect(page.getByRole("heading", { name: /Welcome, Tester/ })).toBeVisible();
+  // First sign-in creates the owner; the greeting uses the default name.
+  await expect(page.getByRole("heading", { name: /^Good (morning|afternoon|evening), Shahriar Ahmed$/ })).toBeVisible();
 
   await page.getByRole("link", { name: "Add your first account" }).click();
   await page.getByLabel("Name").fill("Cash wallet");
@@ -105,6 +106,59 @@ test("lock hides everything until the password is entered again", async ({ page 
   await page.getByPlaceholder("Password").fill(E2E_PASSWORD);
   await page.getByRole("button", { name: "Unlock" }).click();
   await expect(page).toHaveURL(/\/accounts/);
+});
+
+test("an SMS is read and added once, and never twice", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/accounts");
+  await page.getByRole("button", { name: "Add account" }).first().click();
+  await page.getByLabel("Name").fill("bKash");
+  await page.getByRole("radio", { name: "Mobile wallet" }).click();
+  await page.getByPlaceholder("0").fill("2537");
+  await page.getByLabel("Balance as of").fill("2025-01-01");
+  await page.getByRole("button", { name: "Add account" }).last().click();
+  await expect(page.getByText("bKash added")).toBeVisible();
+
+  const sms = "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 20/09/2026 10:05";
+  const paste = async () => {
+    await page.goto("/sms");
+    await page.getByLabel("Transaction messages").fill(sms);
+    await page.getByRole("button", { name: "Analyze" }).click();
+  };
+
+  await paste();
+  const card = page.getByRole("listitem", { name: /Cash out/ });
+  await expect(card).toContainText("Ready");
+  await card.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(card).toContainText("Added");
+  // bKash 2,537 − 2,000 − 37 fee = 500, which is what the SMS says.
+  await expect(card).toContainText("balance matches the SMS");
+
+  await page.goto("/accounts");
+  await expect(page.getByRole("link", { name: /bKash/ })).toContainText("৳500");
+  // The cash out moved ৳2,000 into the Cash wallet (৳10,000 from the earlier tests).
+  await expect(page.getByRole("link", { name: /Cash wallet/ })).toContainText("৳12,000");
+
+  // Pasting the same message again recognises it.
+  await paste();
+  await expect(page.getByRole("listitem", { name: /Cash out/ })).toContainText("Already added");
+
+  await page.goto("/transactions?q=Cash out");
+  await expect(page.getByRole("button", { name: /Cash out fee/ })).toContainText("10:05 am");
+  await expect(page.getByLabel("Added from SMS").first()).toBeVisible();
+});
+
+test("a wrong password on the lock screen says how many tries are left", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/budgets");
+  await page.getByRole("button", { name: "Lock now" }).first().click();
+  await expect(page).toHaveURL(/\/lock\?next=%2Fbudgets/);
+  await page.getByPlaceholder("Password").fill("not-it");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "4 tries left" })).toBeVisible();
+  await page.getByPlaceholder("Password").fill(E2E_PASSWORD);
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page).toHaveURL(/\/budgets/);
 });
 
 test("signing out ends the session", async ({ page }) => {

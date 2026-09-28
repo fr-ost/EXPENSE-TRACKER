@@ -142,7 +142,8 @@ function groupDigits(digits: string, grouping: GroupingStyle): string {
  * grouping) — it is never converted to a float.
  */
 export function sanitizeAmountInput(input: string): string {
-  let cleaned = input.replace(/[^\d.]/g, "");
+  // Bengali keyboards type ০-৯; `\d` only matches ASCII digits.
+  let cleaned = input.replace(/[০-৯]/g, (digit) => String(digit.charCodeAt(0) - 0x09e6)).replace(/[^\d.]/g, "");
   const firstDot = cleaned.indexOf(".");
   if (firstDot !== -1) {
     cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");

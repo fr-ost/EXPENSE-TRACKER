@@ -255,23 +255,33 @@ export function transactionOrderBy(sort: TransactionFilters["sort"]): Prisma.Tra
 
 export async function listTransactions(filters: TransactionFilters, baseCurrency: string): Promise<TransactionPage> {
   const where = buildTransactionWhere(filters);
-  const page = filters.page ?? 1;
-
-  const [total, rows, groups] = await Promise.all([
-    prisma.transaction.count({ where }),
+  const findPage = (page: number) =>
     prisma.transaction.findMany({
       where,
       include: transactionInclude,
       orderBy: transactionOrderBy(filters.sort),
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-    }),
+    });
+  let page = filters.page ?? 1;
+
+  const [total, firstRows, groups] = await Promise.all([
+    prisma.transaction.count({ where }),
+    findPage(page),
     prisma.transaction.groupBy({
       by: ["type", "countAsExpense"],
       where: { AND: [where, { account: { currency: baseCurrency } }] },
       _sum: { amount: true },
     }),
   ]);
+
+  // A page past the end (an old link, or entries deleted since) shows the last page.
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  let rows = firstRows;
+  if (page > pageCount) {
+    page = pageCount;
+    rows = await findPage(page);
+  }
 
   let income = "0.00";
   let expenses = "0.00";
@@ -288,7 +298,7 @@ export async function listTransactions(filters: TransactionFilters, baseCurrency
     total,
     page,
     pageSize: PAGE_SIZE,
-    pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    pageCount,
     summary: { currency: baseCurrency, income, expenses, transfers },
   };
 }
