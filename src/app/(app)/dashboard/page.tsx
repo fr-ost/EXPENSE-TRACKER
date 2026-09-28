@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AccountBalances } from "@/components/dashboard/account-balances";
 import { BudgetProgress } from "@/components/dashboard/budget-progress";
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
+import { Greeting } from "@/components/dashboard/greeting";
 import { Onboarding } from "@/components/dashboard/onboarding";
 import { SpendingBreakdown } from "@/components/dashboard/spending-breakdown";
 import { SummaryStrip } from "@/components/dashboard/summary-strip";
@@ -14,6 +15,7 @@ import { NewTransactionButton } from "@/components/transactions/new-transaction-
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { Card, CardHeader } from "@/components/ui/misc";
 import { formatDate, isValidMonthKey, minDate, monthEnd, monthKeyOf, monthStart, shiftMonth } from "@/lib/dates";
+import { greeting } from "@/lib/greeting";
 import { loadPageContext } from "@/lib/server/page-context";
 import { listAccounts, totalBalance } from "@/lib/server/services/accounts";
 import { categoryTotals, cumulative, dailySpending, monthlySeries, periodSummary, scopeTotals } from "@/lib/server/services/analytics";
@@ -21,14 +23,6 @@ import { budgetsForMonth } from "@/lib/server/services/budgets";
 import { recentTransactions } from "@/lib/server/services/transactions";
 
 export const metadata: Metadata = { title: "Overview" };
-
-function greeting(timeZone: string) {
-  const hour = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone }).format(new Date()));
-  if (hour < 5) return "Good evening";
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   const { settings, today } = await loadPageContext();
@@ -56,8 +50,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
     recentTransactions(6, today),
   ]);
 
+  const hello = <Greeting name={settings.displayName} timeZone={settings.timezone} initial={greeting(settings.timezone)} />;
+
   if (accounts.length === 0) {
-    return <Onboarding name={settings.displayName} />;
+    return <Onboarding greeting={hello} />;
   }
 
   const foreign = [...new Set(accounts.map((a) => a.currency))]
@@ -69,10 +65,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <p className="text-small text-text-tertiary">{formatDate(today, "long")}</p>
-          <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.025em] text-text sm:text-title">
-            {greeting(settings.timezone)}
-            {settings.displayName ? `, ${settings.displayName}` : ""}
-          </h1>
+          <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.025em] text-text sm:text-title">{hello}</h1>
         </div>
         <div className="flex items-center gap-2">
           <MonthSwitcher month={month} current={currentMonth} basePath="/dashboard" />

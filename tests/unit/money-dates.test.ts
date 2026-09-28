@@ -111,3 +111,20 @@ describe("validation", () => {
     expect(filters).toEqual({ sort: "newest", q: "food" });
   });
 });
+
+describe("greeting and times", () => {
+  it("greets by the time of day in the owner's timezone", async () => {
+    const { dayPart, greeting } = await import("@/lib/greeting");
+    expect([4, 5, 11, 12, 16, 17, 23].map(dayPart)).toEqual(["evening", "morning", "morning", "afternoon", "afternoon", "evening", "evening"]);
+    // 03:30 UTC is 09:30 in Dhaka (UTC+6) and 23:30 the day before in New York.
+    const instant = new Date("2026-09-28T03:30:00Z");
+    expect(greeting("Asia/Dhaka", instant)).toBe("Good morning");
+    expect(greeting("America/New_York", instant)).toBe("Good evening");
+    expect(greeting("Not/AZone", new Date("2026-09-28T13:00:00Z"))).toBe("Good afternoon");
+  });
+
+  it("formats times of day on a 12-hour clock", async () => {
+    const { formatTime } = await import("@/lib/dates");
+    expect(["00:05", "09:30", "12:00", "13:45", "23:59"].map(formatTime)).toEqual(["12:05 am", "9:30 am", "12:00 pm", "1:45 pm", "11:59 pm"]);
+  });
+});

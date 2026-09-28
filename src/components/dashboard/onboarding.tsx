@@ -1,5 +1,6 @@
 import { ArrowRightIcon, GaugeIcon, ListPlusIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
+import type * as React from "react";
 import { BrandMark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 
@@ -22,18 +23,16 @@ const STEPS = [
 ];
 
 /** First-run state: what Hisab is and the three steps to get going. */
-export function Onboarding({ name }: { name: string }) {
+export function Onboarding({ greeting }: { greeting: React.ReactNode }) {
   return (
     <div className="mx-auto flex max-w-2xl animate-rise flex-col gap-10 py-6 sm:py-12">
       <div className="flex flex-col gap-4">
         <BrandMark className="size-11" />
         <div className="flex flex-col gap-2">
-          <h1 className="text-[2rem] font-semibold leading-tight tracking-[-0.03em] text-text">
-            Welcome{name ? `, ${name}` : ""}.
-          </h1>
+          <h1 className="text-[2rem] font-semibold leading-tight tracking-[-0.03em] text-text">{greeting}</h1>
           <p className="max-w-lg text-[0.9375rem] leading-relaxed text-text-secondary">
-            Hisab is your private ledger. Balances are always calculated from your transactions, so they stay right — even
-            when you add entries from months ago.
+            Welcome to Hisab, your private ledger. Balances are always calculated from your transactions, so they stay
+            right — even when you add entries from months ago.
           </p>
         </div>
       </div>
