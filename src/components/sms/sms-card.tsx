@@ -7,6 +7,7 @@ import {
   ChevronDownIcon,
   CopyIcon,
   PencilIcon,
+  PlusIcon,
   Undo2Icon,
   XIcon,
 } from "lucide-react";
@@ -23,7 +24,7 @@ import { formatDate, formatTime } from "@/lib/dates";
 import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
 import { IGNORE_REASON_LABELS } from "@/lib/sms/parse";
 import { cn } from "@/lib/utils";
-import { reportedBalance, type SmsItem, type SmsItemStatus } from "./sms-model";
+import { missingAccount, reportedBalance, suggestAccount, type SmsItem, type SmsItemStatus } from "./sms-model";
 import type { BalanceCheck } from "./sms-suggest";
 
 const STATUS: Record<SmsItemStatus, { label: string; tone: "positive" | "warning" | "neutral" | "negative" | "info" }> = {
@@ -39,16 +40,24 @@ const STATUS: Record<SmsItemStatus, { label: string; tone: "positive" | "warning
 
 export interface SmsCardActions {
   onChange: (patch: Partial<SmsItem>) => void;
-  onAdd: (options?: { allowDuplicate?: boolean }) => void;
+  onAdd: (options?: { allowDuplicate?: boolean; sameAs?: string }) => void;
+  /** Record the balance of a message added earlier. */
+  onSaveBalance: () => void;
+  /** Create the account the message needs (its bank or wallet, or Cash). */
+  onCreateAccount: () => void;
   onUndo: () => void;
   onOpen: () => void;
   onDismiss: () => void;
 }
 
 export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: SmsCardActions; balance?: BalanceCheck }) {
-  const { accounts, categories, today } = useAppData();
+  const { accounts, categories, settings, today } = useAppData();
   const format = useFormatMoney();
-  const [editing, setEditing] = React.useState(item.status === "review" && item.issues.some((i) => i.startsWith("Choose")));
+  // Open the fields straight away when something must be chosen — unless the
+  // choice is a new account, which the card offers to create.
+  const [editing, setEditing] = React.useState(
+    item.status === "review" && item.issues.some((i) => i.startsWith("Choose")) && !missingAccount(item),
+  );
   const [showText, setShowText] = React.useState(false);
 
   const { draft, fee, parsed, status } = item;
@@ -60,6 +69,12 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
   const category = categories.find((c) => c.id === categoryId);
   const currency = (draft.type === "TRANSFER" && parsed.direction === "credit" ? destination : source)?.currency;
   const reported = reportedBalance(item, accounts, today);
+  const newAccount = suggestAccount(item, settings.baseCurrency);
+  // The box offering to create the missing account says it already.
+  const missing = missingAccount(item);
+  const issues = item.issues.filter(
+    (issue) => !newAccount || !(missing === "own" ? issue.startsWith("Choose the account") : /cash/i.test(issue)),
+  );
   // A message older than the account's latest known balance only fills in history.
   const olderThanKnown = !!reported && landsBefore(draft.date, draft.time, latestKnownBalance(reported.account), today);
 
@@ -192,18 +207,37 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
             />
           </label>
         )}
-        {reported && status === "added" && item.includeBalance && (
+        {reported && done && item.balanceSaved && (
           <p className="sm:ml-12 flex items-center gap-1.5 text-small text-positive-text">
             <CheckCircle2Icon className="size-3.5 shrink-0" />
-            Balance from the SMS saved: {format(reported.amount, { currency: reported.account.currency, decimals: "always" })}
+            {reported.account.name} balance from the SMS saved:{" "}
+            {format(reported.amount, { currency: reported.account.currency, decimals: "always" })}
           </p>
+        )}
+        {reported && status === "exists" && !item.balanceSaved && (
+          <div className="sm:ml-12 flex items-center justify-between gap-3 rounded-lg bg-surface-subtle px-3 py-2 text-small">
+            <span className="flex min-w-0 flex-col">
+              <span className="text-text-secondary">
+                Added before, without its balance:{" "}
+                <span className="font-medium text-text">{format(reported.amount, { currency: reported.account.currency, decimals: "always" })}</span>
+              </span>
+              {olderThanKnown && (
+                <span className="text-caption text-text-tertiary">
+                  It&rsquo;s older than {reported.account.name}&rsquo;s latest balance, which stays current.
+                </span>
+              )}
+            </span>
+            <Button size="sm" variant="outline" onClick={actions.onSaveBalance}>
+              Update {reported.account.name}
+            </Button>
+          </div>
         )}
 
         {status === "ignored" && parsed.ignored && <p className="sm:pl-12 text-small text-text-secondary">{IGNORE_REASON_LABELS[parsed.ignored]}.</p>}
 
-        {status === "review" && item.issues.length > 0 && (
+        {status === "review" && issues.length > 0 && (
           <ul className="sm:ml-12 flex flex-col gap-1 rounded-lg bg-warning-soft px-3 py-2 text-small text-warning-text">
-            {item.issues.map((issue) => (
+            {issues.map((issue) => (
               <li key={issue} className="flex items-start gap-1.5">
                 <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
                 {issue}
@@ -211,19 +245,38 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
             ))}
           </ul>
         )}
+        {newAccount && (
+          <div className="sm:ml-12 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed border-border-strong px-3 py-2.5 text-small">
+            <span className="min-w-0 flex-1 text-text-secondary">
+              {missing === "cash"
+                ? "No Cash account yet for this withdrawal."
+                : `No account for ${parsed.provider?.name ?? "this message"} yet.`}
+            </span>
+            <Button size="sm" onClick={actions.onCreateAccount}>
+              <PlusIcon />
+              {newAccount.name ? `Add ${newAccount.name} account` : "Add account"}
+            </Button>
+            {accounts.some((a) => a.isActive) && !editing && (
+              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                Pick an existing one
+              </Button>
+            )}
+          </div>
+        )}
 
         {status === "duplicate" && item.similar && (
           <div className="sm:ml-12 flex flex-col gap-2 rounded-lg bg-warning-soft px-3 py-2.5 text-small text-warning-text">
             <p>
               Looks like this is already recorded: <span className="font-medium">{item.similar.description || "a transaction"}</span> ·{" "}
               <Amount value={item.similar.amount} currency={currency} /> · {item.similar.account} · {formatDate(item.similar.date, "short")}.
+              {reported && item.includeBalance && " If it's the same one, the SMS is linked to it and sets the balance."}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => actions.onAdd({ allowDuplicate: true })}>
-                Add anyway
+              <Button size="sm" onClick={() => item.similar && actions.onAdd({ sameAs: item.similar.id })}>
+                It&rsquo;s the same one
               </Button>
-              <Button size="sm" variant="ghost" onClick={actions.onDismiss}>
-                Skip it
+              <Button size="sm" variant="outline" onClick={() => actions.onAdd({ allowDuplicate: true })}>
+                Add as new
               </Button>
             </div>
           </div>

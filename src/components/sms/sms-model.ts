@@ -1,6 +1,7 @@
 import { draftToInput, type TransactionDraft } from "@/components/transactions/transaction-draft";
 import type { ISODate } from "@/lib/dates";
-import type { Money } from "@/lib/money";
+import type { AccountType } from "@/lib/domain";
+import { fromMinor, toMinor, type Money } from "@/lib/money";
 import { normalizeSmsText, parseSms, type ParsedSms } from "@/lib/sms/parse";
 import type { AccountSummary, CategoryRef } from "@/lib/types";
 import { expenseInput, fieldErrorsOf, transactionInput, type TransactionInput } from "@/lib/validation";
@@ -38,6 +39,8 @@ export interface SmsItem {
   includeFee: boolean;
   /** Set the account's balance to the one the message reports (see `reportedBalance`). */
   includeBalance: boolean;
+  /** The message's balance is recorded (now, or when it was added before). */
+  balanceSaved: boolean;
   issues: string[];
   status: SmsItemStatus;
   /** Transactions created from this message (main first, then the fee). */
@@ -49,6 +52,7 @@ export interface SmsItem {
 
 export interface CheckResult {
   existing: string[];
+  balanceSaved: boolean;
   learned: LearnedEntry | null;
 }
 
@@ -79,6 +83,7 @@ export function buildItem(
     fee: suggestion.fee,
     includeFee: true,
     includeBalance: true,
+    balanceSaved: ctx.check?.balanceSaved ?? false,
     issues: suggestion.issues,
     status: existing.length ? "exists" : parsed.ignored ? "ignored" : suggestion.ready ? "ready" : "review",
     addedIds: existing,
@@ -140,3 +145,71 @@ export function itemPayload(
 }
 
 export const PENDING_STATUSES: SmsItemStatus[] = ["ready", "review", "duplicate", "error"];
+
+/** An account to create for a message that has nowhere to go. */
+export interface AccountSuggestion {
+  name: string;
+  type: AccountType;
+  /** What it held before this message's transaction (from the balance it reports), else 0. */
+  openingBalance: Money;
+  openingDate: ISODate;
+}
+
+/** Waiting to be added, but its own account (or a withdrawal's Cash account) doesn't exist yet. */
+export function missingAccount(item: SmsItem): "own" | "cash" | null {
+  if (!["ready", "review", "error"].includes(item.status)) return null;
+  if (!ownAccountId(item)) return "own";
+  const counterpart = item.parsed.direction === "credit" ? item.draft.accountId : item.draft.toAccountId;
+  const viaCash = ["atm", "cash_out", "cash_in"].includes(item.parsed.channel);
+  return item.draft.type === "TRANSFER" && !counterpart && viaCash ? "cash" : null;
+}
+
+export function suggestAccount(item: SmsItem, baseCurrency: string): AccountSuggestion | null {
+  const missing = missingAccount(item);
+  if (!missing) return null;
+  const { parsed, draft } = item;
+  if (missing === "cash") return { name: "Cash", type: "CASH", openingBalance: "0.00", openingDate: draft.date };
+
+  const digits = parsed.accountDigits ? ` ${parsed.accountDigits}` : "";
+  const type: AccountType = parsed.isCard ? "CARD" : (parsed.provider?.kind ?? (parsed.accountDigits ? "BANK" : "OTHER"));
+  const name =
+    type === "CARD"
+      ? `${parsed.provider?.name ?? ""} Card${digits}`.trim()
+      : type === "BANK"
+        ? `${parsed.provider?.name ?? "Bank"}${digits}`
+        : (parsed.provider?.name ?? "");
+
+  // The balance before this transaction, so the message's own balance then matches.
+  let openingBalance: Money = "0.00";
+  const usable = type !== "CARD" && parsed.balance && (!parsed.balanceCurrency || parsed.balanceCurrency === baseCurrency);
+  if (usable && parsed.balance) {
+    try {
+      const incoming = draft.type === "INCOME" || (draft.type === "TRANSFER" && parsed.direction === "credit");
+      const received = incoming && draft.type === "TRANSFER" && draft.toAmount ? draft.toAmount : draft.amount;
+      let delta = draft.amount ? (incoming ? toMinor(received) : -toMinor(draft.amount)) : 0n;
+      if (!incoming && item.includeFee && item.fee?.amount) delta -= toMinor(item.fee.amount);
+      openingBalance = fromMinor(toMinor(parsed.balance) - delta);
+    } catch {
+      openingBalance = parsed.balance;
+    }
+  }
+  return { name: name.slice(0, 60), type, openingBalance, openingDate: draft.date };
+}
+
+/**
+ * The message suggested again against the current accounts (e.g. after one
+ * was created for it), keeping what the user chose about it.
+ */
+export function rematch(
+  item: SmsItem,
+  ctx: { accounts: AccountSummary[]; categories: CategoryRef[]; today: ISODate; remembered: Record<string, string> },
+): SmsItem {
+  const fresh = buildItem(item.text, ctx);
+  if (missingAccount(fresh) && fresh.status !== "ignored") return item;
+  return { ...fresh, id: item.id, includeFee: item.includeFee, includeBalance: item.includeBalance };
+}
+
+/** Added earlier, but the balance it reports isn't recorded yet (and can be). */
+export function needsBalanceSaved(item: SmsItem, accounts: AccountSummary[], today: ISODate): boolean {
+  return item.status === "exists" && item.includeBalance && !item.balanceSaved && !!reportedBalance(item, accounts, today);
+}

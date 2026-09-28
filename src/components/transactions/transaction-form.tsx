@@ -78,6 +78,42 @@ export function TransactionFields({
         )
       : [];
 
+  // Right under the account it would move, so it's seen before saving.
+  const balanceOption = withBalanceOption ? (
+    <div className="flex flex-col gap-2">
+      <label className="flex items-start justify-between gap-4 rounded-lg border border-border px-4 py-3">
+        <span className="flex flex-col gap-0.5">
+          <span className="text-body font-medium text-text">Don&rsquo;t change the balance</span>
+          <span className="text-small text-text-secondary">
+            {draft.type === "TRANSFER"
+              ? "Neither account's balance moves. Still listed with your transfers."
+              : `Keeps ${source?.name ?? "the account"}'s balance as it is. Still counts in reports.`}
+          </span>
+        </span>
+        <Switch
+          checked={!draft.affectsBalance}
+          onCheckedChange={(keepOut) => update({ affectsBalance: !keepOut })}
+          aria-label="Don't change the balance"
+        />
+      </label>
+      {settled.length > 0 && (
+        <p className="flex items-start gap-2 px-1 text-small text-text-tertiary">
+          <HistoryIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span>
+            {settled.map((account, index) => (
+              <React.Fragment key={account.id}>
+                {index > 0 && " and "}
+                {account.name}&rsquo;s {latestKnownBalance(account).opening ? "opening balance" : "latest balance update"} (
+                {formatDate(latestKnownBalance(account).date, "short")})
+              </React.Fragment>
+            ))}{" "}
+            already {settled.length > 1 ? "include" : "includes"} this date, so it won&rsquo;t change the current balance.
+          </span>
+        </p>
+      )}
+    </div>
+  ) : null;
+
   const setType = (type: EntryType) => {
     const patch: Partial<TransactionDraft> = { type };
     if (type === "TRANSFER" && (!draft.toAccountId || draft.toAccountId === draft.accountId)) {
@@ -159,6 +195,8 @@ export function TransactionFields({
         </div>
       )}
 
+      {draft.type !== "TRANSFER" && balanceOption}
+
       <AnimatePresence initial={false}>
         {crossCurrency && destination && (
           <motion.div key="to-amount" {...reveal}>
@@ -189,6 +227,7 @@ export function TransactionFields({
       {draft.type === "TRANSFER" && (
         <>
           <DateField label={dateLabel} value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} {...timeProps} />
+          {balanceOption}
           <div className="rounded-lg border border-border bg-surface-subtle p-4">
             <label className="flex items-start justify-between gap-4">
               <span className="flex flex-col gap-0.5">
@@ -253,41 +292,6 @@ export function TransactionFields({
           <StickyNoteIcon className="size-3.5" />
           Add a note
         </button>
-      )}
-
-      {withBalanceOption && (
-        <div className="flex flex-col gap-2">
-          <label className="flex items-start justify-between gap-4 rounded-lg border border-border px-4 py-3">
-            <span className="flex flex-col gap-0.5">
-              <span className="text-body font-medium text-text">Don&rsquo;t change the balance</span>
-              <span className="text-small text-text-secondary">
-                {draft.type === "TRANSFER"
-                  ? "Neither account's balance moves. Still listed with your transfers."
-                  : "Still counts in reports. For spending the balance already reflects."}
-              </span>
-            </span>
-            <Switch
-              checked={!draft.affectsBalance}
-              onCheckedChange={(keepOut) => update({ affectsBalance: !keepOut })}
-              aria-label="Don't change the balance"
-            />
-          </label>
-          {settled.length > 0 && (
-            <p className="flex items-start gap-2 px-1 text-small text-text-tertiary">
-              <HistoryIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-              <span>
-                {settled.map((account, index) => (
-                  <React.Fragment key={account.id}>
-                    {index > 0 && " and "}
-                    {account.name}&rsquo;s {latestKnownBalance(account).opening ? "opening balance" : "latest balance update"} (
-                    {formatDate(latestKnownBalance(account).date, "short")})
-                  </React.Fragment>
-                ))}{" "}
-                already {settled.length > 1 ? "include" : "includes"} this date, so it won&rsquo;t change the current balance.
-              </span>
-            </p>
-          )}
-        </div>
       )}
 
       {draft.type === "TRANSFER" && source && destination && draft.amount && (

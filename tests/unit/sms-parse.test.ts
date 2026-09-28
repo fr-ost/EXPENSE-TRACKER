@@ -178,6 +178,16 @@ describe("banks and cards", () => {
     const sms = parse("আপনার অ্যাকাউন্ট থেকে ৫০০ টাকা উত্তোলন করা হয়েছে। তারিখ: ২৮/০৯/২০২৬");
     expect(sms).toMatchObject({ direction: "debit", amount: "500.00", currency: "BDT", date: "2026-09-28", ignored: null });
   });
+
+  it("a balance written without a currency still counts", () => {
+    const bare = parse("Your A/C ***4567 has been debited by BDT 500.00 on 28-09-2026 10:15. Avl Bal: 12,345.67. Thank you");
+    expect(bare).toMatchObject({ amount: "500.00", balance: "12345.67", balanceCurrency: "BDT" });
+    const bangla = parse("আপনার অ্যাকাউন্ট থেকে ৫০০ টাকা উত্তোলন করা হয়েছে। ব্যালেন্স ১২০০.৫০। তারিখ: ২৮/০৯/২০২৬");
+    expect(bangla).toMatchObject({ amount: "500.00", balance: "1200.50" });
+    // Neither a date nor a limit is a balance.
+    expect(parse("BDT 500.00 debited from A/C **4567 on 28-09-2026. Balance as on 28-09-2026").balance).toBeNull();
+    expect(parse("Card **1234 used for BDT 500.00 at DARAZ on 28-09-2026. Available limit 9,500.00").balance).toBeNull();
+  });
 });
 
 describe("dates", () => {

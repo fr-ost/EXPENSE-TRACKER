@@ -164,9 +164,22 @@ export function groupAmountInput(raw: string, grouping: GroupingStyle): string {
   return fraction === undefined ? grouped : `${grouped}.${fraction}`;
 }
 
+/**
+ * Minor units of whatever an amount field can hold while typing ("", ".",
+ * "12.", "1,200"), or null if it isn't a number at all. Showing an amount
+ * must never throw: it runs while rendering.
+ */
+function displayMinor(value: Money | bigint): bigint | null {
+  if (typeof value === "bigint") return value;
+  const cleaned = value.replace(/[,\s]/g, "").replace(/^(-?)\./, "$10.");
+  if (cleaned === "" || cleaned === "-" || cleaned === "0.") return 0n;
+  return isMoneyString(cleaned) ? toMinor(cleaned) : null;
+}
+
 export function formatMoney(value: Money | bigint, options: FormatMoneyOptions = {}): string {
   const { currency = "BDT", grouping = "SOUTH_ASIAN", decimals = "auto", sign = "negative", plain = false } = options;
-  const minor = toMinor(value);
+  const minor = displayMinor(value);
+  if (minor === null) return `${plain ? "" : currencySymbol(currency)}${String(value)}`;
   const negative = minor < 0n;
   const abs = negative ? -minor : minor;
   const whole = groupDigits((abs / 100n).toString(), grouping);

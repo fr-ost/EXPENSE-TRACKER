@@ -69,6 +69,11 @@ That is also the answer to a forgotten password.
 If `ADMIN_PASSWORD` is missing, the app still starts and the sign-in page
 explains what to set.
 
+**Which version is running:** **Settings → App** shows the deployed commit
+(Railway's `RAILWAY_GIT_COMMIT_SHA`), matching the latest commit once a deploy
+has finished. An app window left open reloads itself on its next page change
+after a new deploy.
+
 ## Installing the app
 
 - **Chrome or Edge (Windows, macOS, ChromeOS, Android):** use **Install app**
@@ -89,7 +94,10 @@ fee, reported balance and merchant, then builds the transaction:
 
 - **Which account** — the bank or wallet name in the message, the last digits
   of the account or card (name your accounts like `City Bank 4567`), or the
-  account you picked last time for that bank.
+  account you picked last time for that bank. No account for it yet? The
+  message offers **Add … account** right there, filled in from the SMS (the
+  opening balance is what it held just before the message); the waiting
+  messages then match it and are added.
 - **What kind** — payments and purchases are expenses, deposits and salary are
   income. Cash outs and ATM withdrawals are **transfers to your Cash
   account**, and money moved from your bank to bKash is a transfer too, so
@@ -110,9 +118,16 @@ added. OTPs, adverts, failed transactions and reminders are skipped.
 after the transaction. Adding such a message also records that balance as a
 balance update for the account (a switch on each message turns this off), so
 payments that never sent an SMS are corrected for automatically. Hisab shows
-whether its own balance agreed. A card's available limit is never taken as a
-balance, and a message older than the account's latest balance only fills in
-history.
+whether its own balance agreed.
+
+- A message added before (even before balances were read) records its
+  balance when pasted again.
+- A message flagged as already recorded — typed in by hand earlier — offers
+  **It's the same one**: the SMS is linked to that transaction (which takes
+  the SMS's date and time) and sets the balance, without counting it twice.
+- A card's available limit is never taken as a balance, a balance in another
+  currency is ignored, and a message older than the account's latest balance
+  only fills in history. Undo removes the balance a message set.
 
 Works with bKash, Nagad, Rocket, Upay and alerts from Bangladeshi banks and
 cards (DBBL, City, BRAC, EBL, Islami Bank, Standard Chartered and ~40 more),

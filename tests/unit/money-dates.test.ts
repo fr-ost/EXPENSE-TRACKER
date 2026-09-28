@@ -68,6 +68,8 @@ describe("money", () => {
     expect(formatMoney("12.")).toBe("৳12");
     expect(positiveAmount.safeParse("12.").success).toBe(true);
     expect(() => toMinor(".")).toThrow();
+    // Showing an amount never throws, whatever the field holds.
+    expect(["", ".", "-", "-.", "0.", ".5", "1,200.", "abc"].map((v) => formatMoney(v))).toEqual(["৳0", "৳0", "৳0", "৳0", "৳0", "৳0.50", "৳1,200", "৳abc"]);
   });
 });
 

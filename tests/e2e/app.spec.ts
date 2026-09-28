@@ -134,7 +134,7 @@ test("an SMS is read and added once, and never twice", async ({ page }) => {
   await expect(card).toContainText("Matches Hisab");
   await card.getByRole("button", { name: "Add", exact: true }).click();
   await expect(card).toContainText("Added");
-  await expect(card).toContainText("Balance from the SMS saved: ৳500.00");
+  await expect(card).toContainText("bKash balance from the SMS saved: ৳500.00");
 
   await page.goto("/accounts");
   await expect(page.getByRole("link", { name: /bKash/ })).toContainText("৳500");
@@ -188,6 +188,64 @@ test("a balance update holds, older entries don't move it, and an entry can stay
   // Today's spending after the update moves it.
   await addExpense("150", null);
   await expect(page.getByText("Current balance").locator("..")).toContainText("৳650");
+});
+
+test("an SMS from a wallet with no account: create it right there, and the SMS sets its balance", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/sms");
+  await page.getByLabel("Transaction messages").fill(
+    "Tk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:5566778899 Date:20-SEP-26 02:30:45 pm.",
+  );
+  await page.getByRole("button", { name: "Analyze" }).click();
+  const card = page.getByRole("listitem", { name: /Received from 01712345678/ });
+  await card.getByRole("button", { name: "Add Rocket account" }).click();
+
+  const form = page.getByRole("dialog", { name: "New account" });
+  await expect(form.getByLabel("Name")).toHaveValue("Rocket");
+  // What it held just before this message: 1,234.56 − 500.
+  await expect(form.getByPlaceholder("0")).toHaveValue("734.56");
+  await form.getByRole("button", { name: "Add account" }).click();
+
+  await expect(card).toContainText("Added");
+  await expect(card).toContainText("Rocket balance from the SMS saved: ৳1,234.56");
+  await page.goto("/accounts");
+  await expect(page.getByRole("link", { name: /Rocket/ })).toContainText("৳1,234.56");
+});
+
+test("an SMS for something typed in by hand: confirm it's the same one and the balance follows the SMS", async ({ page }) => {
+  await signIn(page);
+  // An SMS time is to the minute; the previous test's balance update was
+  // entered moments ago, so the message is stamped the minute after it.
+  const sent = new Date(Date.now() + 60_000);
+  const part = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dhaka", ...options }).format(sent);
+  const smsDate = part({ day: "2-digit", month: "2-digit", year: "numeric" });
+  const smsTime = part({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+  // bKash is at ৳650 from the previous test; ৳50 typed in by hand.
+  await page.goto("/transactions");
+  await page.getByRole("button", { name: "New transaction" }).last().click();
+  const sheet = page.getByRole("dialog", { name: "New transaction" });
+  await sheet.getByLabel(/Amount/).fill("50");
+  await sheet.getByRole("radio", { name: "Shopping" }).click();
+  await sheet.getByRole("combobox").first().click();
+  await page.getByRole("option", { name: /bKash/ }).click();
+  await sheet.getByRole("button", { name: /Add expense/ }).click();
+  await expect(page.getByText("Expense added")).toBeVisible();
+
+  await page.goto("/sms");
+  await page.getByLabel("Transaction messages").fill(
+    `Payment Tk 50.00 to Daraz (01712345678) successful. Balance Tk 600.00. TrxID BJXE2E0001 at ${smsDate} ${smsTime}`,
+  );
+  await page.getByRole("button", { name: "Analyze" }).click();
+  const card = page.getByRole("listitem", { name: /Daraz/ });
+  await card.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(card).toContainText("Possible duplicate");
+  await card.getByRole("button", { name: "It’s the same one" }).click();
+  await expect(page.getByText("Linked to the recorded transaction")).toBeVisible();
+  await expect(card).toContainText("bKash balance from the SMS saved: ৳600.00");
+
+  await page.goto("/accounts");
+  await expect(page.getByRole("link", { name: /bKash/ })).toContainText("৳600");
 });
 
 test("a wrong password on the lock screen says how many tries are left", async ({ page }) => {

@@ -1,13 +1,12 @@
 "use client";
 
-import { ClipboardPasteIcon, MessageSquareTextIcon, SparklesIcon } from "lucide-react";
+import { ClipboardPasteIcon, SparklesIcon } from "lucide-react";
 import { AnimatePresence } from "motion/react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
+import { AccountFormSheet } from "@/components/accounts/account-form-sheet";
 import { useAppData } from "@/components/app-data";
-import { EmptyState } from "@/components/states";
 import { useTransactionSheet } from "@/components/transactions/transaction-sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -17,15 +16,20 @@ import { api, errorMessage } from "@/lib/api-client";
 import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
 import { fromMinor, toMinor, type Money } from "@/lib/money";
 import { splitMessages } from "@/lib/sms/parse";
-import type { TransactionView } from "@/lib/types";
+import type { AccountSummary, TransactionView } from "@/lib/types";
 import { SmsCard } from "./sms-card";
 import {
   buildItem,
   itemPayload,
   messageKey,
+  missingAccount,
+  needsBalanceSaved,
   ownAccountId,
   PENDING_STATUSES,
+  rematch,
   reportedBalance,
+  suggestAccount,
+  type AccountSuggestion,
   type CheckResult,
   type SimilarTransaction,
   type SmsItem,
@@ -33,8 +37,8 @@ import {
 import { loadRememberedAccounts, ownEffect, rememberAccountFor, type BalanceCheck } from "./sms-suggest";
 
 type ImportResult =
-  | { status: "added"; ids: string[] }
-  | { status: "exists"; ids: string[] }
+  | { status: "added"; ids: string[]; balanceSaved: boolean }
+  | { status: "exists"; ids: string[]; balanceSaved: boolean }
   | { status: "possible_duplicate"; similar: SimilarTransaction }
   | { status: "error"; error: string; fieldErrors?: Record<string, string> };
 
@@ -55,7 +59,7 @@ function subscribeToStorage(onChange: () => void) {
 
 export function SmsImporter() {
   const router = useRouter();
-  const { accounts, categories, today } = useAppData();
+  const { accounts, categories, settings, today } = useAppData();
   const { openEdit } = useTransactionSheet();
   const [text, setText] = React.useState("");
   const [items, setItems] = React.useState<SmsItem[]>([]);
@@ -73,12 +77,19 @@ export function SmsImporter() {
     setItems((list) => list.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }, []);
 
-  /** Add the given items; returns how many were added. */
+  /**
+   * Add the given items; returns how many were added. `sameAs` (one item):
+   * the user confirmed it's the recorded transaction it was flagged against.
+   */
   const addItems = React.useCallback(
-    async (targets: SmsItem[], options: { allowDuplicate?: boolean; quiet?: boolean } = {}) => {
+    async (
+      targets: SmsItem[],
+      options: { allowDuplicate?: boolean; sameAs?: string; quiet?: boolean; accounts?: AccountSummary[] } = {},
+    ) => {
       const sendable: Array<{ item: SmsItem; payload: Extract<ReturnType<typeof itemPayload>, { ok: true }> }> = [];
       for (const item of targets) {
-        const payload = itemPayload(item, accounts, today);
+        // A just-created account may not be in the page data yet.
+        const payload = itemPayload(item, options.accounts ?? accounts, today);
         if (payload.ok) sendable.push({ item, payload });
         else patchItem(item.id, { status: "review", fieldErrors: payload.fieldErrors, issues: [...new Set([...item.issues, "Fix the highlighted fields."])] });
       }
@@ -98,6 +109,7 @@ export function SmsImporter() {
               fee: payload.fee,
               balance: payload.balance,
               allowDuplicate: options.allowDuplicate ?? false,
+              sameAs: options.sameAs ?? null,
             })),
           },
         });
@@ -109,11 +121,20 @@ export function SmsImporter() {
       }
 
       const addedIds: string[] = [];
+      let balancesSaved = 0;
       sendable.forEach(({ item }, index) => {
         const result = results[index];
         if (result.status === "added" || result.status === "exists") {
-          patchItem(item.id, { status: result.status, addedIds: result.ids, similar: undefined, error: undefined, fieldErrors: {} });
+          patchItem(item.id, {
+            status: result.status,
+            addedIds: result.ids,
+            balanceSaved: result.balanceSaved,
+            similar: undefined,
+            error: undefined,
+            fieldErrors: {},
+          });
           if (result.status === "added") addedIds.push(...result.ids);
+          if (result.balanceSaved) balancesSaved++;
           const own = ownAccountId(item);
           if (own) rememberAccountFor(item.parsed, own);
         } else if (result.status === "possible_duplicate") {
@@ -125,10 +146,19 @@ export function SmsImporter() {
 
       const added = results.filter((r) => r.status === "added").length;
       const flagged = results.filter((r) => r.status === "possible_duplicate").length;
+      const notes = [
+        balancesSaved ? `Balance${balancesSaved === 1 ? "" : "s"} updated from the SMS.` : null,
+        flagged ? `${flagged} look${flagged === 1 ? "s" : ""} like ${flagged === 1 ? "a duplicate" : "duplicates"} — check below.` : null,
+      ].filter(Boolean);
+      const linked = !!options.sameAs && results[0]?.status === "exists";
+      if (linked) {
+        router.refresh();
+        toast.success("Linked to the recorded transaction", { description: balancesSaved ? "Balance updated from the SMS." : undefined });
+      }
       if (added) {
         router.refresh();
         toast.success(added === 1 ? "Transaction added" : `${added} transactions added`, {
-          description: flagged ? `${flagged} look${flagged === 1 ? "s" : ""} like ${flagged === 1 ? "a duplicate" : "duplicates"} — check below.` : undefined,
+          description: notes.join(" ") || undefined,
           action: {
             label: "Undo",
             onClick: () => {
@@ -146,8 +176,37 @@ export function SmsImporter() {
         });
       } else if (flagged && !options.quiet) {
         toast.warning("Already recorded?", { description: "Something similar is already in your ledger — check below." });
+      } else if (balancesSaved && !linked) {
+        router.refresh();
       }
       return added;
+    },
+    [accounts, patchItem, router, today],
+  );
+
+  /** Record the balances of messages that were added earlier. */
+  const saveBalances = React.useCallback(
+    async (targets: SmsItem[], options: { quiet?: boolean } = {}) => {
+      const sendable = targets.flatMap((item) => {
+        const reported = needsBalanceSaved(item, accounts, today) ? reportedBalance(item, accounts, today) : null;
+        return reported ? [{ item, balance: { accountId: reported.account.id, amount: reported.amount } }] : [];
+      });
+      if (!sendable.length) return 0;
+      try {
+        const { results } = await api<{ results: Array<{ saved: boolean }> }>("/api/sms/balance", {
+          body: { items: sendable.map(({ item, balance }) => ({ text: item.text, balance })) },
+        });
+        sendable.forEach(({ item }, index) => patchItem(item.id, { balanceSaved: results[index]?.saved ?? false }));
+        const saved = results.filter((r) => r.saved).length;
+        if (saved) {
+          router.refresh();
+          toast.success(saved === 1 ? "Balance updated from the SMS" : `${saved} balances updated from the SMS`);
+        }
+        return saved;
+      } catch (error) {
+        if (!options.quiet) toast.error(errorMessage(error));
+        return 0;
+      }
     },
     [accounts, patchItem, router, today],
   );
@@ -192,8 +251,11 @@ export function SmsImporter() {
       setText("");
 
       const ready = built.filter((item) => item.status === "ready");
-      if (auto && autoAdd && ready.length) {
-        await addItems(ready, { quiet: true });
+      // Messages added before whose balance isn't recorded yet (e.g. from before balances were read).
+      const earlier = built.filter((item) => needsBalanceSaved(item, accounts, today));
+      if (auto && autoAdd && (ready.length || earlier.length)) {
+        if (ready.length) await addItems(ready, { quiet: true });
+        if (earlier.length) await saveBalances(earlier, { quiet: true });
       } else if (built.length) {
         const skipped = built.filter((i) => i.status === "ignored").length;
         const already = built.filter((i) => i.status === "exists").length;
@@ -205,7 +267,7 @@ export function SmsImporter() {
         toast(parts.join(" · "));
       }
     },
-    [accounts, categories, today, autoAdd, addItems],
+    [accounts, categories, today, autoAdd, addItems, saveBalances],
   );
 
   // Messages shared to the installed app arrive in the URL fragment (never sent to the server).
@@ -225,6 +287,27 @@ export function SmsImporter() {
     // Run once, on arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Creating an account for a message whose bank or wallet has none yet.
+  const [newAccount, setNewAccount] = React.useState<{ key: number; open: boolean; item: SmsItem; suggestion: AccountSuggestion } | null>(null);
+
+  async function accountCreated(id: string, from: SmsItem) {
+    if (missingAccount(from) === "own") rememberAccountFor(from.parsed, id);
+    let fresh: AccountSummary[];
+    try {
+      fresh = (await api<{ accounts: AccountSummary[] }>("/api/accounts", { method: "GET" })).accounts;
+    } catch (error) {
+      toast.error(errorMessage(error));
+      return;
+    }
+    // Every message still waiting for an account gets another look.
+    const context = { accounts: fresh, categories, today, remembered: loadRememberedAccounts() };
+    const rematched = itemsRef.current.filter((item) => missingAccount(item)).map((item) => rematch(item, context));
+    const byId = new Map(rematched.map((item) => [item.id, item]));
+    setItems((list) => list.map((item) => byId.get(item.id) ?? item));
+    const ready = rematched.filter((item) => item.status === "ready");
+    if (autoAdd && ready.length) await addItems(ready, { accounts: fresh });
+  }
 
   async function pasteFromClipboard() {
     try {
@@ -310,24 +393,6 @@ export function SmsImporter() {
 
   const pending = items.filter((i) => i.status === "ready" || i.status === "review" || i.status === "error");
   const readyCount = items.filter((i) => i.status === "ready").length;
-  const hasAccounts = accounts.some((a) => a.isActive);
-
-  if (!hasAccounts) {
-    return (
-      <Card>
-        <EmptyState
-          icon={<MessageSquareTextIcon />}
-          title="Add an account first"
-          description="SMS are matched to your accounts — add your bank, bKash or cash wallet, then paste messages here."
-          action={
-            <Button asChild>
-              <Link href="/accounts?new=1">Add account</Link>
-            </Button>
-          }
-        />
-      </Card>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -415,6 +480,11 @@ export function SmsImporter() {
                   actions={{
                     onChange: (patch) => patchItem(item.id, patch),
                     onAdd: (options) => void addItems([item], options),
+                    onSaveBalance: () => void saveBalances([item]),
+                    onCreateAccount: () => {
+                      const suggestion = suggestAccount(item, settings.baseCurrency);
+                      if (suggestion) setNewAccount((current) => ({ key: (current?.key ?? 0) + 1, open: true, item, suggestion }));
+                    },
                     onUndo: () => void undo(item),
                     onOpen: () => void open(item),
                     onDismiss: () => setItems((list) => list.filter((i) => i.id !== item.id)),
@@ -426,6 +496,21 @@ export function SmsImporter() {
         </section>
       ) : (
         <HowItWorks />
+      )}
+
+      {newAccount && (
+        <AccountFormSheet
+          key={newAccount.key}
+          open={newAccount.open}
+          onOpenChange={(open) => setNewAccount((current) => (current ? { ...current, open } : current))}
+          defaults={newAccount.suggestion}
+          description={
+            newAccount.suggestion.openingBalance !== "0.00"
+              ? "Filled in from the SMS: the opening balance is what it held just before this message."
+              : "Filled in from the SMS. Check the opening balance."
+          }
+          onCreated={(id) => void accountCreated(id, newAccount.item)}
+        />
       )}
     </div>
   );

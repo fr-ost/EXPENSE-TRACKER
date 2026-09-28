@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/server/db";
 import { getAccount } from "@/lib/server/services/accounts";
 import { listBalanceUpdates } from "@/lib/server/services/balances";
-import { checkSms, importSms, smsFingerprint } from "@/lib/server/services/sms";
+import { checkSms, importSms, saveSmsBalances, smsFingerprint } from "@/lib/server/services/sms";
 import { createTransaction, deleteTransaction, getTransaction, updateTransaction } from "@/lib/server/services/transactions";
 import { smsImportInput, type TransactionInput } from "@/lib/validation";
 import { categoryId, makeAccount, resetData } from "../support/fixtures";
@@ -54,7 +54,7 @@ describe("SMS import", () => {
     const respaced = cashOut();
     respaced.items[0].text = `  ${CASH_OUT.replace(/ /g, "  ")}\n`;
     const [second] = await importSms(respaced, TODAY);
-    expect(second).toEqual({ status: "exists", ids: first.status === "added" ? first.ids : [] });
+    expect(second).toEqual({ status: "exists", ids: first.status === "added" ? first.ids : [], balanceSaved: false });
     expect(await prisma.transaction.count()).toBe(2);
     expect(smsFingerprint(CASH_OUT)).toBe(smsFingerprint(CASH_OUT.toUpperCase()));
   });
@@ -191,6 +191,56 @@ describe("SMS import", () => {
     await deleteTransaction(main);
     expect(await prisma.balanceCheckpoint.count()).toBe(0);
     expect((await getAccount(bkash, TODAY)).balance).toBe("3000.00");
+  });
+
+  it("records the balance of a message added before, when it comes again", async () => {
+    await prisma.account.update({ where: { id: bkash }, data: { openingBalance: "3000" } });
+    // Added without its balance (as before balances were read from SMS).
+    await importSms(cashOut(), TODAY);
+    expect((await getAccount(bkash, TODAY)).balance).toBe("963.00");
+    expect((await checkSms([{ text: CASH_OUT, description: "" }]))[0]).toMatchObject({ balanceSaved: false });
+
+    const again = cashOut();
+    again.items[0].balance = { accountId: bkash, amount: "500.00" };
+    expect((await importSms(again, TODAY))[0]).toMatchObject({ status: "exists", balanceSaved: true });
+    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
+    expect((await checkSms([{ text: CASH_OUT, description: "" }]))[0]).toMatchObject({ balanceSaved: true });
+    // Saving it again, or for a message never added, changes nothing.
+    expect(await saveSmsBalances([{ text: CASH_OUT, balance: { accountId: bkash, amount: "500.00" } }, { text: PAYMENT, balance: { accountId: bkash, amount: "1.00" } }])).toEqual([
+      { saved: true },
+      { saved: false },
+    ]);
+    expect(await prisma.balanceCheckpoint.count()).toBe(1);
+  });
+
+  it("a flagged message confirmed as the same transaction takes over its time and sets the balance", async () => {
+    // Paid at 12:00, typed in by hand at 12:05 without a time.
+    const typed = await createTransaction(
+      { type: "EXPENSE", amount: "350", date: TODAY, accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Daraz", notes: null },
+      { today: TODAY, time: "12:05:00" },
+    );
+    const input = smsImportInput.parse({
+      items: [
+        {
+          text: PAYMENT,
+          transaction: { type: "EXPENSE", amount: "350", date: TODAY, time: "12:00", accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Daraz" },
+          balance: { accountId: bkash, amount: "150.00" },
+        },
+      ],
+    });
+    const [flagged] = await importSms(input, TODAY, "18:00:00");
+    expect(flagged).toMatchObject({ status: "possible_duplicate", similar: { id: typed.id } });
+
+    input.items[0].sameAs = typed.id;
+    expect((await importSms(input, TODAY, "18:00:00"))[0]).toEqual({ status: "exists", ids: [typed.id], balanceSaved: true });
+    // Counted once: the balance is what the SMS says, not 150 − 350.
+    expect((await getAccount(bkash, TODAY)).balance).toBe("150.00");
+    expect(await getTransaction(typed.id)).toMatchObject({ time: "12:00", fromSms: true });
+    expect(await prisma.transaction.count()).toBe(1);
+
+    // The message is now linked to it.
+    input.items[0].sameAs = null;
+    expect((await importSms(input, TODAY))[0]).toMatchObject({ status: "exists", ids: [typed.id] });
   });
 
   it("ignores a reported balance for an account the transaction doesn't touch", async () => {

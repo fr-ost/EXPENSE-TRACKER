@@ -1,15 +1,15 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
-import { addDays, fromDbDate, type Clock, type ISODate } from "@/lib/dates";
+import { addDays, fromDbDate, toDbDate, type Clock, type ISODate } from "@/lib/dates";
 import type { EntryType, ExpenseScope } from "@/lib/domain";
 import { normalizeMoney, type Money } from "@/lib/money";
 import { normalizeSmsText } from "@/lib/sms/parse";
 import type { SmsImportInput } from "@/lib/validation";
 import { prisma, type Tx } from "../db";
-import { AppError } from "../errors";
+import { AppError, invalid } from "../errors";
 import { isUniqueViolation } from "./mappers";
-import { resolveEntry } from "./transactions";
+import { loggedTimeFor, resolveEntry } from "./transactions";
 
 /**
  * SMS imports. Each message gets a fingerprint of its (normalised) text; its
@@ -37,6 +37,8 @@ export interface LearnedEntry {
 export interface SmsCheckResult {
   /** Transactions already added from this message. */
   existing: string[];
+  /** The balance this message reports is already recorded. */
+  balanceSaved: boolean;
   learned: LearnedEntry | null;
 }
 
@@ -44,8 +46,13 @@ export async function checkSms(items: Array<{ text: string; description: string 
   const keys = items.flatMap((item) => [smsKey(item.text, 0), smsKey(item.text, 1)]);
   const descriptions = [...new Set(items.map((i) => i.description.toLowerCase()).filter(Boolean))];
 
-  const [existing, learned] = await Promise.all([
-    prisma.transaction.findMany({ where: { idempotencyKey: { in: keys } }, select: { id: true, idempotencyKey: true } }),
+  const [existing, balances, learned] = await Promise.all([
+    prisma.transaction.findMany({
+      where: { idempotencyKey: { in: keys } },
+      select: { id: true, idempotencyKey: true },
+      orderBy: { idempotencyKey: "asc" },
+    }),
+    prisma.balanceCheckpoint.findMany({ where: { smsKey: { in: items.map((item) => smsKey(item.text, "b")) } }, select: { smsKey: true } }),
     descriptions.length
       ? prisma.$queryRaw<Array<LearnedEntry & { key: string }>>`
           SELECT DISTINCT ON (lower("description"))
@@ -62,6 +69,7 @@ export async function checkSms(items: Array<{ text: string; description: string 
     const match = learned.find((l) => l.key === item.description.toLowerCase());
     return {
       existing: existing.filter((e) => e.idempotencyKey?.startsWith(prefix)).map((e) => e.id),
+      balanceSaved: balances.some((b) => b.smsKey === `${prefix}b`),
       learned: match
         ? {
             type: match.type,
@@ -84,9 +92,10 @@ export interface SimilarTransaction {
   account: string;
 }
 
+/** `balanceSaved`: the balance the message reports is recorded for its account. */
 export type SmsImportResult =
-  | { status: "added"; ids: string[] }
-  | { status: "exists"; ids: string[] }
+  | { status: "added"; ids: string[]; balanceSaved: boolean }
+  | { status: "exists"; ids: string[]; balanceSaved: boolean }
   | { status: "possible_duplicate"; similar: SimilarTransaction }
   | { status: "error"; error: string; fieldErrors?: Record<string, string> };
 
@@ -124,17 +133,31 @@ async function findSimilar(tx: Tx, row: Prisma.TransactionUncheckedCreateInput):
 
 type ImportItem = SmsImportInput["items"][number];
 
+/** A message and the balance it reports for one of its accounts. */
+type ReportedBalance = Pick<ImportItem, "text" | "balance">;
+
+/** Where a transaction sits: the accounts it touches and its moment. */
+interface Placed {
+  accountId: string;
+  toAccountId?: string | null;
+  date: Date | string;
+  time?: string | null;
+  loggedTime?: string | null;
+}
+
+const PLACED = { id: true, idempotencyKey: true, accountId: true, toAccountId: true, date: true, time: true, loggedTime: true } as const;
+
 /**
  * The balance the message reports becomes a balance update for the account it
  * belongs to, placed right after the message's own transaction (same moment,
- * and a balance update comes after the movements at its minute). Idempotent
- * per message.
+ * and a balance update comes after the movements at its moment). Idempotent
+ * per message. Returns whether the message's balance is saved.
  */
-async function recordReportedBalance(client: Tx, item: ImportItem, row: Prisma.TransactionUncheckedCreateInput): Promise<void> {
+async function recordReportedBalance(client: Tx, item: ReportedBalance, row: Placed): Promise<boolean> {
   const accountIds = [row.accountId, row.toAccountId].filter((v): v is string => !!v);
-  if (!item.balance || !accountIds.includes(item.balance.accountId)) return;
+  if (!item.balance || !accountIds.includes(item.balance.accountId)) return false;
   const key = smsKey(item.text, "b");
-  if (await client.balanceCheckpoint.findUnique({ where: { smsKey: key }, select: { id: true } })) return;
+  if (await client.balanceCheckpoint.findUnique({ where: { smsKey: key }, select: { id: true } })) return true;
   await client.balanceCheckpoint.create({
     data: {
       accountId: item.balance.accountId,
@@ -146,6 +169,7 @@ async function recordReportedBalance(client: Tx, item: ImportItem, row: Prisma.T
       smsKey: key,
     },
   });
+  return true;
 }
 
 class PossibleDuplicate extends Error {
@@ -154,19 +178,54 @@ class PossibleDuplicate extends Error {
   }
 }
 
+/**
+ * The user confirmed a flagged message is a transaction already recorded
+ * (e.g. typed in by hand). The message becomes its record: the transaction
+ * takes the message's date and time — the bank's clock beats a guess — so the
+ * balance the message reports lands right after it, and pasting the message
+ * again finds it.
+ */
+async function linkToRecorded(tx: Tx, item: ImportItem, targetId: string, mainKey: string, clock: Clock): Promise<SmsImportResult> {
+  const target = await tx.transaction.findUnique({ where: { id: targetId }, select: { ...PLACED, type: true } });
+  if (!target || target.type === "ADJUSTMENT") throw invalid("That transaction no longer exists.");
+  const date = item.transaction.date;
+  const time = item.transaction.time ?? target.time;
+  const unmoved = fromDbDate(target.date) === date && target.time === time;
+  const linked = await tx.transaction.update({
+    where: { id: target.id },
+    data: {
+      date: toDbDate(date),
+      time,
+      loggedTime: time ? null : unmoved ? target.loggedTime : loggedTimeFor(date, null, clock),
+      // Keep a key another message already gave it (the other side of a transfer).
+      ...(target.idempotencyKey?.startsWith("sms:") ? {} : { idempotencyKey: mainKey }),
+    },
+    select: PLACED,
+  });
+  return { status: "exists", ids: [linked.id], balanceSaved: await recordReportedBalance(tx, item, linked) };
+}
+
 async function importOne(item: ImportItem, clock: Clock): Promise<SmsImportResult> {
   const mainKey = smsKey(item.text, 0);
   const feeKey = smsKey(item.text, 1);
-  const already = async () =>
-    (await prisma.transaction.findMany({ where: { idempotencyKey: { in: [mainKey, feeKey] } }, select: { id: true } })).map((t) => t.id);
-
-  const existing = await already();
-  if (existing.length) return { status: "exists", ids: existing };
+  // Main transaction first (":0" sorts before ":1").
+  const fromThisMessage = (client: Tx | typeof prisma) =>
+    client.transaction.findMany({ where: { idempotencyKey: { in: [mainKey, feeKey] } }, select: PLACED, orderBy: { idempotencyKey: "asc" } });
 
   try {
-    const ids = await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx): Promise<SmsImportResult> => {
+      const existing = await fromThisMessage(tx);
+      if (existing.length) {
+        // Added before — perhaps before balances were read from SMS: record it now.
+        const main = existing.find((row) => row.idempotencyKey === mainKey);
+        return { status: "exists", ids: existing.map((row) => row.id), balanceSaved: main ? await recordReportedBalance(tx, item, main) : false };
+      }
+      if (item.sameAs) return linkToRecorded(tx, item, item.sameAs, mainKey, clock);
+
       const row = await resolveEntry(tx, item.transaction, clock);
       if (!item.allowDuplicate) {
+        // Not added (and its balance not recorded) until the user says whether
+        // it's the same transaction or another one.
         const similar = await findSimilar(tx, row);
         if (similar) throw new PossibleDuplicate(similar);
       }
@@ -175,15 +234,15 @@ async function importOne(item: ImportItem, clock: Clock): Promise<SmsImportResul
         const feeRow = await resolveEntry(tx, item.fee, clock);
         created.push(await tx.transaction.create({ data: { ...feeRow, idempotencyKey: feeKey }, select: { id: true } }));
       }
-      await recordReportedBalance(tx, item, row);
-      return created.map((c) => c.id);
+      return { status: "added", ids: created.map((c) => c.id), balanceSaved: await recordReportedBalance(tx, item, row) };
     });
-    return { status: "added", ids };
   } catch (error) {
-    // The balance is only recorded with its transaction: the entry this one
-    // resembles may be timed differently, and would be counted twice.
     if (error instanceof PossibleDuplicate) return { status: "possible_duplicate", similar: error.similar };
-    if (isUniqueViolation(error, "idempotencyKey")) return { status: "exists", ids: await already() };
+    if (isUniqueViolation(error)) {
+      // The same message imported at the same moment elsewhere won the race.
+      const saved = await prisma.balanceCheckpoint.findUnique({ where: { smsKey: smsKey(item.text, "b") }, select: { id: true } });
+      return { status: "exists", ids: (await fromThisMessage(prisma)).map((row) => row.id), balanceSaved: !!saved };
+    }
     if (error instanceof AppError) return { status: "error", error: error.message, fieldErrors: error.fieldErrors };
     throw error;
   }
@@ -194,5 +253,27 @@ export async function importSms(input: SmsImportInput, today: ISODate, time?: st
   const results: SmsImportResult[] = [];
   // Sequential on purpose: later items see earlier ones when looking for duplicates.
   for (const item of input.items) results.push(await importOne(item, { today, time }));
+  return results;
+}
+
+/**
+ * Record the balances of messages added earlier (e.g. before balances were
+ * read from SMS). A message that was never added records nothing.
+ */
+export async function saveSmsBalances(items: ReportedBalance[]): Promise<Array<{ saved: boolean }>> {
+  const results: Array<{ saved: boolean }> = [];
+  for (const item of items) {
+    const saved = await prisma
+      .$transaction(async (tx) => {
+        const main = await tx.transaction.findUnique({ where: { idempotencyKey: smsKey(item.text, 0) }, select: PLACED });
+        return main ? recordReportedBalance(tx, item, main) : false;
+      })
+      .catch(async (error: unknown) => {
+        // Saved at the same moment by another request.
+        if (!isUniqueViolation(error)) throw error;
+        return !!(await prisma.balanceCheckpoint.findUnique({ where: { smsKey: smsKey(item.text, "b") }, select: { id: true } }));
+      });
+    results.push({ saved });
+  }
   return results;
 }

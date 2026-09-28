@@ -15,7 +15,8 @@ import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { ACCOUNT_TYPE_META, ACCOUNT_TYPES, CURRENCIES, isPaletteKey, type AccountType, type PaletteKey } from "@/lib/domain";
-import { sanitizeAmountInput } from "@/lib/money";
+import type { ISODate } from "@/lib/dates";
+import { normalizeMoney, sanitizeAmountInput, type Money } from "@/lib/money";
 import type { AccountSummary } from "@/lib/types";
 import { accountInput, fieldErrorsOf } from "@/lib/validation";
 import { cn } from "@/lib/utils";
@@ -33,25 +34,33 @@ export function AccountFormSheet({
   open,
   onOpenChange,
   account,
+  defaults,
+  description,
+  onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account?: AccountSummary;
+  /** Starting values for a new account (e.g. read from an SMS). */
+  defaults?: { name?: string; type?: AccountType; openingBalance?: Money; openingDate?: ISODate };
+  description?: string;
+  onCreated?: (id: string) => void;
 }) {
   const router = useRouter();
   const { settings, today } = useAppData();
   const formId = React.useId();
   const editing = !!account;
   const hasHistory = (account?.transactionCount ?? 0) > 0;
+  const initialType = account?.type ?? defaults?.type ?? "CASH";
 
-  const initialBalance = account?.openingBalance ?? "0";
-  const [name, setName] = React.useState(account?.name ?? "");
-  const [type, setType] = React.useState<AccountType>(account?.type ?? "CASH");
+  const initialBalance = normalizeMoney(account?.openingBalance ?? defaults?.openingBalance ?? "0");
+  const [name, setName] = React.useState(account?.name ?? defaults?.name ?? "");
+  const [type, setType] = React.useState<AccountType>(initialType);
   const [currency, setCurrency] = React.useState(account?.currency ?? settings.baseCurrency);
   const [negative, setNegative] = React.useState(initialBalance.startsWith("-"));
   const [balance, setBalance] = React.useState(initialBalance.replace(/^-/, "").replace(/\.00$/, "").replace(/^0$/, ""));
-  const [openingDate, setOpeningDate] = React.useState(account?.openingDate ?? today);
-  const [color, setColor] = React.useState<PaletteKey>(isPaletteKey(account?.color) ? account.color : DEFAULT_COLORS[account?.type ?? "CASH"]);
+  const [openingDate, setOpeningDate] = React.useState(account?.openingDate ?? defaults?.openingDate ?? today);
+  const [color, setColor] = React.useState<PaletteKey>(isPaletteKey(account?.color) ? account.color : DEFAULT_COLORS[initialType]);
   const [colorTouched, setColorTouched] = React.useState(!!account?.color);
   const [isActive, setIsActive] = React.useState(account?.isActive ?? true);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -82,8 +91,9 @@ export function AccountFormSheet({
         await api(`/api/accounts/${account.id}`, { method: "PUT", body: parsed.data });
         toast.success("Account updated");
       } else {
-        await api("/api/accounts", { body: parsed.data });
+        const created = await api<{ id: string }>("/api/accounts", { body: parsed.data });
         toast.success(`${parsed.data.name} added`);
+        onCreated?.(created.id);
       }
       onOpenChange(false);
       router.refresh();
@@ -100,7 +110,7 @@ export function AccountFormSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={editing ? "Edit account" : "New account"}
-      description={editing ? undefined : "Where your money physically lives."}
+      description={editing ? undefined : (description ?? "Where your money physically lives.")}
       footer={
         <div className="flex gap-2 sm:justify-end">
           <Button variant="secondary" className="hidden sm:inline-flex" onClick={() => onOpenChange(false)}>

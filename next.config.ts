@@ -34,6 +34,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // Each Railway deploy has its own id: an app left open reloads itself on its
+  // next navigation after a deploy instead of running the old version.
+  deploymentId: process.env.RAILWAY_GIT_COMMIT_SHA || undefined,
   // Native / filesystem-dependent packages stay out of the server bundle.
   serverExternalPackages: ["pdfkit", "exceljs"],
   async headers() {

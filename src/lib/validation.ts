@@ -169,12 +169,22 @@ export const smsImportInput = z.object({
           .transform((v) => v ?? null),
         /** Add even though a similar transaction is already recorded. */
         allowDuplicate: z.boolean().default(false),
+        /** The recorded transaction this message is (the user confirmed a flagged duplicate). */
+        sameAs: id.nullish().transform((v) => v ?? null),
       }),
     )
     .min(1)
     .max(50),
 });
 export type SmsImportInput = z.infer<typeof smsImportInput>;
+
+/** Balances of messages added earlier. */
+export const smsBalanceInput = z.object({
+  items: z
+    .array(z.object({ text: smsText, balance: z.object({ accountId: id, amount: signedAmount }) }))
+    .min(1)
+    .max(50),
+});
 
 export const smsCheckInput = z.object({
   items: z

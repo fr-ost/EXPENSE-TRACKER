@@ -194,6 +194,10 @@ function findAmounts(text: string): AmountMatch[] {
   return found.sort((a, b) => a.index - b.index);
 }
 
+/** A balance without a currency, e.g. "Avl Bal: 12,345.67" (never a date or time after it). */
+const UNANCHORED_BALANCE =
+  /(?:\bbal(?:ance)?|\bavl\.?\s*bal\w*|ব্যালেন্স)\s*(?:is|was|of|now)?\s*[:=-]?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)(?![\d:/-])/i;
+
 /** Amount without a currency, e.g. "debited by 500.00" or "Amount: 500". */
 const UNANCHORED_AMOUNT =
   /\b(?:amount|amt|debited\s+(?:by|with|for)|credited\s+(?:by|with)|withdrawn|deposited|paid|received|sent)\s*(?:of)?\s*[:=-]?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)(?![\d:/-])/i;
@@ -563,7 +567,13 @@ export function parseSms(input: string, { today }: ParseOptions): ParsedSms {
   // The figure after the transaction amount, if there are several.
   const reported = (label: AmountLabel) =>
     amounts.find((a) => a.label === label && a.index > amountIndex) ?? amounts.find((a) => a.label === label) ?? null;
-  const balanceMatch = reported("balance");
+  let balanceMatch: Pick<AmountMatch, "value" | "currency"> | null = reported("balance");
+  if (!balanceMatch) {
+    // "Bal: 12,345.67" — the message's own currency.
+    const bare = UNANCHORED_BALANCE.exec(text);
+    const value = bare ? toMoney(bare[1]) : null;
+    if (value) balanceMatch = { value, currency: currency ?? "BDT" };
+  }
   const limit = reported("limit")?.value ?? null;
 
   const { direction, margin } = detectDirection(text, amountIndex);

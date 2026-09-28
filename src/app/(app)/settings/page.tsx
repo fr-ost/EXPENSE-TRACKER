@@ -10,6 +10,7 @@ import { Card, CardHeader } from "@/components/ui/misc";
 import { loadPageContext } from "@/lib/server/page-context";
 import { listCategories } from "@/lib/server/services/categories";
 import { listSessions } from "@/lib/server/services/settings";
+import { appVersion } from "@/lib/server/version";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -64,7 +65,7 @@ export default async function SettingsPage() {
       </div>
 
       <Card>
-        <CardHeader title="App" />
+        <CardHeader title="App" description={`Version ${appVersion()}`} />
         <div className="px-5 pb-6 pt-4 sm:px-6">
           <InstallAppCard />
         </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildItem, itemPayload, reportedBalance } from "@/components/sms/sms-model";
+import { buildItem, itemPayload, missingAccount, rematch, reportedBalance, suggestAccount } from "@/components/sms/sms-model";
 import { ownEffect, suggestFromSms, type SuggestContext } from "@/components/sms/sms-suggest";
 import type { AccountType } from "@/lib/domain";
 import { fromMinor, toMinor } from "@/lib/money";
@@ -146,6 +146,32 @@ describe("SMS suggestions", () => {
 
     const off = itemPayload({ ...item, includeBalance: false }, [cash, bkash, city], today);
     expect(off.ok && off.balance).toBeNull();
+  });
+
+  it("offers to create the account a message needs, with the balance before it", () => {
+    const nagad = "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30";
+    const item = buildItem(nagad, { accounts: [cash, bkash, city], categories, today, remembered: {} });
+    expect(missingAccount(item)).toBe("own");
+    // 1,234.56 after receiving 500 → 734.56 before.
+    expect(suggestAccount(item, "BDT")).toEqual({ name: "Nagad", type: "MOBILE_WALLET", openingBalance: "734.56", openingDate: "2026-09-28" });
+
+    // Once it exists, the message matches it and can set its balance.
+    const created = account("a-nagad", "Nagad", "MOBILE_WALLET", "734.56");
+    const again = rematch(item, { accounts: [cash, bkash, city, created], categories, today, remembered: {} });
+    expect(again).toMatchObject({ id: item.id, status: "ready", draft: { accountId: "a-nagad" } });
+    expect(missingAccount(again)).toBeNull();
+    expect(reportedBalance(again, [cash, bkash, city, created], today)).toMatchObject({ amount: "1234.56" });
+
+    // A bank named with its digits; a withdrawal with no Cash account gets one.
+    const bank = buildItem("Your A/C ***9876 at BRAC Bank is debited with BDT 3,000.00 on 28-09-2026 10:22 for bills. Available Balance: BDT 12,000.00", {
+      accounts: [bkash],
+      categories,
+      today,
+      remembered: {},
+    });
+    expect(suggestAccount(bank, "BDT")).toMatchObject({ name: "BRAC Bank 9876", type: "BANK", openingBalance: "15000.00" });
+    const withdrawal = buildItem(CASH_OUT, { accounts: [bkash, city], categories, today, remembered: {} });
+    expect(suggestAccount(withdrawal, "BDT")).toMatchObject({ name: "Cash", type: "CASH" });
   });
 
   it("never takes a card's limit, a card SMS or another currency as a balance", () => {

@@ -40,9 +40,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   `resolveEntry`, keys each message `sms:<fingerprint>:<part>` (0 transaction,
   1 fee, b its balance update) and flags likely duplicates via the
   `TransactionLeg` view. A reported balance is recorded only with its own
-  transaction (never on a flagged duplicate) and deleted with it
-  (`deleteTransaction`); card limits are never balances.
+  transaction and deleted with it (`deleteTransaction`): on add, on a repeat
+  of a message added earlier ("exists", or `saveSmsBalances`), or when a
+  flagged duplicate is confirmed with `sameAs` (the recorded transaction takes
+  the message's key, date and time). Card limits are never balances.
   Add new message formats as parser tests first (`tests/unit/sms-parse.test.ts`).
+- Displaying money (`formatMoney`) must never throw: it runs during render,
+  and amount fields hold partial input like "12.".
+- `deploymentId` is Railway's commit SHA (skew protection: an open app reloads
+  after a deploy); Settings shows it as the version.
 - The service worker (`public/sw.js`) must never cache pages or API responses.
   Icons are rendered from one drawing: `node scripts/generate-icons.mjs`.
 - Rate limiting keys on the leftmost `X-Forwarded-For` (Railway). Next.js fills
