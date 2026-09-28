@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightIcon, ArrowUpDownIcon, StickyNoteIcon } from "lucide-react";
+import { ArrowRightIcon, ArrowUpDownIcon, HistoryIcon, StickyNoteIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import * as React from "react";
 import { useAppData, useFormatMoney } from "@/components/app-data";
@@ -13,7 +13,9 @@ import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
+import { formatDate } from "@/lib/dates";
 import { ENTRY_TYPES, TRANSACTION_TYPE_LABELS, type EntryType } from "@/lib/domain";
+import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
 import { currencySymbol, sanitizeAmountInput } from "@/lib/money";
 import type { AccountSummary } from "@/lib/types";
 import { selectableCategories, type TransactionDraft } from "./transaction-draft";
@@ -35,6 +37,7 @@ export function TransactionFields({
   autoFocusAmount,
   dateLabel = "Date",
   withTime = false,
+  withBalanceOption = false,
 }: {
   draft: TransactionDraft;
   update: (patch: Partial<TransactionDraft>) => void;
@@ -44,6 +47,8 @@ export function TransactionFields({
   dateLabel?: string;
   /** Offer an optional time of day next to the date (not for recurring rules). */
   withTime?: boolean;
+  /** Offer to keep it out of the account balance, and say when it lands before a known balance. */
+  withBalanceOption?: boolean;
 }) {
   const { categories, today } = useAppData();
   const format = useFormatMoney();
@@ -64,6 +69,14 @@ export function TransactionFields({
   const timeProps = withTime
     ? { time: draft.time, onTimeChange: (time: string) => update({ time }), timeError: errors.time }
     : {};
+
+  // Accounts whose latest known balance already includes this entry.
+  const settled =
+    withBalanceOption && draft.affectsBalance
+      ? [source, draft.type === "TRANSFER" ? destination : undefined].filter(
+          (account): account is AccountSummary => !!account && landsBefore(draft.date, draft.time, latestKnownBalance(account), today),
+        )
+      : [];
 
   const setType = (type: EntryType) => {
     const patch: Partial<TransactionDraft> = { type };
@@ -240,6 +253,41 @@ export function TransactionFields({
           <StickyNoteIcon className="size-3.5" />
           Add a note
         </button>
+      )}
+
+      {withBalanceOption && (
+        <div className="flex flex-col gap-2">
+          <label className="flex items-start justify-between gap-4 rounded-lg border border-border px-4 py-3">
+            <span className="flex flex-col gap-0.5">
+              <span className="text-body font-medium text-text">Don&rsquo;t change the balance</span>
+              <span className="text-small text-text-secondary">
+                {draft.type === "TRANSFER"
+                  ? "Neither account's balance moves. Still listed with your transfers."
+                  : "Still counts in reports. For spending the balance already reflects."}
+              </span>
+            </span>
+            <Switch
+              checked={!draft.affectsBalance}
+              onCheckedChange={(keepOut) => update({ affectsBalance: !keepOut })}
+              aria-label="Don't change the balance"
+            />
+          </label>
+          {settled.length > 0 && (
+            <p className="flex items-start gap-2 px-1 text-small text-text-tertiary">
+              <HistoryIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span>
+                {settled.map((account, index) => (
+                  <React.Fragment key={account.id}>
+                    {index > 0 && " and "}
+                    {account.name}&rsquo;s {latestKnownBalance(account).opening ? "opening balance" : "latest balance update"} (
+                    {formatDate(latestKnownBalance(account).date, "short")})
+                  </React.Fragment>
+                ))}{" "}
+                already {settled.length > 1 ? "include" : "includes"} this date, so it won&rsquo;t change the current balance.
+              </span>
+            </p>
+          )}
+        </div>
       )}
 
       {draft.type === "TRANSFER" && source && destination && draft.amount && (

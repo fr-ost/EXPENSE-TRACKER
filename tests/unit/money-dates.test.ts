@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMonths, describeSchedule, formatDate, isValidISODate, todayInTimeZone } from "@/lib/dates";
+import { addMonths, describeSchedule, formatDate, isValidISODate, timeInTimeZone, todayInTimeZone } from "@/lib/dates";
 import {
   addMoney,
   formatCompactNumber,
@@ -60,6 +60,15 @@ describe("money", () => {
     expect(sanitizeAmountInput("abc")).toBe("");
     expect(groupAmountInput("1234567.5", "SOUTH_ASIAN")).toBe("12,34,567.5");
   });
+
+  it("reads an amount typed up to its decimal point", () => {
+    // What an amount field holds between typing "12." and "12.5".
+    expect(sanitizeAmountInput("12.")).toBe("12.");
+    expect(toMinor("12.")).toBe(1200n);
+    expect(formatMoney("12.")).toBe("৳12");
+    expect(positiveAmount.safeParse("12.").success).toBe(true);
+    expect(() => toMinor(".")).toThrow();
+  });
 });
 
 describe("dates", () => {
@@ -80,6 +89,9 @@ describe("dates", () => {
     const instant = new Date("2026-09-27T20:30:00Z"); // 02:30 on the 28th in Dhaka
     expect(todayInTimeZone("Asia/Dhaka", instant)).toBe("2026-09-28");
     expect(todayInTimeZone("UTC", instant)).toBe("2026-09-27");
+    expect(timeInTimeZone("Asia/Dhaka", instant)).toBe("02:30");
+    expect(timeInTimeZone("Asia/Dhaka", new Date("2026-09-27T18:00:05Z"), true)).toBe("00:00:05");
+    expect(timeInTimeZone("Not/AZone", instant, true)).toBe("20:30:00");
   });
 
   it("formats deterministically", () => {

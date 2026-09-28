@@ -26,34 +26,44 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge, Card, CardHeader } from "@/components/ui/misc";
 import { api, errorMessage } from "@/lib/api-client";
-import { formatDate, type ISODate } from "@/lib/dates";
+import { describeDay, formatDate, formatTime, type ISODate } from "@/lib/dates";
 import { ACCOUNT_TYPE_META } from "@/lib/domain";
 import { isZero, type Money } from "@/lib/money";
-import type { AccountSummary, TransactionView } from "@/lib/types";
+import type { AccountSummary, BalanceUpdateView, TransactionView } from "@/lib/types";
 import { AccountFormSheet } from "./account-form-sheet";
-import { ReconcileSheet } from "./reconcile-sheet";
+import { BalanceUpdates } from "./balance-updates";
+import { UpdateBalanceSheet } from "./update-balance-sheet";
 
 export function AccountDetailView({
   account,
   history,
   transactions,
   totalTransactions,
+  balanceUpdates,
   today,
 }: {
   account: AccountSummary;
   history: Array<{ date: ISODate; balance: Money }>;
   transactions: TransactionView[];
   totalTransactions: number;
+  balanceUpdates: BalanceUpdateView[];
   today: ISODate;
 }) {
   const router = useRouter();
   const { openCreate } = useTransactionSheet();
   const [editKey, setEditKey] = React.useState(0);
   const [editOpen, setEditOpen] = React.useState(false);
-  const [reconcileKey, setReconcileKey] = React.useState(0);
-  const [reconcileOpen, setReconcileOpen] = React.useState(false);
+  const [updateKey, setUpdateKey] = React.useState(0);
+  const [updateOpen, setUpdateOpen] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+
+  const openUpdate = () => {
+    setUpdateKey((k) => k + 1);
+    setUpdateOpen(true);
+  };
+  const hasCorrections = !isZero(account.corrections);
+  const lastUpdate = account.lastUpdate;
 
   async function setActive(isActive: boolean) {
     try {
@@ -122,6 +132,12 @@ export function AccountDetailView({
               tone={account.balance.startsWith("-") ? "signed" : "none"}
               className="text-[2.5rem] font-semibold leading-none tracking-[-0.035em]"
             />
+            {lastUpdate && (
+              <span className="text-small text-text-tertiary">
+                {lastUpdate.source === "SMS" ? "Balance from an SMS" : "Balance checked"} {describeDay(lastUpdate.date, today)}
+                {lastUpdate.time && ` at ${formatTime(lastUpdate.time)}`}
+              </span>
+            )}
             {!isZero(account.scheduledNet) && (
               <span className="text-small text-text-tertiary">
                 <Amount value={account.scheduledNet} currency={account.currency} sign="always" /> scheduled after today
@@ -130,22 +146,16 @@ export function AccountDetailView({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={openUpdate}>
+            <ScaleIcon />
+            Update balance
+          </Button>
           {account.isActive && (
             <Button variant="outline" onClick={() => openCreate({ accountId: account.id })}>
               <PlusIcon />
               Transaction
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={() => {
-              setReconcileKey((k) => k + 1);
-              setReconcileOpen(true);
-            }}
-          >
-            <ScaleIcon />
-            Reconcile
-          </Button>
           <Button
             variant="outline"
             onClick={() => {
@@ -184,19 +194,26 @@ export function AccountDetailView({
         </div>
       </header>
 
-      <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3">
+      <dl
+        className={`mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border ${hasCorrections ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+      >
         <Stat label={`Opening · ${formatDate(account.openingDate, "medium")}`}>
           <Amount value={account.openingBalance} currency={account.currency} />
         </Stat>
         <Stat label="Money in">
           <Amount value={account.inflow} currency={account.currency} tone="income" />
         </Stat>
-        <Stat label="Money out" className="col-span-2 sm:col-span-1">
+        <Stat label="Money out" className={hasCorrections ? undefined : "col-span-2 sm:col-span-1"}>
           <Amount value={account.outflow} currency={account.currency} />
         </Stat>
+        {hasCorrections && (
+          <Stat label="Corrections">
+            <Amount value={account.corrections} currency={account.currency} sign="always" />
+          </Stat>
+        )}
       </dl>
 
-      {account.transactionCount > 0 && (
+      {(account.transactionCount > 0 || balanceUpdates.length > 0) && (
         <Card className="mb-6">
           <CardHeader title="Balance" description={`${formatDate(history[0].date, "medium")} – today`} />
           <div className="px-3 pb-4 pt-2 sm:px-4">
@@ -204,6 +221,8 @@ export function AccountDetailView({
           </div>
         </Card>
       )}
+
+      {balanceUpdates.length > 0 && <BalanceUpdates account={account} updates={balanceUpdates} today={today} onUpdate={openUpdate} />}
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -226,7 +245,7 @@ export function AccountDetailView({
       </section>
 
       <AccountFormSheet key={`edit-${editKey}`} open={editOpen} onOpenChange={setEditOpen} account={account} />
-      <ReconcileSheet key={`reconcile-${reconcileKey}`} open={reconcileOpen} onOpenChange={setReconcileOpen} account={account} />
+      <UpdateBalanceSheet key={`update-${updateKey}`} open={updateOpen} onOpenChange={setUpdateOpen} account={account} />
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}

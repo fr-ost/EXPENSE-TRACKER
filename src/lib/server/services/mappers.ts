@@ -66,6 +66,7 @@ export function toTransactionView(row: TransactionWithRefs): TransactionView {
     countAsExpense: row.countAsExpense,
     scope: row.scope,
     recurringId: row.recurringId,
+    affectsBalance: row.affectsBalance,
     fromSms: row.idempotencyKey?.startsWith("sms:") ?? false,
     createdAt: row.createdAt.toISOString(),
   };

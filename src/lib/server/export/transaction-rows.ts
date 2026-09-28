@@ -27,6 +27,8 @@ export interface ExportRow {
   receivedCurrency: string;
   notes: string;
   recurring: boolean;
+  /** False for entries kept for the record without moving the balance. */
+  inBalance: boolean;
 }
 
 export const EXPORT_COLUMNS: Array<{ key: keyof ExportRow; header: string; numeric?: boolean }> = [
@@ -45,6 +47,7 @@ export const EXPORT_COLUMNS: Array<{ key: keyof ExportRow; header: string; numer
   { key: "receivedCurrency", header: "Received currency" },
   { key: "notes", header: "Notes" },
   { key: "recurring", header: "Recurring" },
+  { key: "inBalance", header: "Counts in balance" },
 ];
 
 /** Every transaction matching the filters (all pages), in the requested order. */
@@ -78,5 +81,6 @@ export async function exportTransactionRows(filters: TransactionFilters): Promis
     receivedCurrency: row.toAccount?.currency ?? "",
     notes: row.notes ?? "",
     recurring: row.recurringId !== null,
+    inBalance: row.affectsBalance,
   }));
 }

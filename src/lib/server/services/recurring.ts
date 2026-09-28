@@ -157,7 +157,7 @@ export async function createRecurring(input: RecurringInput, options: { today: I
   const { today, backfill } = options;
   const rule = await prisma.$transaction(async (tx) => {
     // Validate exactly like a transaction dated on the start date.
-    await resolveEntry(tx, ruleToInput(input, input.startDate), today);
+    await resolveEntry(tx, ruleToInput(input, input.startDate), { today });
     const index = backfill ? 0 : firstIndexOnOrAfter(input.startDate, input.frequency, today);
     return tx.recurringTransaction.create({
       data: { ...ruleData(input), ...scheduleState(input.startDate, input.frequency, input.endDate, index) },
@@ -175,7 +175,7 @@ export async function updateRecurring(id: string, input: RecurringInput, today: 
       select: { frequency: true, startDate: true, occurrenceIndex: true, accountId: true, toAccountId: true, categoryId: true },
     });
     if (!existing) throw notFound("Recurring transaction");
-    await resolveEntry(tx, ruleToInput(input, input.startDate), today, existing);
+    await resolveEntry(tx, ruleToInput(input, input.startDate), { today }, existing);
 
     const scheduleChanged = existing.frequency !== input.frequency || fromDbDate(existing.startDate) !== input.startDate;
     let index = existing.occurrenceIndex;
@@ -253,8 +253,9 @@ export async function postDueForRule(id: string, today: ISODate): Promise<number
       if (date > today || (end && date > end)) break;
       try {
         // Validated as a brand-new entry: an inactive account or archived
-        // category stops the rule rather than slipping through.
-        const data = await resolveEntry(tx, ruleToInput(rule, date), today);
+        // category stops the rule rather than slipping through. No clock
+        // time: a scheduled entry counts at the end of its day.
+        const data = await resolveEntry(tx, ruleToInput(rule, date), { today });
         await tx.$executeRaw`SAVEPOINT occurrence`;
         try {
           await tx.transaction.create({ data: { ...data, recurringId: id, occurrenceDate: toDbDate(date) } });

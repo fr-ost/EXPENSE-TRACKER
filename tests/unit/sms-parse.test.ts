@@ -119,7 +119,9 @@ describe("banks and cards", () => {
       direction: "debit",
       channel: "payment",
       amount: "1250.00",
-      balance: "98750.00",
+      // An available limit is not what the card holds: it never becomes a balance.
+      balance: null,
+      limit: "98750.00",
       counterparty: "Daraz BD",
       accountDigits: "1234",
       isCard: true,
@@ -145,6 +147,7 @@ describe("banks and cards", () => {
   it("foreign-currency card charge", () => {
     const sms = parse("Dear Customer, Your EBL Card ****1234 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15. Avl limit BDT 1,50,000.00");
     expect(sms).toMatchObject({ direction: "debit", amount: "12.99", currency: "USD", counterparty: "netflix.com", accountDigits: "1234", date: "2026-09-28", time: "20:15" });
+    expect(sms).toMatchObject({ balance: null, limit: "150000.00" });
     expect(sms.categoryHints[0]).toBe("Subscriptions");
     expect(sms.provider?.id).toBe("ebl");
   });

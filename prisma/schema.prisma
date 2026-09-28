@@ -53,6 +53,11 @@ enum NumberFormat {
   INTERNATIONAL
 }
 
+enum CheckpointSource {
+  MANUAL
+  SMS
+}
+
 /// The owner. Exactly one row may exist (enforced by the unique `singleton`
 /// column plus a CHECK constraint); it is created on first sign-in. There is
 /// no sign-up path anywhere in the application, and the password is not stored
@@ -106,22 +111,23 @@ model LoginAttempt {
 
 /// Where money physically lives.
 model Account {
-  id                  String                 @id @default(cuid())
-  name                String                 @unique @db.VarChar(60)
-  type                AccountType
-  currency            String                 @default("BDT") @db.Char(3)
-  openingBalance      Decimal                @default(0) @db.Decimal(14, 2)
-  openingDate         DateTime               @db.Date
-  isActive            Boolean                @default(true)
-  icon                String?                @db.VarChar(32)
-  color               String?                @db.VarChar(16)
-  sortOrder           Int                    @default(0)
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
-  transactions        Transaction[]          @relation("TransactionAccount")
-  incomingTransfers   Transaction[]          @relation("TransferDestination")
-  recurring           RecurringTransaction[] @relation("RecurringAccount")
-  recurringIncoming   RecurringTransaction[] @relation("RecurringDestination")
+  id                String                 @id @default(cuid())
+  name              String                 @unique @db.VarChar(60)
+  type              AccountType
+  currency          String                 @default("BDT") @db.Char(3)
+  openingBalance    Decimal                @default(0) @db.Decimal(14, 2)
+  openingDate       DateTime               @db.Date
+  isActive          Boolean                @default(true)
+  icon              String?                @db.VarChar(32)
+  color             String?                @db.VarChar(16)
+  sortOrder         Int                    @default(0)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  transactions      Transaction[]          @relation("TransactionAccount")
+  incomingTransfers Transaction[]          @relation("TransferDestination")
+  checkpoints       BalanceCheckpoint[]
+  recurring         RecurringTransaction[] @relation("RecurringAccount")
+  recurringIncoming RecurringTransaction[] @relation("RecurringDestination")
 }
 
 model Category {
@@ -158,6 +164,11 @@ model Transaction {
   date           DateTime              @db.Date
   /// Local time of day ("HH:MM") when known, e.g. from a bank SMS.
   time           String?               @db.Char(5)
+  /// Without a `time`: the local time it was recorded ("HH:MM:SS"), if that
+  /// was on its own date. Never shown; it only places the entry against
+  /// balance updates made that day (otherwise an entry without a time counts
+  /// at the end of its day).
+  loggedTime     String?               @db.Char(8)
   accountId      String
   account        Account               @relation("TransactionAccount", fields: [accountId], references: [id], onDelete: Restrict)
   toAccountId    String?
@@ -172,6 +183,9 @@ model Transaction {
   recurringId    String?
   recurring      RecurringTransaction? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
   occurrenceDate DateTime?             @db.Date
+  /// False for entries kept for the record (reports) that must not move the
+  /// account balance, e.g. old spending already included in a balance.
+  affectsBalance Boolean               @default(true)
   /// Client-generated key that makes "create" idempotent (double-submit safe).
   idempotencyKey String?               @unique @db.VarChar(64)
   createdAt      DateTime              @default(now())
@@ -183,6 +197,31 @@ model Transaction {
   @@index([toAccountId, date])
   @@index([categoryId, date])
   @@index([type, date])
+}
+
+/// "At this moment the account held exactly this much" — from the bank or
+/// wallet app, a cash count, or an SMS. Balances are still derived from the
+/// ledger: the "BalanceCorrection" view adds whatever correction makes the
+/// balance match at each checkpoint, so entries dated before a checkpoint
+/// never change the balance after it.
+model BalanceCheckpoint {
+  id         String           @id @default(cuid())
+  accountId  String
+  account    Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date       DateTime         @db.Date
+  /// "HH:MM" (local time); null means the end of the day…
+  time       String?          @db.Char(5)
+  /// …unless it was recorded that same day: then the local time it was
+  /// recorded ("HH:MM:SS").
+  loggedTime String?          @db.Char(8)
+  balance    Decimal          @db.Decimal(14, 2)
+  source     CheckpointSource @default(MANUAL)
+  note       String?          @db.VarChar(500)
+  /// For balances read from an SMS, so importing the message again adds nothing.
+  smsKey     String?          @unique @db.VarChar(64)
+  createdAt  DateTime         @default(now())
+
+  @@index([accountId, date])
 }
 
 /// Effective-dated monthly budget. The budget for month M is the row with the

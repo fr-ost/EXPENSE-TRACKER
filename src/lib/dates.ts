@@ -54,6 +54,32 @@ export function todayInTimeZone(timeZone: string, now: Date = new Date()): ISODa
   }
 }
 
+/** "Now" for the user: the local date and, when known, the local time of day ("HH:MM:SS"). */
+export interface Clock {
+  today: ISODate;
+  time?: string | null;
+}
+
+/** The time of day in `timeZone`: "HH:MM" (24-hour), or "HH:MM:SS" with `seconds`. */
+export function timeInTimeZone(timeZone: string, now: Date = new Date(), seconds = false): string {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now);
+  } catch {
+    return now.toISOString().slice(11, seconds ? 19 : 16);
+  }
+  const part = (type: "hour" | "minute" | "second") => (parts.find((p) => p.type === type)?.value ?? "00").padStart(2, "0");
+  // Some engines still print midnight as "24".
+  const hour = part("hour") === "24" ? "00" : part("hour");
+  return seconds ? `${hour}:${part("minute")}:${part("second")}` : `${hour}:${part("minute")}`;
+}
+
 /** "14:05" → "2:05 pm" (deterministic, so server and browser agree). */
 export function formatTime(value: string): string {
   const match = /^(\d{2}):(\d{2})/.exec(value);

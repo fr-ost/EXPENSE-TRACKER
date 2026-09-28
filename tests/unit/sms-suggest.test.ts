@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildItem, itemPayload, reportedBalance } from "@/components/sms/sms-model";
 import { ownEffect, suggestFromSms, type SuggestContext } from "@/components/sms/sms-suggest";
 import type { AccountType } from "@/lib/domain";
 import { fromMinor, toMinor } from "@/lib/money";
@@ -25,6 +26,8 @@ function account(id: string, name: string, type: AccountType, balance = "0.00", 
     transactionCount: 0,
     lastActivity: null,
     scheduledNet: "0.00",
+    corrections: "0.00",
+    lastUpdate: null,
   };
 }
 
@@ -132,6 +135,33 @@ describe("SMS suggestions", () => {
       learned: { type: "INCOME", accountId: "a-bkash", toAccountId: null, categoryId: "c-salary", scope: null, countAsExpense: false },
     });
     expect(ignored.draft.type).toBe("EXPENSE");
+  });
+
+  it("sends the balance in the message along with it, unless switched off", () => {
+    const item = buildItem(CASH_OUT, { accounts: [cash, bkash, city], categories, today, remembered: {} });
+    expect(reportedBalance(item, [cash, bkash, city], today)).toEqual({ account: bkash, amount: "500.00" });
+    expect(item.includeBalance).toBe(true);
+    const payload = itemPayload(item, [cash, bkash, city], today);
+    expect(payload.ok && payload.balance).toEqual({ accountId: "a-bkash", amount: "500.00" });
+
+    const off = itemPayload({ ...item, includeBalance: false }, [cash, bkash, city], today);
+    expect(off.ok && off.balance).toBeNull();
+  });
+
+  it("never takes a card's limit, a card SMS or another currency as a balance", () => {
+    const card = account("a-card", "EBL Card ••1234", "CARD", "-5000.00");
+    const context = { accounts: [cash, bkash, city, card], categories, today, remembered: {} };
+    const limit = buildItem("Your EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Avl limit BDT 98,750.00", context);
+    expect(limit.parsed.balance).toBeNull();
+    expect(reportedBalance(limit, context.accounts, today)).toBeNull();
+
+    const cardBalance = buildItem("Your EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Balance BDT 6,250.00", context);
+    expect(cardBalance.draft.accountId).toBe("a-card");
+    expect(reportedBalance(cardBalance, context.accounts, today)).toBeNull();
+
+    const usd = buildItem("Dear Customer, your A/C **4567 has been debited by BDT 1,300.00 on 28-09-2026. Avl Bal USD 12.00", context);
+    expect(usd.parsed.balanceCurrency).toBe("USD");
+    expect(reportedBalance(usd, context.accounts, today)).toBeNull();
   });
 
   it("flags a foreign-currency amount and an unknown date", () => {

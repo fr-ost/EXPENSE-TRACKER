@@ -147,11 +147,9 @@ describe("ledger balances", () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
-  it("rejects dates before the account's opening date", async () => {
-    await expect(createTransaction(expense(cash, food, "10", "2024-12-31"), { today: TODAY })).rejects.toMatchObject({
-      status: 400,
-      fieldErrors: { date: expect.stringContaining("Cash starts on") },
-    });
+  it("accepts dates before the opening date as history that doesn't change the balance", async () => {
+    await createTransaction(expense(cash, food, "10", "2024-12-31"), { today: TODAY });
+    expect(await balance(cash)).toBe("20000.00");
   });
 
   it("rejects an income category on an expense", async () => {
@@ -215,9 +213,9 @@ describe("ledger balances", () => {
       color: null,
       isActive: true,
     };
-    await expect(updateAccount(cash, { ...base, openingDate: "2025-06-01" })).rejects.toMatchObject({
-      fieldErrors: { openingDate: expect.any(String) },
-    });
+    // Moving the opening balance after a transaction turns it into history.
+    await updateAccount(cash, { ...base, openingDate: "2025-06-01" });
+    expect(await balance(cash)).toBe("20000.00");
     await expect(updateAccount(cash, { ...base, openingDate: "2025-01-01", currency: "USD" })).rejects.toMatchObject({
       fieldErrors: { currency: expect.any(String) },
     });

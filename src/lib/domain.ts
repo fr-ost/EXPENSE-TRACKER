@@ -11,7 +11,7 @@ export const OWNER_NAME = "Shahriar Ahmed";
 export const TRANSACTION_TYPES = ["INCOME", "EXPENSE", "TRANSFER", "ADJUSTMENT"] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
-/** Types a user can create directly (adjustments come from reconciliation). */
+/** Types a user can create directly (adjustments are older balance corrections). */
 export const ENTRY_TYPES = ["EXPENSE", "INCOME", "TRANSFER"] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
 
@@ -54,6 +54,10 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
   MONTHLY: "Monthly",
   YEARLY: "Yearly",
 };
+
+/** Where a balance update came from. */
+export const CHECKPOINT_SOURCES = ["MANUAL", "SMS"] as const;
+export type CheckpointSource = (typeof CHECKPOINT_SOURCES)[number];
 
 export const NUMBER_FORMATS = ["SOUTH_ASIAN", "INTERNATIONAL"] as const;
 export type NumberFormat = (typeof NUMBER_FORMATS)[number];

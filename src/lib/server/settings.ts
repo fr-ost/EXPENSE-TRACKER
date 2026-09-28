@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { todayInTimeZone, type ISODate } from "@/lib/dates";
+import { timeInTimeZone, todayInTimeZone, type ISODate } from "@/lib/dates";
 import { OWNER_NAME, type NumberFormat } from "@/lib/domain";
 import { prisma } from "./db";
 import { isUniqueViolation } from "./services/mappers";
@@ -49,4 +49,11 @@ export const getSettings = cache(async (): Promise<AppSettings> => {
 export async function getToday(): Promise<ISODate> {
   const settings = await getSettings();
   return todayInTimeZone(settings.timezone);
+}
+
+/** The owner's local date and time of day (to the second), read together. */
+export async function getClock(): Promise<{ today: ISODate; time: string }> {
+  const settings = await getSettings();
+  const now = new Date();
+  return { today: todayInTimeZone(settings.timezone, now), time: timeInTimeZone(settings.timezone, now, true) };
 }

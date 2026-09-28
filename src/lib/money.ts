@@ -9,7 +9,8 @@
 
 export type Money = string;
 
-const MONEY_PATTERN = /^(-)?(\d+)(?:\.(\d{1,2}))?$/;
+// A bare trailing point ("12.", mid-typing in an amount field) reads as whole units.
+const MONEY_PATTERN = /^(-)?(\d+)(?:\.(\d{0,2}))?$/;
 
 /** Upper bound of NUMERIC(14,2): 999,999,999,999.99 */
 export const MAX_MINOR = 99_999_999_999_999n;

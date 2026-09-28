@@ -11,7 +11,6 @@ import {
   XIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import Link from "next/link";
 import * as React from "react";
 import { Amount, useAppData, useFormatMoney } from "@/components/app-data";
 import { IconBadge } from "@/components/icon";
@@ -21,9 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/switch";
 import { formatDate, formatTime } from "@/lib/dates";
+import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
 import { IGNORE_REASON_LABELS } from "@/lib/sms/parse";
 import { cn } from "@/lib/utils";
-import type { SmsItem, SmsItemStatus } from "./sms-model";
+import { reportedBalance, type SmsItem, type SmsItemStatus } from "./sms-model";
 import type { BalanceCheck } from "./sms-suggest";
 
 const STATUS: Record<SmsItemStatus, { label: string; tone: "positive" | "warning" | "neutral" | "negative" | "info" }> = {
@@ -46,7 +46,7 @@ export interface SmsCardActions {
 }
 
 export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: SmsCardActions; balance?: BalanceCheck }) {
-  const { accounts, categories } = useAppData();
+  const { accounts, categories, today } = useAppData();
   const format = useFormatMoney();
   const [editing, setEditing] = React.useState(item.status === "review" && item.issues.some((i) => i.startsWith("Choose")));
   const [showText, setShowText] = React.useState(false);
@@ -59,6 +59,9 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
   const categoryId = draft.type === "INCOME" ? draft.incomeCategoryId : draft.expenseCategoryId;
   const category = categories.find((c) => c.id === categoryId);
   const currency = (draft.type === "TRANSFER" && parsed.direction === "credit" ? destination : source)?.currency;
+  const reported = reportedBalance(item, accounts, today);
+  // A message older than the account's latest known balance only fills in history.
+  const olderThanKnown = !!reported && landsBefore(draft.date, draft.time, latestKnownBalance(reported.account), today);
 
   const updateDraft = (patch: Partial<TransactionDraft>) => {
     const fieldErrors = { ...item.fieldErrors };
@@ -157,24 +160,42 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
           </label>
         )}
 
-        {balance && (
-          <p className={cn("sm:ml-12 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-small", balance.matches ? "text-positive-text" : "text-text-tertiary")}>
-            {balance.matches ? (
-              <>
-                <CheckCircle2Icon className="size-3.5 shrink-0" />
-                {balance.account.name} balance matches the SMS: {format(balance.reported, { currency: balance.account.currency, decimals: "always" })}
-              </>
-            ) : (
-              <>
-                <span>
-                  Balance in the SMS {format(balance.reported, { currency: balance.account.currency, decimals: "always" })} · in Hisab
-                  {balance.afterPending ? " after adding" : ""} {format(balance.expected, { currency: balance.account.currency, decimals: "always" })}
+        {reported && pending && (
+          <label className="sm:ml-12 flex items-center justify-between gap-3 rounded-lg bg-surface-subtle px-3 py-2 text-small">
+            <span className="flex min-w-0 flex-col">
+              <span className="text-text-secondary">
+                {olderThanKnown ? `Save ${reported.account.name} balance of ` : `Update ${reported.account.name} balance to `}
+                <span className="font-medium text-text">{format(reported.amount, { currency: reported.account.currency, decimals: "always" })}</span>
+              </span>
+              {olderThanKnown ? (
+                <span className="text-caption text-text-tertiary">
+                  It&rsquo;s older than {reported.account.name}&rsquo;s latest balance, which stays current.
                 </span>
-                <Link href={`/accounts/${balance.account.id}`} className="font-medium text-accent-text hover:underline">
-                  Reconcile
-                </Link>
-              </>
-            )}
+              ) : (
+                balance &&
+                (balance.matches ? (
+                  <span className="inline-flex items-center gap-1 text-caption text-positive-text">
+                    <CheckCircle2Icon className="size-3 shrink-0" /> Matches Hisab
+                  </span>
+                ) : (
+                  <span className="text-caption text-text-tertiary">
+                    Hisab{balance.afterPending ? " after adding" : ""}:{" "}
+                    {format(balance.expected, { currency: balance.account.currency, decimals: "always" })} — the difference is corrected
+                  </span>
+                ))
+              )}
+            </span>
+            <Switch
+              checked={item.includeBalance}
+              onCheckedChange={(includeBalance) => actions.onChange({ includeBalance })}
+              aria-label={`Update ${reported.account.name} balance from this SMS`}
+            />
+          </label>
+        )}
+        {reported && status === "added" && item.includeBalance && (
+          <p className="sm:ml-12 flex items-center gap-1.5 text-small text-positive-text">
+            <CheckCircle2Icon className="size-3.5 shrink-0" />
+            Balance from the SMS saved: {format(reported.amount, { currency: reported.account.currency, decimals: "always" })}
           </p>
         )}
 

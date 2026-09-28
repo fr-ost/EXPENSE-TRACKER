@@ -19,8 +19,9 @@ import {
 } from "./domain";
 import { MAX_MINOR, toMinor } from "./money";
 
-const AMOUNT_INPUT = /^\d{1,12}(\.\d{1,2})?$/;
-const SIGNED_AMOUNT_INPUT = /^-?\d{1,12}(\.\d{1,2})?$/;
+// "12." is what an amount field holds while typing "12.50"; it means 12.
+const AMOUNT_INPUT = /^\d{1,12}(\.\d{0,2})?$/;
+const SIGNED_AMOUNT_INPUT = /^-?\d{1,12}(\.\d{0,2})?$/;
 
 /**
  * Minor units, or null for malformed input. Zod 4 runs refinements even after
@@ -89,6 +90,8 @@ const baseEntry = {
   date: isoDate,
   /** Optional; omitted on edit means "keep the current time". */
   time: timeOfDay.nullish(),
+  /** False keeps it for reports without moving the balance; omitted on edit keeps the current setting. */
+  affectsBalance: z.boolean().optional(),
   description,
   notes,
 };
@@ -159,6 +162,11 @@ export const smsImportInput = z.object({
         transaction: transactionInput,
         /** A fee charged with it, recorded as a separate expense. */
         fee: expenseInput.nullish().transform((v) => v ?? null),
+        /** The balance the message reports for one of the transaction's accounts. */
+        balance: z
+          .object({ accountId: id, amount: signedAmount })
+          .nullish()
+          .transform((v) => v ?? null),
         /** Add even though a similar transaction is already recorded. */
         allowDuplicate: z.boolean().default(false),
       }),
@@ -246,19 +254,30 @@ export const accountInput = z.object({
 });
 export type AccountInput = z.infer<typeof accountInput>;
 
-export const reconcileInput = z.object({
-  countedBalance: signedAmount,
+/**
+ * "The account holds exactly this much" at a moment. The difference from the
+ * ledger becomes an automatic correction, or (CATEGORY) a transaction for
+ * spending / income that wasn't recorded.
+ */
+export const balanceUpdateInput = z.object({
+  balance: signedAmount,
   date: isoDate,
-  /** How to record a difference. */
-  recordAs: z.enum(["ADJUSTMENT", "CATEGORY"]),
+  time: timeOfDay.nullish().transform((v) => v ?? null),
+  recordAs: z.enum(["CORRECTION", "CATEGORY"]).default("CORRECTION"),
   categoryId: id.nullish().transform((v) => v ?? null),
   scope: z
     .enum(EXPENSE_SCOPES)
     .nullish()
     .transform((v) => v ?? null),
-  note: z.string().trim().max(500).default(""),
+  note: z.string().trim().max(500).nullish().transform((v) => v || null),
 });
-export type ReconcileInput = z.infer<typeof reconcileInput>;
+export type BalanceUpdateInput = z.infer<typeof balanceUpdateInput>;
+
+/** A moment to read the recorded balance at (search params). */
+export const balanceAtQuery = z.object({
+  date: isoDate,
+  time: timeOfDay.nullish().transform((v) => v ?? null),
+});
 
 // ---------------------------------------------------------------------------
 // Categories, budgets, recurring

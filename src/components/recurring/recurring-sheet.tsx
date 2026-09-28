@@ -35,6 +35,7 @@ function draftFromRule(rule: RecurringView): TransactionDraft {
     time: "",
     description: rule.description,
     notes: rule.notes ?? "",
+    affectsBalance: true,
   };
 }
 

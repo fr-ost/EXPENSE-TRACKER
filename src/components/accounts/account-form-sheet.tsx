@@ -50,7 +50,7 @@ export function AccountFormSheet({
   const [currency, setCurrency] = React.useState(account?.currency ?? settings.baseCurrency);
   const [negative, setNegative] = React.useState(initialBalance.startsWith("-"));
   const [balance, setBalance] = React.useState(initialBalance.replace(/^-/, "").replace(/\.00$/, "").replace(/^0$/, ""));
-  const [openingDate, setOpeningDate] = React.useState(account?.openingDate ?? `${today.slice(0, 4)}-01-01`);
+  const [openingDate, setOpeningDate] = React.useState(account?.openingDate ?? today);
   const [color, setColor] = React.useState<PaletteKey>(isPaletteKey(account?.color) ? account.color : DEFAULT_COLORS[account?.type ?? "CASH"]);
   const [colorTouched, setColorTouched] = React.useState(!!account?.color);
   const [isActive, setIsActive] = React.useState(account?.isActive ?? true);
@@ -207,8 +207,8 @@ export function AccountFormSheet({
           />
           {!errors.openingDate && (
             <p className="text-caption text-text-tertiary">
-              The opening balance is what the account held on this date. Transactions can be recorded from this date
-              onward — pick an early date if you want to enter older history.
+              What the account held at the start of this day. Older transactions you add later are kept as history and
+              don&rsquo;t change the balance from this date on.
             </p>
           )}
         </div>

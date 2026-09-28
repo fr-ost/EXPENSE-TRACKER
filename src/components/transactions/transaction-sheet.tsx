@@ -228,7 +228,15 @@ function TransactionSheet({ state, onClose }: { state: SheetState; onClose: () =
                 Have a bank or bKash SMS? <span className="font-medium text-accent-text">Paste it instead</span>
               </Link>
             )}
-            <TransactionFields draft={draft} update={update} errors={errors} accounts={usable} autoFocusAmount={!editing} withTime />
+            <TransactionFields
+              draft={draft}
+              update={update}
+              errors={errors}
+              accounts={usable}
+              autoFocusAmount={!editing}
+              withTime
+              withBalanceOption
+            />
             {needsTwoAccounts && (
               <p className="mt-4 text-small text-text-secondary">
                 Transfers need two accounts.{" "}
@@ -265,8 +273,8 @@ function AdjustmentDetails({ transaction, onDelete }: { transaction: Transaction
       </div>
       {transaction.notes && <p className="rounded-lg bg-surface-muted p-4 text-body text-text-secondary">{transaction.notes}</p>}
       <p className="text-small text-text-tertiary">
-        Adjustments come from reconciling an account and correct its balance without counting as income or spending.
-        To change one, delete it and reconcile again.
+        Adjustments correct an account&rsquo;s balance without counting as income or spending. To change one, delete it
+        and use Update balance on the account instead.
       </p>
       <Button variant="danger-soft" onClick={onDelete}>
         <Trash2Icon />

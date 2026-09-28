@@ -36,8 +36,8 @@ export async function periodSummary(from: ISODate, to: ISODate, currency: string
       (SELECT COUNT(*) FROM "Transaction" t JOIN "Account" a ON a."id" = t."accountId"
         WHERE t."type" = 'TRANSFER' AND NOT t."countAsExpense" AND a."currency" = ${currency}
           AND t."date" BETWEEN ${from}::date AND ${to}::date)::int AS "transferCount",
-      (SELECT COALESCE(SUM(t."amount"), 0) FROM "Transaction" t JOIN "Account" a ON a."id" = t."accountId"
-        WHERE t."type" = 'ADJUSTMENT' AND a."currency" = ${currency} AND t."date" BETWEEN ${from}::date AND ${to}::date)::text AS "adjustments"`;
+      (SELECT COALESCE(SUM("amount"), 0) FROM "LedgerEntry"
+        WHERE "type" = 'ADJUSTMENT' AND "currency" = ${currency} AND "date" BETWEEN ${from}::date AND ${to}::date)::text AS "adjustments"`;
 
   const income = money(row.income);
   const expenses = money(row.expenses);
@@ -175,8 +175,8 @@ export async function accountActivity(from: ISODate, to: ISODate): Promise<Accou
       COUNT(l."transactionId") FILTER (WHERE l."date" BETWEEN ${from}::date AND ${to}::date)::int AS "transactionCount"
     FROM "Account" a
     LEFT JOIN "LedgerEntry" l ON l."accountId" = a."id"
-    WHERE a."openingDate" <= ${to}::date
     GROUP BY a."id"
+    HAVING a."openingDate" <= ${to}::date OR COUNT(l."transactionId") FILTER (WHERE l."date" <= ${to}::date) > 0
     ORDER BY a."isActive" DESC, a."sortOrder", a."createdAt"`;
 
   return rows.map((row) => ({

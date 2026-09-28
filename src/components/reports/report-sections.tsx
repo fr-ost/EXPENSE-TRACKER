@@ -33,7 +33,7 @@ export function Statement({ summary, transactionsQuery }: { summary: PeriodSumma
       value: summary.transfers,
       href: `/transactions?type=TRANSFER&${transactionsQuery}`,
     },
-    { label: "Balance adjustments", hint: "From reconciling accounts — not income or spending", value: summary.adjustments, href: `/transactions?type=ADJUSTMENT&${transactionsQuery}` },
+    { label: "Balance corrections", hint: "Balance updates correcting what wasn't recorded — not income or spending", value: summary.adjustments },
   ];
 
   const renderRow = (row: (typeof rows)[number]) => {

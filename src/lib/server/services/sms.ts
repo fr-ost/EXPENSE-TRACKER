@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
-import { addDays, fromDbDate, type ISODate } from "@/lib/dates";
+import { addDays, fromDbDate, type Clock, type ISODate } from "@/lib/dates";
 import type { EntryType, ExpenseScope } from "@/lib/domain";
 import { normalizeMoney, type Money } from "@/lib/money";
 import { normalizeSmsText } from "@/lib/sms/parse";
@@ -22,7 +22,7 @@ export function smsFingerprint(text: string): string {
   return createHash("sha256").update(normalized, "utf8").digest("hex").slice(0, 40);
 }
 
-const smsKey = (text: string, part: 0 | 1) => `sms:${smsFingerprint(text)}:${part}`;
+const smsKey = (text: string, part: 0 | 1 | "b") => `sms:${smsFingerprint(text)}:${part}`;
 
 /** What was recorded last time for the same description, to repeat the user's own choices. */
 export interface LearnedEntry {
@@ -108,7 +108,7 @@ async function findSimilar(tx: Tx, row: Prisma.TransactionUncheckedCreateInput):
   for (const movement of movements) {
     const [match] = await tx.$queryRaw<Array<Omit<SimilarTransaction, "amount"> & { amount: string }>>`
       SELECT t."id", t."description", to_char(t."date", 'YYYY-MM-DD') AS "date", t."amount"::text AS "amount", a."name" AS "account"
-      FROM "LedgerEntry" l
+      FROM "TransactionLeg" l
       JOIN "Transaction" t ON t."id" = l."transactionId"
       JOIN "Account" a ON a."id" = t."accountId"
       WHERE l."accountId" = ${movement.accountId}
@@ -122,13 +122,39 @@ async function findSimilar(tx: Tx, row: Prisma.TransactionUncheckedCreateInput):
   return null;
 }
 
+type ImportItem = SmsImportInput["items"][number];
+
+/**
+ * The balance the message reports becomes a balance update for the account it
+ * belongs to, placed right after the message's own transaction (same moment,
+ * and a balance update comes after the movements at its minute). Idempotent
+ * per message.
+ */
+async function recordReportedBalance(client: Tx, item: ImportItem, row: Prisma.TransactionUncheckedCreateInput): Promise<void> {
+  const accountIds = [row.accountId, row.toAccountId].filter((v): v is string => !!v);
+  if (!item.balance || !accountIds.includes(item.balance.accountId)) return;
+  const key = smsKey(item.text, "b");
+  if (await client.balanceCheckpoint.findUnique({ where: { smsKey: key }, select: { id: true } })) return;
+  await client.balanceCheckpoint.create({
+    data: {
+      accountId: item.balance.accountId,
+      date: row.date,
+      time: row.time ?? null,
+      loggedTime: row.loggedTime ?? null,
+      balance: item.balance.amount,
+      source: "SMS",
+      smsKey: key,
+    },
+  });
+}
+
 class PossibleDuplicate extends Error {
   constructor(public readonly similar: SimilarTransaction) {
     super("possible duplicate");
   }
 }
 
-async function importOne(item: SmsImportInput["items"][number], today: ISODate): Promise<SmsImportResult> {
+async function importOne(item: ImportItem, clock: Clock): Promise<SmsImportResult> {
   const mainKey = smsKey(item.text, 0);
   const feeKey = smsKey(item.text, 1);
   const already = async () =>
@@ -139,20 +165,23 @@ async function importOne(item: SmsImportInput["items"][number], today: ISODate):
 
   try {
     const ids = await prisma.$transaction(async (tx) => {
-      const row = await resolveEntry(tx, item.transaction, today);
+      const row = await resolveEntry(tx, item.transaction, clock);
       if (!item.allowDuplicate) {
         const similar = await findSimilar(tx, row);
         if (similar) throw new PossibleDuplicate(similar);
       }
       const created = [await tx.transaction.create({ data: { ...row, idempotencyKey: mainKey }, select: { id: true } })];
       if (item.fee) {
-        const feeRow = await resolveEntry(tx, item.fee, today);
+        const feeRow = await resolveEntry(tx, item.fee, clock);
         created.push(await tx.transaction.create({ data: { ...feeRow, idempotencyKey: feeKey }, select: { id: true } }));
       }
+      await recordReportedBalance(tx, item, row);
       return created.map((c) => c.id);
     });
     return { status: "added", ids };
   } catch (error) {
+    // The balance is only recorded with its transaction: the entry this one
+    // resembles may be timed differently, and would be counted twice.
     if (error instanceof PossibleDuplicate) return { status: "possible_duplicate", similar: error.similar };
     if (isUniqueViolation(error, "idempotencyKey")) return { status: "exists", ids: await already() };
     if (error instanceof AppError) return { status: "error", error: error.message, fieldErrors: error.fieldErrors };
@@ -161,9 +190,9 @@ async function importOne(item: SmsImportInput["items"][number], today: ISODate):
 }
 
 /** Add each message's transaction (and fee) atomically; one bad message doesn't block the rest. */
-export async function importSms(input: SmsImportInput, today: ISODate): Promise<SmsImportResult[]> {
+export async function importSms(input: SmsImportInput, today: ISODate, time?: string | null): Promise<SmsImportResult[]> {
   const results: SmsImportResult[] = [];
   // Sequential on purpose: later items see earlier ones when looking for duplicates.
-  for (const item of input.items) results.push(await importOne(item, today));
+  for (const item of input.items) results.push(await importOne(item, { today, time }));
   return results;
 }

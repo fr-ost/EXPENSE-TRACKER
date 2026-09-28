@@ -18,6 +18,8 @@ export interface TransactionDraft {
   time: string;
   description: string;
   notes: string;
+  /** False keeps it in reports without moving the account balance. */
+  affectsBalance: boolean;
 }
 
 export type DraftDefaults = Partial<Pick<TransactionDraft, "type" | "accountId" | "toAccountId" | "expenseCategoryId" | "incomeCategoryId" | "date">>;
@@ -70,6 +72,7 @@ export function newDraft(
     time: "",
     description: "",
     notes: "",
+    affectsBalance: true,
   };
 }
 
@@ -90,6 +93,7 @@ export function draftFromTransaction(tx: TransactionView): TransactionDraft {
     time: tx.time ?? "",
     description: tx.description,
     notes: tx.notes ?? "",
+    affectsBalance: tx.affectsBalance,
   };
 }
 
@@ -99,6 +103,7 @@ export function draftToInput(draft: TransactionDraft, needsToAmount: boolean) {
     amount: draft.amount,
     date: draft.date,
     time: draft.time || null,
+    affectsBalance: draft.affectsBalance,
     description: draft.description,
     notes: draft.notes || null,
     accountId: draft.accountId,

@@ -39,7 +39,11 @@ export function AccountCard({ account, today }: { account: AccountSummary; today
           className="text-[1.625rem] font-semibold leading-none tracking-[-0.025em]"
         />
         <span className="text-small text-text-tertiary">
-          {account.lastActivity ? `Last activity ${describeDay(account.lastActivity, today)}` : "No transactions yet"}
+          {account.lastUpdate && (!account.lastActivity || account.lastUpdate.date >= account.lastActivity)
+            ? `Balance checked ${describeDay(account.lastUpdate.date, today)}`
+            : account.lastActivity
+              ? `Last activity ${describeDay(account.lastActivity, today)}`
+              : "No transactions yet"}
         </span>
       </div>
     </Link>

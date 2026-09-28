@@ -129,10 +129,12 @@ test("an SMS is read and added once, and never twice", async ({ page }) => {
   await paste();
   const card = page.getByRole("listitem", { name: /Cash out/ });
   await expect(card).toContainText("Ready");
+  // bKash 2,537 − 2,000 − 37 fee = 500, which is what the SMS says.
+  await expect(card).toContainText("Update bKash balance to ৳500.00");
+  await expect(card).toContainText("Matches Hisab");
   await card.getByRole("button", { name: "Add", exact: true }).click();
   await expect(card).toContainText("Added");
-  // bKash 2,537 − 2,000 − 37 fee = 500, which is what the SMS says.
-  await expect(card).toContainText("balance matches the SMS");
+  await expect(card).toContainText("Balance from the SMS saved: ৳500.00");
 
   await page.goto("/accounts");
   await expect(page.getByRole("link", { name: /bKash/ })).toContainText("৳500");
@@ -146,6 +148,46 @@ test("an SMS is read and added once, and never twice", async ({ page }) => {
   await page.goto("/transactions?q=Cash out");
   await expect(page.getByRole("button", { name: /Cash out fee/ })).toContainText("10:05 am");
   await expect(page.getByLabel("Added from SMS").first()).toBeVisible();
+});
+
+test("a balance update holds, older entries don't move it, and an entry can stay out of it", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/accounts");
+  await page.getByRole("link", { name: /bKash/ }).click();
+  await expect(page.getByRole("heading", { name: "bKash" })).toBeVisible();
+
+  // bKash shows ৳500; the app says ৳800.
+  await page.getByRole("button", { name: "Update balance" }).click();
+  const update = page.getByRole("dialog", { name: "Update bKash balance" });
+  await update.getByLabel("Balance in BDT").fill("800");
+  await expect(update.getByText("+৳300")).toBeVisible();
+  await update.getByRole("button", { name: /Update balance/ }).click();
+  await expect(page.getByText("bKash balance updated")).toBeVisible();
+  await expect(page.getByText("Current balance").locator("..")).toContainText("৳800");
+  await expect(page.getByRole("heading", { name: "Balance updates" })).toBeVisible();
+
+  const addExpense = async (amount: string, date: string | null, options: { keepOut?: boolean; expectHistory?: boolean } = {}) => {
+    await page.getByRole("button", { name: "Transaction", exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "New transaction" });
+    await sheet.getByLabel(/Amount/).fill(amount);
+    await sheet.getByRole("radio", { name: "Food" }).click();
+    if (date) await sheet.getByLabel("Date").fill(date);
+    if (options.expectHistory) await expect(sheet.getByText(/already includes this date/)).toBeVisible();
+    if (options.keepOut) await sheet.getByRole("switch", { name: "Don't change the balance" }).click();
+    await sheet.getByRole("button", { name: /Add expense/ }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+
+  // Last year's spending, added now: the update already includes it.
+  await addExpense("150", "2025-06-01", { expectHistory: true });
+  await expect(page.getByText("Current balance").locator("..")).toContainText("৳800");
+  // Kept out of the balance on purpose.
+  await addExpense("40", null, { keepOut: true });
+  await expect(page.getByText("Current balance").locator("..")).toContainText("৳800");
+  await expect(page.getByText("Not in balance").first()).toBeVisible();
+  // Today's spending after the update moves it.
+  await addExpense("150", null);
+  await expect(page.getByText("Current balance").locator("..")).toContainText("৳650");
 });
 
 test("a wrong password on the lock screen says how many tries are left", async ({ page }) => {

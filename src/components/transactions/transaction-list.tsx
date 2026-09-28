@@ -158,6 +158,7 @@ function TransactionRow({
             </span>
           )}
           {tx.countAsExpense && <Badge tone="info">Counted as expense</Badge>}
+          {!tx.affectsBalance && <Badge tone="outline">Not in balance</Badge>}
           {upcoming && <Badge tone="warning">Upcoming</Badge>}
         </span>
       </span>

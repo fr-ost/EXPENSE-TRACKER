@@ -8,14 +8,19 @@ pleasant to use every day, on a phone or a desktop.
 `src/lib/domain.ts`.
 
 - **Accounts** — cash, bank, bKash / Nagad, cards, exchanges; any currency.
-  Balances are always derived from the ledger, never typed in.
+  Balances are always derived from the ledger, never stored.
 - **Transactions** — expenses, income and transfers, with fast entry
   (`N` on desktop, the ＋ tab on phones), an optional time of day, historical
   back-filling, search, filters, sorting, pagination, and CSV / Excel export
   of any filtered view.
 - **Import from SMS** — paste bank or bKash / Nagad / Rocket messages (or
   share them to the installed app on Android): Hisab reads the amount, bank,
-  type, date and time and adds them — never the same message twice.
+  type, date and time and adds them — never the same message twice — and the
+  balance in the message becomes the account's balance.
+- **Update balance** — enter what an account actually holds; Hisab corrects
+  for whatever wasn't recorded. Older transactions added later never change a
+  balance after it, so back-filling history can't push a balance negative.
+  Any transaction can also be kept out of the balance.
 - **Transfers that can count as spending** — money moves once between
   accounts; optionally it is also recognised as an expense (e.g. support sent
   to family) without being double counted.
@@ -30,8 +35,6 @@ pleasant to use every day, on a phone or a desktop.
 - **Reports** — monthly and yearly statements, category, family & personal,
   income sources, savings trend, account activity; PDF (Bengali names
   included) and Excel exports.
-- **Reconciliation** — compare the ledger with a physical cash count and
-  record the difference as an adjustment or as an unrecorded expense/income.
 - **Installable app** — install it from Chrome or Edge (desktop and Android)
   or add it to the iPhone home screen.
 - **Private by construction** — one account, no sign-up, the password lives
@@ -101,9 +104,15 @@ uncertain waits for a quick review with the normal transaction fields.
 The same message is never added twice (on any device), and a message that
 looks like something already recorded — typed in by hand, or the other side
 of a transfer imported from the other bank's SMS — is flagged instead of
-added. OTPs, adverts, failed transactions and reminders are skipped. When the
-newest message for an account reports a balance, Hisab shows whether its own
-balance agrees.
+added. OTPs, adverts, failed transactions and reminders are skipped.
+
+**Balances from SMS.** bKash, Nagad and most bank alerts end with the balance
+after the transaction. Adding such a message also records that balance as a
+balance update for the account (a switch on each message turns this off), so
+payments that never sent an SMS are corrected for automatically. Hisab shows
+whether its own balance agreed. A card's available limit is never taken as a
+balance, and a message older than the account's latest balance only fills in
+history.
 
 Works with bKash, Nagad, Rocket, Upay and alerts from Bangladeshi banks and
 cards (DBBL, City, BRAC, EBL, Islami Bank, Standard Chartered and ~40 more),
@@ -112,9 +121,9 @@ notes.
 
 ## Financial rules
 
-These rules are implemented once, in SQL views in the initial migration
-(`LedgerEntry`, `ExpenseEntry`, `IncomeEntry`), and every screen, report and
-export reads from them.
+These rules are implemented once, in SQL views (`TransactionLeg`,
+`BalanceCorrection`, `LedgerEntry`, `ExpenseEntry`, `IncomeEntry`), and every
+screen, report and export reads from them.
 
 | Recorded as                    | Source account | Destination account | Counted as income | Counted as spending |
 | ------------------------------ | -------------- | ------------------- | ----------------- | ------------------- |
@@ -122,10 +131,28 @@ export reads from them.
 | Expense                        | − amount       | —                   | no                | yes (its category)  |
 | Transfer                       | − amount       | + amount            | no                | no                  |
 | Transfer, *count as expense*   | − amount       | + amount            | no                | yes (its category)  |
-| Adjustment (reconciliation)    | ± amount       | —                   | no                | no                  |
+| Any of the above, *kept out of the balance* | — | —                 | as above          | as above            |
+| Balance correction (from a balance update)  | ± difference | —   | no                | no                  |
 
-- **Balance** = opening balance + every movement dated on or before today.
-  Future-dated entries are shown as scheduled and excluded until their date.
+- **Known balances.** The opening balance is what an account held at the
+  start of its date. A **balance update** (entered with *Update balance*, or
+  read from an SMS) is what it held at a moment. Every known balance holds
+  exactly: Hisab adds a correction for whatever the recorded transactions
+  don't explain since the previous one. You can instead record the difference
+  as *Unrecorded spending* or *income* in a category, so it counts in reports.
+- **Balance** at any moment = the latest known balance before it + every
+  movement after that. So a transaction dated before a known balance — last
+  month's spending added today, or anything before the opening date — never
+  changes the balance after it; it only shapes the history before it. Deleting
+  a balance update hands its correction to the next one.
+- **Within a day**, an entry's time decides. An entry without a time counts
+  from the moment it was recorded if that was the same day, and otherwise at
+  the end of its day. A balance update comes after the entries at the same
+  moment.
+- **Kept out of the balance** — *Don't change the balance* on a transaction
+  keeps it in income, spending and reports without moving any balance (e.g.
+  spending the balance already reflects).
+- Future-dated entries are shown as scheduled and excluded until their date.
 - **Savings** = income − spending. **Savings rate** = savings ÷ income.
 - **Transfers** in reports are pure movements between your accounts; transfers
   marked as expenses are reported separately (and included in spending), so
@@ -133,9 +160,6 @@ export reads from them.
 - Totals and analytics use accounts in your **main currency** (Settings).
   Amounts in different currencies are never added together; cross-currency
   transfers record the amount received.
-- A transaction cannot be dated before its account's opening date. To record
-  older history, move the opening date back — the opening balance is what the
-  account held on that date.
 
 ## Architecture
 
@@ -144,8 +168,8 @@ A single Next.js 16 (App Router) application with PostgreSQL via Prisma 7.
 | Concern        | Decision |
 | -------------- | -------- |
 | Money          | `NUMERIC(14,2)` in Postgres; decimal strings over the wire; `bigint` minor units for any arithmetic in TypeScript (`src/lib/money.ts`). Floats are used only to draw charts. |
-| Ledger         | No stored balances. Views expand transactions into signed per-account movements; Postgres sums them in milliseconds for a personal data set. |
-| Invariants     | CHECK constraints make invalid rows impossible (transfer to the same account, expense without category, zero/negative amounts, malformed times…). Entry rules that need other rows (opening dates, category kinds, currencies) live in one function, `resolveEntry`, run under row locks. |
+| Ledger         | No stored balances. Views expand transactions into signed per-account movements and derive the correction that makes each known balance (opening balance, balance updates) hold; Postgres sums them in milliseconds for a personal data set (~80 ms for every account at 30,000 transactions). |
+| Invariants     | CHECK constraints make invalid rows impossible (transfer to the same account, expense without category, zero/negative amounts, malformed times, an adjustment kept out of the balance…). Entry rules that need other rows (active accounts, category kinds, currencies) live in one function, `resolveEntry`, run under row locks. |
 | Reads / writes | Server Components read through a service layer (`src/lib/server/services`). Writes go through REST route handlers under `/api`, then the client refreshes server data in place — no full reloads. |
 | Idempotency    | Each "new transaction" sheet carries an idempotency key; retries and double clicks return the original row. SMS imports use a key derived from the message text. Recurring occurrences are unique per (rule, date) and posted under `FOR UPDATE SKIP LOCKED`. |
 | Dates          | Calendar dates (`DATE`) plus an optional time of day, "today" resolved in your timezone (Settings), deterministic formatting so server and browser always agree. |
@@ -242,7 +266,9 @@ npm run build && npm run test:e2e   # end-to-end, against the production build
 - Set `CHROMIUM_PATH` to use an installed Chromium for e2e tests instead of
   running `npx playwright install chromium`.
 
-Covered: balances with historical entries, exact cents, transfers,
+Covered: balances with historical entries, balance updates (corrections,
+back-filled history before them, order within a day, deleting one, entries
+kept out of the balance, balances read from SMS), exact cents, transfers,
 transfers counted as expense (once), edit/delete, future-dated entries,
 idempotent and concurrent creation, cross-currency transfers, account history
 protection, database CHECK constraints, monthly and yearly analytics (including
@@ -252,7 +278,7 @@ schedules and duplicate-free posting; the SMS parser on real message formats
 (wallets, banks, cards, Bengali, OTPs, adverts), account and category
 matching, idempotent and concurrent SMS import, duplicate detection; the
 password variable, session binding, unlock limits; and — end to end —
-authentication, locking, SMS import, 401s on every API route (with and without
+authentication, locking, SMS import, balance updates, 401s on every API route (with and without
 a forged cookie), CSRF, cookie flags, security headers, open redirects, rate
 limiting, invalid input, public install files, the share target, and the
 phone layout.

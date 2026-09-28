@@ -53,8 +53,12 @@ export interface ParsedSms {
   /** ISO code, e.g. "BDT". */
   currency: string | null;
   fee: Money | null;
-  /** Balance or available limit reported after the transaction. */
+  /** The account balance reported after the transaction. */
   balance: Money | null;
+  /** ISO code of `balance` (it can differ from the amount's, e.g. a USD charge on a BDT account). */
+  balanceCurrency: string | null;
+  /** A card's available limit — not a balance, so it never sets one. */
+  limit: Money | null;
   provider: Provider | null;
   /** Another bank or wallet named in the message (e.g. "from City Bank" in a bKash alert). */
   otherProvider: Provider | null;
@@ -138,7 +142,7 @@ function currencyCode(token: string): string {
   return CURRENCY_ALIASES.find(([alias]) => alias === lower)?.[1] ?? "BDT";
 }
 
-type AmountLabel = "amount" | "balance" | "fee" | "cashback" | "due";
+type AmountLabel = "amount" | "balance" | "limit" | "fee" | "cashback" | "due";
 
 interface AmountMatch {
   value: Money;
@@ -150,7 +154,8 @@ interface AmountMatch {
 
 /** Words right before an amount that say what it is. */
 const LABELS: Array<[RegExp, AmountLabel]> = [
-  [/(?:\bbal(?:ance)?|\bavl\.?\s*bal\w*|ব্যালেন্স|\b(?:available|avl\.?|credit)\s+limit|\blimit)\s*(?:is|was|of|now)?\s*[:=-]?\s*$/i, "balance"],
+  [/(?:\bbal(?:ance)?|\bavl\.?\s*bal\w*|ব্যালেন্স)\s*(?:is|was|of|now)?\s*[:=-]?\s*$/i, "balance"],
+  [/(?:\b(?:available|avl\.?|credit)\s+limit|\blimit)\s*(?:is|was|of|now)?\s*[:=-]?\s*$/i, "limit"],
   [/\b(?:fee|fees|charge|charges|service\s+charge|vat|commission)\s*(?:is|of|amount)?\s*[:=-]?\s*$/i, "fee"],
   [/\bcash\s*-?back\s*(?:of)?\s*[:=-]?\s*$/i, "cashback"],
   [/\b(?:due|payable|outstanding|min(?:imum)?\.?\s*(?:amount\s*)?due)\s*(?:is|of)?\s*[:=-]?\s*$/i, "due"],
@@ -555,7 +560,11 @@ export function parseSms(input: string, { today }: ParseOptions): ParsedSms {
 
   const feeMinor = amounts.filter((a) => a.label === "fee").reduce((sum, a) => sum + toMinor(a.value), 0n);
   const fee = feeMinor > 0n ? normalizeMoney(feeMinor) : null;
-  const balance = amounts.find((a) => a.label === "balance" && a.index > amountIndex)?.value ?? amounts.find((a) => a.label === "balance")?.value ?? null;
+  // The figure after the transaction amount, if there are several.
+  const reported = (label: AmountLabel) =>
+    amounts.find((a) => a.label === label && a.index > amountIndex) ?? amounts.find((a) => a.label === label) ?? null;
+  const balanceMatch = reported("balance");
+  const limit = reported("limit")?.value ?? null;
 
   const { direction, margin } = detectDirection(text, amountIndex);
   const { provider, other: otherProvider } = detectProviders(text);
@@ -582,7 +591,9 @@ export function parseSms(input: string, { today }: ParseOptions): ParsedSms {
     amount,
     currency,
     fee,
-    balance,
+    balance: balanceMatch?.value ?? null,
+    balanceCurrency: balanceMatch?.currency ?? null,
+    limit,
     provider,
     otherProvider,
     accountDigits,

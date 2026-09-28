@@ -136,8 +136,8 @@ function Definitions({ summary }: { summary: PeriodSummary }) {
             <dd className="text-text-secondary">Income minus spending, and that as a share of income.</dd>
           </div>
           <p className="border-t border-border pt-3 text-caption text-text-tertiary">
-            Totals include {summary.currency} accounts only. Balance adjustments from reconciling are not counted as
-            income or spending.
+            Totals include {summary.currency} accounts only. Corrections from balance updates are not counted as income
+            or spending.
           </p>
         </dl>
       </PopoverContent>

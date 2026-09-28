@@ -1,13 +1,12 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
-import { formatDate, toDbDate, type ISODate } from "@/lib/dates";
-import type { AccountType } from "@/lib/domain";
-import { fromMinor, normalizeMoney, toMinor, type Money } from "@/lib/money";
+import { toDbDate, type ISODate } from "@/lib/dates";
+import type { AccountType, CheckpointSource } from "@/lib/domain";
+import { fromMinor, toMinor, type Money } from "@/lib/money";
 import type { AccountSummary } from "@/lib/types";
-import type { AccountInput, ReconcileInput } from "@/lib/validation";
+import type { AccountInput } from "@/lib/validation";
 import { prisma, type Tx } from "../db";
 import { conflict, invalid, notFound } from "../errors";
-import { requireCategory } from "./categories";
 import { money } from "./mappers";
 
 interface AccountRow {
@@ -27,11 +26,20 @@ interface AccountRow {
   transactionCount: number;
   lastActivity: string | null;
   scheduledNet: string;
+  checkpointDate: string | null;
+  checkpointTime: string | null;
+  checkpointBalance: string | null;
+  checkpointSource: CheckpointSource | null;
 }
 
 /**
  * Accounts with balances derived from the ledger. Balance = opening balance +
- * every signed ledger movement dated on or before `asOf`. Nothing is cached.
+ * every signed ledger movement dated on or before `asOf`, including the
+ * automatic corrections that make balance updates hold. Nothing is cached.
+ *
+ * Money in/out count the account's own transactions since its opening date;
+ * whatever else changed the balance (balance updates) is `corrections`, so
+ * opening + in − out + corrections = balance.
  */
 async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): Promise<AccountSummary[]> {
   const rows = await prisma.$queryRaw<AccountRow[]>`
@@ -43,38 +51,62 @@ async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): P
       (a."openingBalance" + COALESCE(l."net", 0))::text AS "balance",
       COALESCE(l."inflow", 0)::text AS "inflow",
       COALESCE(l."outflow", 0)::text AS "outflow",
-      COALESCE(l."count", 0)::int AS "transactionCount",
-      to_char(l."last", 'YYYY-MM-DD') AS "lastActivity",
-      COALESCE(f."net", 0)::text AS "scheduledNet"
+      COALESCE(t."count", 0)::int AS "transactionCount",
+      to_char(t."last", 'YYYY-MM-DD') AS "lastActivity",
+      COALESCE(l."future", 0)::text AS "scheduledNet",
+      to_char(c."date", 'YYYY-MM-DD') AS "checkpointDate",
+      c."time" AS "checkpointTime",
+      c."balance"::text AS "checkpointBalance",
+      c."source"::text AS "checkpointSource"
     FROM "Account" a
+    -- One pass over the account's ledger: the corrections behind it are
+    -- derived from all of its history, so reading it twice costs twice.
+    LEFT JOIN LATERAL (
+      SELECT SUM(e."amount") FILTER (WHERE e."date" <= ${asOf}::date) AS "net",
+             SUM(e."amount") FILTER (WHERE e."date" > ${asOf}::date) AS "future",
+             SUM(e."amount") FILTER (WHERE e."transactionId" IS NOT NULL AND e."amount" > 0 AND e."date" BETWEEN a."openingDate" AND ${asOf}::date) AS "inflow",
+             -SUM(e."amount") FILTER (WHERE e."transactionId" IS NOT NULL AND e."amount" < 0 AND e."date" BETWEEN a."openingDate" AND ${asOf}::date) AS "outflow"
+      FROM "LedgerEntry" e
+      WHERE e."accountId" = a."id"
+    ) l ON true
+    -- A transaction has at most one leg per account (transfers can't loop back).
     LEFT JOIN (
-      SELECT "accountId",
-             SUM("amount") AS "net",
-             SUM("amount") FILTER (WHERE "amount" > 0) AS "inflow",
-             -SUM("amount") FILTER (WHERE "amount" < 0) AS "outflow",
-             COUNT(*) AS "count",
-             MAX("date") AS "last"
-      FROM "LedgerEntry"
+      SELECT "accountId", COUNT(*) AS "count", MAX("date") AS "last"
+      FROM "TransactionLeg"
       WHERE "date" <= ${asOf}::date
       GROUP BY "accountId"
-    ) l ON l."accountId" = a."id"
-    LEFT JOIN (
-      SELECT "accountId", SUM("amount") AS "net"
-      FROM "LedgerEntry"
-      WHERE "date" > ${asOf}::date
-      GROUP BY "accountId"
-    ) f ON f."accountId" = a."id"
+    ) t ON t."accountId" = a."id"
+    LEFT JOIN LATERAL (
+      SELECT cp."date", cp."balance", cp."source",
+             -- As shown in the list of updates: see shownTime in balances.ts.
+             COALESCE(cp."time", CASE WHEN cp."source" = 'MANUAL' THEN left(cp."loggedTime", 5) END) AS "time"
+      FROM "BalanceCheckpoint" cp
+      WHERE cp."accountId" = a."id" AND cp."date" <= ${asOf}::date
+      ORDER BY cp."date" DESC, COALESCE(cp."time", cp."loggedTime", '24:00')::text COLLATE "C" DESC, cp."createdAt" DESC
+      LIMIT 1
+    ) c ON true
     ${where}
     ORDER BY a."isActive" DESC, a."sortOrder" ASC, a."createdAt" ASC`;
 
-  return rows.map((row) => ({
-    ...row,
-    openingBalance: money(row.openingBalance),
-    balance: money(row.balance),
-    inflow: money(row.inflow),
-    outflow: money(row.outflow),
-    scheduledNet: money(row.scheduledNet),
-  }));
+  return rows.map(({ checkpointDate, checkpointTime, checkpointBalance, checkpointSource, ...row }) => {
+    const balance = money(row.balance);
+    const openingBalance = money(row.openingBalance);
+    const inflow = money(row.inflow);
+    const outflow = money(row.outflow);
+    return {
+      ...row,
+      openingBalance,
+      balance,
+      inflow,
+      outflow,
+      corrections: fromMinor(toMinor(balance) - toMinor(openingBalance) - toMinor(inflow) + toMinor(outflow)),
+      scheduledNet: money(row.scheduledNet),
+      lastUpdate:
+        checkpointDate && checkpointBalance && checkpointSource
+          ? { date: checkpointDate, time: checkpointTime, balance: money(checkpointBalance), source: checkpointSource }
+          : null,
+    };
+  });
 }
 
 export function listAccounts(today: ISODate): Promise<AccountSummary[]> {
@@ -166,22 +198,20 @@ export async function updateAccount(id: string, input: AccountInput, today?: ISO
       SELECT "currency" FROM "Account" WHERE "id" = ${id} FOR UPDATE`;
     if (!existing) throw notFound("Account");
 
-    const [history] = await tx.$queryRaw<Array<{ earliest: string | null; count: number }>>`
-      SELECT to_char(MIN("date"), 'YYYY-MM-DD') AS "earliest", COUNT(*)::int AS "count"
-      FROM "LedgerEntry" WHERE "accountId" = ${id}`;
-    const recurringCount = await tx.recurringTransaction.count({
-      where: { OR: [{ accountId: id }, { toAccountId: id }] },
-    });
-
-    if (input.currency !== existing.currency && (history.count > 0 || recurringCount > 0)) {
-      throw invalid("Currency can't change once the account has history.", {
-        currency: "This account already has transactions, so its currency is fixed.",
-      });
-    }
-    if (history.earliest && history.earliest < input.openingDate) {
-      throw invalid("The opening date is after existing transactions.", {
-        openingDate: `The earliest transaction is on ${formatDate(history.earliest)}. Choose that date or earlier.`,
-      });
+    // Amounts already recorded (transactions, balance updates, rules) are in
+    // this currency. The opening date can move freely: entries before it are
+    // history and don't change the balance from that date on.
+    if (input.currency !== existing.currency) {
+      const [transactions, checkpoints, rules] = await Promise.all([
+        tx.transaction.count({ where: { OR: [{ accountId: id }, { toAccountId: id }] } }),
+        tx.balanceCheckpoint.count({ where: { accountId: id } }),
+        tx.recurringTransaction.count({ where: { OR: [{ accountId: id }, { toAccountId: id }] } }),
+      ]);
+      if (transactions + checkpoints + rules > 0) {
+        throw invalid("Currency can't change once the account has history.", {
+          currency: "This account already has transactions, so its currency is fixed.",
+        });
+      }
     }
 
     return tx.account.update({
@@ -224,66 +254,4 @@ export async function deleteAccount(id: string) {
 /** Sum of balances for accounts in one currency (other currencies can't be added). */
 export function totalBalance(accounts: AccountSummary[], currency: string): Money {
   return fromMinor(accounts.filter((a) => a.currency === currency).reduce((sum, a) => sum + toMinor(a.balance), 0n));
-}
-
-export interface ReconcileResult {
-  expected: Money;
-  counted: Money;
-  difference: Money;
-  transactionId: string | null;
-}
-
-/**
- * Compare the ledger balance with a physically counted balance and record the
- * difference. The expected balance and the difference are computed here,
- * under a row lock — never taken from the client.
- */
-export async function reconcileAccount(id: string, input: ReconcileInput, today: ISODate): Promise<ReconcileResult> {
-  return prisma.$transaction(async (tx) => {
-    const [account] = await tx.$queryRaw<Array<{ id: string; openingDate: string }>>`
-      SELECT "id", to_char("openingDate", 'YYYY-MM-DD') AS "openingDate"
-      FROM "Account" WHERE "id" = ${id} FOR UPDATE`;
-    if (!account) throw notFound("Account");
-    if (input.date > today) throw invalid("Choose today or an earlier date.", { date: "You can't count cash in the future." });
-    if (input.date < account.openingDate) {
-      throw invalid("The date is before the account was opened.", { date: "Choose a date on or after the opening date." });
-    }
-
-    const expected = await balanceAsOf(id, input.date, tx);
-    const counted = normalizeMoney(input.countedBalance);
-    const difference = toMinor(counted) - toMinor(expected);
-    if (difference === 0n) return { expected, counted, difference: fromMinor(0n), transactionId: null };
-
-    const base = {
-      date: toDbDate(input.date),
-      accountId: id,
-      description: "Reconciliation",
-      notes: input.note || null,
-    };
-
-    let created: { id: string };
-    if (input.recordAs === "ADJUSTMENT") {
-      created = await tx.transaction.create({
-        data: { ...base, type: "ADJUSTMENT", amount: fromMinor(difference) },
-        select: { id: true },
-      });
-    } else {
-      const kind = difference < 0n ? "EXPENSE" : "INCOME";
-      if (!input.categoryId) {
-        throw invalid("Choose a category.", { categoryId: `Choose the ${kind === "EXPENSE" ? "expense" : "income"} category.` });
-      }
-      const category = await requireCategory(tx, input.categoryId, kind);
-      created = await tx.transaction.create({
-        data: {
-          ...base,
-          type: kind,
-          amount: fromMinor(difference < 0n ? -difference : difference),
-          categoryId: category.id,
-          scope: kind === "EXPENSE" ? (input.scope ?? category.defaultScope ?? "OTHER") : null,
-        },
-        select: { id: true },
-      });
-    }
-    return { expected, counted, difference: fromMinor(difference), transactionId: created.id };
-  });
 }

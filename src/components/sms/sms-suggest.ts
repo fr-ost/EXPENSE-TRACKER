@@ -5,7 +5,7 @@
  * spending), the category, and any fee as its own expense.
  */
 import type { TransactionDraft } from "@/components/transactions/transaction-draft";
-import { addDays, formatDate, type ISODate } from "@/lib/dates";
+import { addDays, type ISODate } from "@/lib/dates";
 import type { AccountType, EntryType, ExpenseScope } from "@/lib/domain";
 import { toMinor, type Money } from "@/lib/money";
 import { FEE_CATEGORY_HINTS, type ParsedSms } from "@/lib/sms/parse";
@@ -262,9 +262,6 @@ export function suggestFromSms(parsed: ParsedSms, ctx: SuggestContext): SmsSugge
   if (!parsed.date) issues.push("No date in the message — using today.");
   const date = parsed.date ?? today;
   if (date > addDays(today, 1)) issues.push("The date is in the future.");
-  for (const account of [active.find((a) => a.id === accountId), active.find((a) => a.id === toAccountId)]) {
-    if (account && date < account.openingDate) issues.push(`${account.name} starts on ${formatDate(account.openingDate)}.`);
-  }
 
   const draft: TransactionDraft = {
     type,
@@ -280,6 +277,7 @@ export function suggestFromSms(parsed: ParsedSms, ctx: SuggestContext): SmsSugge
     time: parsed.time ?? "",
     description: parsed.description,
     notes: parsed.text.slice(0, 2000),
+    affectsBalance: true,
   };
 
   let fee: TransactionDraft | null = null;

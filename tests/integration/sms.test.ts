@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/server/db";
 import { getAccount } from "@/lib/server/services/accounts";
+import { listBalanceUpdates } from "@/lib/server/services/balances";
 import { checkSms, importSms, smsFingerprint } from "@/lib/server/services/sms";
-import { createTransaction, getTransaction, updateTransaction } from "@/lib/server/services/transactions";
+import { createTransaction, deleteTransaction, getTransaction, updateTransaction } from "@/lib/server/services/transactions";
 import { smsImportInput, type TransactionInput } from "@/lib/validation";
 import { categoryId, makeAccount, resetData } from "../support/fixtures";
 
@@ -95,13 +96,13 @@ describe("SMS import", () => {
   it("reports entry-rule errors per message without blocking the others", async () => {
     const input = smsImportInput.parse({
       items: [
-        { text: "old one", transaction: { type: "EXPENSE", amount: "10", date: "2020-01-01", accountId: bkash, categoryId: shopping, scope: "PERSONAL" } },
+        { text: "too far ahead", transaction: { type: "EXPENSE", amount: "10", date: "2028-01-01", accountId: bkash, categoryId: shopping, scope: "PERSONAL" } },
         { text: PAYMENT, transaction: { type: "EXPENSE", amount: "350", date: "2026-09-28", accountId: bkash, categoryId: shopping, scope: "PERSONAL" } },
       ],
     });
     const [bad, good] = await importSms(input, TODAY);
     expect(bad.status).toBe("error");
-    expect(bad.status === "error" && bad.fieldErrors?.date).toMatch(/starts on/);
+    expect(bad.status === "error" && bad.fieldErrors?.date).toMatch(/too far ahead|a year ahead/i);
     expect(good.status).toBe("added");
   });
 
@@ -129,5 +130,73 @@ describe("SMS import", () => {
     expect((await getTransaction(id)).time).toBe("10:05");
     await updateTransaction(id, { type: "EXPENSE", amount: "40", date: "2026-09-28", time: null, accountId: bkash, categoryId: fees, scope: "OTHER", description: "Fee", notes: null }, TODAY);
     expect((await getTransaction(id)).time).toBeNull();
+  });
+
+  it("sets the account balance from the balance in the message, once", async () => {
+    // Hisab thinks bKash has 3,000; the SMS says 500 after the cash out.
+    await prisma.account.update({ where: { id: bkash }, data: { openingBalance: "3000" } });
+    const input = cashOut();
+    input.items[0].balance = { accountId: bkash, amount: "500.00" };
+    const [result] = await importSms(input, TODAY);
+    expect(result.status).toBe("added");
+    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
+    const [update] = await listBalanceUpdates(bkash);
+    expect(update).toMatchObject({ date: "2026-09-28", time: "10:05", balance: "500.00", source: "SMS", correction: "-463.00" });
+
+    // Importing it again adds nothing, and older entries added later don't move today's balance.
+    await importSms(input, TODAY);
+    expect(await prisma.balanceCheckpoint.count()).toBe(1);
+    await createTransaction(
+      { type: "EXPENSE", amount: "100", date: "2026-09-20", accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Older", notes: null },
+      { today: TODAY },
+    );
+    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
+  });
+
+  it("records the reported balance only with its transaction", async () => {
+    // A different ৳350 payment that morning, typed by hand.
+    await createTransaction(
+      { type: "EXPENSE", amount: "350", date: "2026-09-28", time: "09:00", accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Daraz", notes: null },
+      { today: TODAY },
+    );
+    const input = smsImportInput.parse({
+      items: [
+        {
+          text: PAYMENT,
+          transaction: { type: "EXPENSE", amount: "350", date: "2026-09-28", time: "12:00", accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Daraz" },
+          balance: { accountId: bkash, amount: "150.00" },
+        },
+      ],
+    });
+    expect((await importSms(input, TODAY))[0].status).toBe("possible_duplicate");
+    expect(await prisma.balanceCheckpoint.count()).toBe(0);
+    expect((await getAccount(bkash, TODAY)).balance).toBe("2187.00");
+
+    input.items[0].allowDuplicate = true;
+    expect((await importSms(input, TODAY))[0].status).toBe("added");
+    expect((await getAccount(bkash, TODAY)).balance).toBe("150.00");
+  });
+
+  it("undoing the import removes the balance it set, but deleting the fee doesn't", async () => {
+    await prisma.account.update({ where: { id: bkash }, data: { openingBalance: "3000" } });
+    const input = cashOut();
+    input.items[0].balance = { accountId: bkash, amount: "500.00" };
+    const [result] = await importSms(input, TODAY);
+    const [main, fee] = result.status === "added" ? result.ids : [];
+
+    await deleteTransaction(fee);
+    expect(await prisma.balanceCheckpoint.count()).toBe(1);
+    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
+
+    await deleteTransaction(main);
+    expect(await prisma.balanceCheckpoint.count()).toBe(0);
+    expect((await getAccount(bkash, TODAY)).balance).toBe("3000.00");
+  });
+
+  it("ignores a reported balance for an account the transaction doesn't touch", async () => {
+    const input = cashOut();
+    input.items[0].balance = { accountId: await makeAccount({ name: "Elsewhere" }), amount: "1.00" };
+    await importSms(input, TODAY);
+    expect(await prisma.balanceCheckpoint.count()).toBe(0);
   });
 });

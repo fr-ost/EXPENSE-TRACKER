@@ -12,6 +12,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - The transaction ledger is the only source of truth for balances. Never add a
   stored balance column; derive from the `LedgerEntry` view.
+- Known balances are anchors: the opening balance and each balance update
+  (`BalanceCheckpoint`, manual or from an SMS). The `BalanceCorrection` view
+  derives the correction that makes each hold, so entries dated before one
+  never change the balance after it. Filter that view (and `LedgerEntry`) by
+  `accountId` for one account: it is then computed for that account only.
+- Order within a day is (date, `at`, rank, createdAt): `at` is the time, else
+  the hidden `loggedTime` ("HH:MM:SS", set only when an untimed entry is
+  recorded on its own date, via `loggedTimeFor` and the server clock), else
+  '24:00'; rank puts the opening first and a checkpoint after the movements at
+  the same moment. `src/lib/known-balance.ts` mirrors this for UI hints.
+- `Transaction.affectsBalance = false` keeps an entry in reports (ExpenseEntry /
+  IncomeEntry) but out of every balance.
 - Money: `NUMERIC(14,2)` in SQL, decimal strings in TypeScript, `bigint` minor
   units for arithmetic (`src/lib/money.ts`). Never do money maths in floats.
 - Income / spending / transfer classification is defined once: the SQL views in
@@ -25,9 +37,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - SMS import: the parser (`src/lib/sms/parse.ts`) is pure and client-side;
   account/category suggestions live in `src/components/sms/sms-suggest.ts`;
   the server (`src/lib/server/services/sms.ts`) re-validates through
-  `resolveEntry`, keys each message `sms:<fingerprint>:<part>` and flags likely
-  duplicates via the `LedgerEntry` view. Add new message formats as parser
-  tests first (`tests/unit/sms-parse.test.ts`).
+  `resolveEntry`, keys each message `sms:<fingerprint>:<part>` (0 transaction,
+  1 fee, b its balance update) and flags likely duplicates via the
+  `TransactionLeg` view. A reported balance is recorded only with its own
+  transaction (never on a flagged duplicate) and deleted with it
+  (`deleteTransaction`); card limits are never balances.
+  Add new message formats as parser tests first (`tests/unit/sms-parse.test.ts`).
 - The service worker (`public/sw.js`) must never cache pages or API responses.
   Icons are rendered from one drawing: `node scripts/generate-icons.mjs`.
 - Rate limiting keys on the leftmost `X-Forwarded-For` (Railway). Next.js fills

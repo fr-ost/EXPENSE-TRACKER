@@ -14,11 +14,22 @@ import { Textarea } from "@/components/ui/input";
 import { Card } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/switch";
 import { api, errorMessage } from "@/lib/api-client";
-import { fromMinor, toMinor } from "@/lib/money";
+import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
+import { fromMinor, toMinor, type Money } from "@/lib/money";
 import { splitMessages } from "@/lib/sms/parse";
 import type { TransactionView } from "@/lib/types";
 import { SmsCard } from "./sms-card";
-import { buildItem, itemPayload, messageKey, PENDING_STATUSES, type CheckResult, type SimilarTransaction, type SmsItem } from "./sms-model";
+import {
+  buildItem,
+  itemPayload,
+  messageKey,
+  ownAccountId,
+  PENDING_STATUSES,
+  reportedBalance,
+  type CheckResult,
+  type SimilarTransaction,
+  type SmsItem,
+} from "./sms-model";
 import { loadRememberedAccounts, ownEffect, rememberAccountFor, type BalanceCheck } from "./sms-suggest";
 
 type ImportResult =
@@ -67,7 +78,7 @@ export function SmsImporter() {
     async (targets: SmsItem[], options: { allowDuplicate?: boolean; quiet?: boolean } = {}) => {
       const sendable: Array<{ item: SmsItem; payload: Extract<ReturnType<typeof itemPayload>, { ok: true }> }> = [];
       for (const item of targets) {
-        const payload = itemPayload(item, accounts);
+        const payload = itemPayload(item, accounts, today);
         if (payload.ok) sendable.push({ item, payload });
         else patchItem(item.id, { status: "review", fieldErrors: payload.fieldErrors, issues: [...new Set([...item.issues, "Fix the highlighted fields."])] });
       }
@@ -85,6 +96,7 @@ export function SmsImporter() {
               text: item.text,
               transaction: payload.transaction,
               fee: payload.fee,
+              balance: payload.balance,
               allowDuplicate: options.allowDuplicate ?? false,
             })),
           },
@@ -102,7 +114,7 @@ export function SmsImporter() {
         if (result.status === "added" || result.status === "exists") {
           patchItem(item.id, { status: result.status, addedIds: result.ids, similar: undefined, error: undefined, fieldErrors: {} });
           if (result.status === "added") addedIds.push(...result.ids);
-          const own = item.draft.type === "TRANSFER" && item.parsed.direction === "credit" ? item.draft.toAccountId : item.draft.accountId;
+          const own = ownAccountId(item);
           if (own) rememberAccountFor(item.parsed, own);
         } else if (result.status === "possible_duplicate") {
           patchItem(item.id, { status: "duplicate", similar: result.similar });
@@ -137,7 +149,7 @@ export function SmsImporter() {
       }
       return added;
     },
-    [accounts, patchItem, router],
+    [accounts, patchItem, router, today],
   );
 
   /** Read messages, check them against the ledger, and (optionally) add the confident ones. */
@@ -263,29 +275,35 @@ export function SmsImporter() {
   }
 
   // Compare the balance in the newest message for each account with what the
-  // ledger shows once everything pending here is added.
+  // ledger shows once everything pending here is added (before any balance
+  // update from the messages themselves).
   const balanceChecks = React.useMemo(() => {
     const stamp = (item: SmsItem) => `${item.draft.date} ${item.draft.time || "00:00"}`;
-    const byAccount = new Map<string, { latest: SmsItem | null; pending: bigint; waiting: boolean }>();
+    const byAccount = new Map<string, { latest: { item: SmsItem; amount: Money } | null; pending: bigint; waiting: boolean }>();
     for (const item of items) {
       if (item.status === "ignored") continue;
       const effect = ownEffect(item.parsed, item.draft, item.includeFee ? item.fee : null);
       if (!effect) continue;
       const entry = byAccount.get(effect.accountId) ?? { latest: null, pending: 0n, waiting: false };
-      if (PENDING_STATUSES.includes(item.status)) {
+      const account = accounts.find((a) => a.id === effect.accountId);
+      // Something older than the account's latest known balance is already part of it.
+      const counts = !account || !landsBefore(item.draft.date, item.draft.time, latestKnownBalance(account), today);
+      if (PENDING_STATUSES.includes(item.status) && counts) {
         entry.pending += effect.delta;
         entry.waiting = true;
       }
-      if (item.parsed.balance && (!entry.latest || stamp(item) > stamp(entry.latest))) entry.latest = item;
+      const reported = reportedBalance(item, accounts, today);
+      if (reported?.account.id === effect.accountId && (!entry.latest || stamp(item) > stamp(entry.latest.item))) {
+        entry.latest = { item, amount: reported.amount };
+      }
       byAccount.set(effect.accountId, entry);
     }
     const checks = new Map<string, BalanceCheck>();
     for (const [accountId, { latest, pending, waiting }] of byAccount) {
       const account = accounts.find((a) => a.id === accountId);
-      if (!latest?.parsed.balance || !account || latest.draft.date > today) continue;
-      if (latest.parsed.currency && latest.parsed.currency !== account.currency) continue;
+      if (!latest || !account) continue;
       const expected = fromMinor(toMinor(account.balance) + pending);
-      checks.set(latest.id, { account, expected, reported: latest.parsed.balance, matches: expected === latest.parsed.balance, afterPending: waiting });
+      checks.set(latest.item.id, { account, expected, reported: latest.amount, matches: expected === latest.amount, afterPending: waiting });
     }
     return checks;
   }, [items, accounts, today]);
@@ -417,7 +435,10 @@ function HowItWorks() {
   const steps = [
     { title: "Paste", body: "Copy a transaction SMS and paste it above — one message or many at once." },
     { title: "Check", body: "Hisab reads the amount, bank or wallet, type, date and time, and picks the account and category." },
-    { title: "Done", body: "It's added to your ledger. Cash outs and ATM withdrawals become transfers to Cash; fees are recorded separately." },
+    {
+      title: "Done",
+      body: "It's added to your ledger, and the balance in the SMS becomes the account's balance. Cash outs and ATM withdrawals become transfers to Cash; fees are recorded separately.",
+    },
   ];
   return (
     <section aria-label="How it works" className="grid grid-cols-1 gap-3 sm:grid-cols-3">

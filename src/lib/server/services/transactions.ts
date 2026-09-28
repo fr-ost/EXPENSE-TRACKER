@@ -1,6 +1,6 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
-import { addYears, formatDate, monthEnd, monthStart, toDbDate, type ISODate } from "@/lib/dates";
+import { addYears, fromDbDate, monthEnd, monthStart, toDbDate, type Clock, type ISODate } from "@/lib/dates";
 import { isRecognizedExpense, type AccountType, type ExpenseScope } from "@/lib/domain";
 import { addMoney, isMoneyString, normalizeMoney } from "@/lib/money";
 import type { TransactionPage, TransactionView } from "@/lib/types";
@@ -19,30 +19,28 @@ interface LockedAccount {
   name: string;
   currency: string;
   isActive: boolean;
-  openingDate: string;
   type: AccountType;
 }
 
 async function lockAccount(tx: Tx, id: string, field: string): Promise<LockedAccount> {
-  // FOR SHARE: blocks a concurrent account edit (e.g. moving the opening date)
-  // until this write commits, without serialising other transaction inserts.
+  // FOR SHARE: blocks a concurrent account edit or balance update until this
+  // write commits, without serialising other transaction inserts.
   const [account] = await tx.$queryRaw<LockedAccount[]>`
-    SELECT "id", "name", "currency", "isActive", "type"::text AS "type",
-           to_char("openingDate", 'YYYY-MM-DD') AS "openingDate"
+    SELECT "id", "name", "currency", "isActive", "type"::text AS "type"
     FROM "Account" WHERE "id" = ${id} FOR SHARE`;
   if (!account) throw invalid("Choose an account.", { [field]: "This account no longer exists." });
   return account;
 }
 
-function assertUsable(account: LockedAccount, field: string, date: ISODate, previousId?: string | null) {
+/**
+ * Any date is fine: an entry dated before the account's opening balance (or
+ * a balance update) is history — it shapes balances before that point but
+ * never the balance after it.
+ */
+function assertUsable(account: LockedAccount, field: string, previousId?: string | null) {
   if (!account.isActive && account.id !== previousId) {
     throw invalid("That account is inactive.", {
       [field]: `${account.name} is inactive. Reactivate it to record new transactions.`,
-    });
-  }
-  if (date < account.openingDate) {
-    throw invalid("The date is before the account was opened.", {
-      date: `${account.name} starts on ${formatDate(account.openingDate)}. To record earlier history, move its opening date back first.`,
     });
   }
 }
@@ -51,34 +49,51 @@ export interface ExistingEntry {
   accountId: string;
   toAccountId: string | null;
   categoryId: string | null;
+  date?: Date;
   time?: string | null;
+  loggedTime?: string | null;
+  affectsBalance?: boolean;
+}
+
+/**
+ * An entry without a time that is recorded on its own date is placed at the
+ * moment it was recorded, so a balance update made earlier that day still
+ * sees it as coming after. Otherwise (no clock time, or another date) it
+ * counts at the end of its day.
+ */
+export function loggedTimeFor(date: ISODate, time: string | null, clock: Clock): string | null {
+  return !time && clock.time && date === clock.today ? clock.time : null;
 }
 
 /**
  * Turn validated input into a row, enforcing every rule that needs the
- * database: accounts exist and are usable, the date is not before an
- * account's opening date, categories match the transaction kind, and
- * cross-currency transfers state the amount received.
+ * database: accounts exist and are usable, categories match the transaction
+ * kind, and cross-currency transfers state the amount received.
  */
 export async function resolveEntry(
   tx: Tx,
   input: TransactionInput,
-  today: ISODate,
+  clock: Clock,
   existing?: ExistingEntry,
 ): Promise<Prisma.TransactionUncheckedCreateInput> {
-  if (input.date > addYears(today, 1)) {
+  if (input.date > addYears(clock.today, 1)) {
     throw invalid("That date is too far ahead.", {
       date: "Dates more than a year ahead aren't allowed. Use a recurring transaction for future payments.",
     });
   }
 
   const account = await lockAccount(tx, input.accountId, "accountId");
-  assertUsable(account, "accountId", input.date, existing?.accountId);
+  assertUsable(account, "accountId", existing?.accountId);
 
+  const time = input.time === undefined ? (existing?.time ?? null) : input.time;
+  // An edit that leaves the date and time alone keeps the entry where it was.
+  const unmoved = !!existing?.date && fromDbDate(existing.date) === input.date && (existing.time ?? null) === time;
   const base = {
     amount: input.amount,
     date: toDbDate(input.date),
-    time: input.time === undefined ? (existing?.time ?? null) : input.time,
+    time,
+    loggedTime: time ? null : unmoved ? (existing?.loggedTime ?? null) : loggedTimeFor(input.date, time, clock),
+    affectsBalance: input.affectsBalance ?? existing?.affectsBalance ?? true,
     description: input.description,
     notes: input.notes,
     accountId: account.id,
@@ -103,7 +118,7 @@ export async function resolveEntry(
         throw invalid("Choose two different accounts.", { toAccountId: "Choose a different destination account." });
       }
       const destination = await lockAccount(tx, input.toAccountId, "toAccountId");
-      assertUsable(destination, "toAccountId", input.date, existing?.toAccountId);
+      assertUsable(destination, "toAccountId", existing?.toAccountId);
 
       let toAmount: string | null = null;
       if (destination.currency !== account.currency) {
@@ -145,16 +160,16 @@ export async function resolveEntry(
  */
 export async function createTransaction(
   input: TransactionInput,
-  options: { today: ISODate; idempotencyKey?: string },
+  options: Clock & { idempotencyKey?: string },
 ): Promise<{ id: string; created: boolean }> {
-  const { today, idempotencyKey } = options;
+  const { idempotencyKey } = options;
   if (idempotencyKey) {
     const existing = await prisma.transaction.findUnique({ where: { idempotencyKey }, select: { id: true } });
     if (existing) return { id: existing.id, created: false };
   }
   try {
     const row = await prisma.$transaction(async (tx) => {
-      const data = await resolveEntry(tx, input, today);
+      const data = await resolveEntry(tx, input, options);
       return tx.transaction.create({ data: { ...data, idempotencyKey: idempotencyKey ?? null }, select: { id: true } });
     });
     return { id: row.id, created: true };
@@ -167,24 +182,42 @@ export async function createTransaction(
   }
 }
 
-export async function updateTransaction(id: string, input: TransactionInput, today: ISODate) {
+export async function updateTransaction(id: string, input: TransactionInput, today: ISODate, time?: string | null) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.transaction.findUnique({
       where: { id },
-      select: { type: true, accountId: true, toAccountId: true, categoryId: true, time: true },
+      select: {
+        type: true,
+        accountId: true,
+        toAccountId: true,
+        categoryId: true,
+        date: true,
+        time: true,
+        loggedTime: true,
+        affectsBalance: true,
+      },
     });
     if (!existing) throw notFound("Transaction");
     if (existing.type === "ADJUSTMENT") {
-      throw invalid("Adjustments can't be edited. Delete it and reconcile the account again.");
+      throw invalid("Adjustments can't be edited. Delete it and update the account balance instead.");
     }
-    const data = await resolveEntry(tx, input, today, existing);
+    const data = await resolveEntry(tx, input, { today, time }, existing);
     return tx.transaction.update({ where: { id }, data, select: { id: true } });
   });
 }
 
+/** A message's own transaction ("sms:<fingerprint>:0"), not its fee. */
+const SMS_MAIN_KEY = /^sms:([0-9a-f]+):0$/;
+
 export async function deleteTransaction(id: string) {
-  const result = await prisma.transaction.deleteMany({ where: { id } });
-  if (result.count === 0) throw notFound("Transaction");
+  await prisma.$transaction(async (tx) => {
+    const row = await tx.transaction.findUnique({ where: { id }, select: { idempotencyKey: true } });
+    const result = await tx.transaction.deleteMany({ where: { id } });
+    if (!row || result.count === 0) throw notFound("Transaction");
+    // A balance read from an SMS goes with the message's transaction (e.g. Undo after an import).
+    const sms = row.idempotencyKey ? SMS_MAIN_KEY.exec(row.idempotencyKey) : null;
+    if (sms) await tx.balanceCheckpoint.deleteMany({ where: { smsKey: `sms:${sms[1]}:b` } });
+  });
 }
 
 // ---------------------------------------------------------------------------

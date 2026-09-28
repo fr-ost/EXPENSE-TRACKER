@@ -3,7 +3,7 @@
  * decimal string (see lib/money.ts); dates are "YYYY-MM-DD".
  */
 import type { ISODate, MonthKey } from "./dates";
-import type { AccountType, CategoryKind, ExpenseScope, Frequency, TransactionType } from "./domain";
+import type { AccountType, CategoryKind, CheckpointSource, ExpenseScope, Frequency, TransactionType } from "./domain";
 import type { Money } from "./money";
 
 export interface AccountRef {
@@ -22,12 +22,44 @@ export interface AccountSummary extends AccountRef {
   sortOrder: number;
   /** Opening balance + every ledger movement dated today or earlier. */
   balance: Money;
+  /** Money in / out through transactions since the opening date. */
   inflow: Money;
   outflow: Money;
+  /** What balance updates corrected: opening + in − out + corrections = balance. */
+  corrections: Money;
   transactionCount: number;
   lastActivity: ISODate | null;
   /** Net of transactions dated after today (not yet in the balance). */
   scheduledNet: Money;
+  /** The most recent balance update, if any. */
+  lastUpdate: { date: ISODate; time: string | null; balance: Money; source: CheckpointSource } | null;
+}
+
+/** A balance update ("the account held exactly this much at this moment"). */
+export interface BalanceUpdateView {
+  id: string;
+  date: ISODate;
+  time: string | null;
+  balance: Money;
+  source: CheckpointSource;
+  note: string | null;
+  /** What the ledger had to add (+) or remove (−) to match; zero when it already matched. */
+  correction: Money;
+  /** The earliest balance known for the account: it anchors older history instead of correcting it. */
+  startingPoint: boolean;
+}
+
+/** What Hisab has recorded for an account at a moment — what a balance update there is compared with. */
+export interface RecordedBalance {
+  balance: Money;
+  /** The moment comes before every known balance (the opening included): an update there only fills in history. */
+  startingPoint: boolean;
+  /**
+   * The first known balance after that moment (the opening balance or an
+   * update). If there is one, an update here can't change the balance from
+   * then on; it only corrects the history before it.
+   */
+  nextBalance: { date: ISODate; opening: boolean } | null;
 }
 
 export interface CategoryRef {
@@ -61,6 +93,8 @@ export interface TransactionView {
   countAsExpense: boolean;
   scope: ExpenseScope | null;
   recurringId: string | null;
+  /** False when kept for the record without moving the account balance. */
+  affectsBalance: boolean;
   /** Added from a bank or wallet SMS. */
   fromSms: boolean;
   createdAt: string;

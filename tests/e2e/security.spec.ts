@@ -206,4 +206,20 @@ test("invalid input is a 400 with field errors, never a server error", async ({ 
 
   const huge = await post(expense({ notes: "x".repeat(100_000) }));
   expect(huge.status()).toBe(413);
+
+  // Balance updates: bad input is a 400, an unknown account a 404.
+  const headers = { Origin: ORIGIN, "Content-Type": "application/json", Cookie: cookie };
+  for (const [label, data, status] of [
+    ["not a number", { balance: "abc", date: "2026-01-01" }, 400],
+    ["impossible date", { balance: "10", date: "2026-02-30" }, 400],
+    ["bad time", { balance: "10", date: "2026-01-01", time: "25:00" }, 400],
+    ["unknown account", { balance: "10", date: "2026-01-01" }, 404],
+  ] as const) {
+    const response = await request.post("/api/accounts/nope/balance", { headers, data });
+    expect(response.status(), label).toBe(status);
+  }
+  expect((await request.get("/api/accounts/nope/balance?date=2026-02-30", { headers })).status()).toBe(400);
+  expect((await request.get("/api/accounts/nope/balance?date=2026-01-01&time=9am", { headers })).status()).toBe(400);
+  expect((await request.get("/api/accounts/nope/balance?date=2026-01-01", { headers })).status()).toBe(404);
+  expect((await request.delete("/api/accounts/nope/balance/nope", { headers })).status()).toBe(404);
 });
