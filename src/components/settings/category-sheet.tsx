@@ -12,6 +12,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ResponsiveSheet } from "@/components/ui/sheet";
+import { guardSheet } from "@/components/ui/sheet-error-boundary";
 import { Switch } from "@/components/ui/switch";
 import { useAutoFocusFields } from "@/hooks/use-media-query";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
@@ -23,7 +24,10 @@ import { cn } from "@/lib/utils";
 /** Icons that make sense for categories (account-type glyphs excluded). */
 const CATEGORY_ICONS = ICON_KEYS.filter((k) => !["landmark", "smartphone", "credit-card", "arrow-left-right", "vault", "scale"].includes(k));
 
-export function CategorySheet({
+/** A crash inside closes the sheet with a message instead of breaking the page. */
+export const CategorySheet = guardSheet(CategorySheetContent);
+
+function CategorySheetContent({
   open,
   onOpenChange,
   category,

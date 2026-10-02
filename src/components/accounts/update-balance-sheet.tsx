@@ -15,6 +15,7 @@ import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/misc";
 import { ResponsiveSheet } from "@/components/ui/sheet";
+import { guardSheet } from "@/components/ui/sheet-error-boundary";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/dates";
 import type { ExpenseScope } from "@/lib/domain";
@@ -30,12 +31,15 @@ interface UpdateResult {
   recorded: { id: string; type: "EXPENSE" | "INCOME" } | null;
 }
 
+/** A crash inside closes the sheet with a message instead of breaking the page. */
+export const UpdateBalanceSheet = guardSheet(UpdateBalanceSheetContent);
+
 /**
  * "The account holds exactly this much" — for money that moved without a
  * record or an SMS. Whatever is dated before it and added later is absorbed,
  * so back-filling old spending never changes the balance after it.
  */
-export function UpdateBalanceSheet({
+function UpdateBalanceSheetContent({
   open,
   onOpenChange,
   account,

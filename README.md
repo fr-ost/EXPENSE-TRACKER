@@ -75,7 +75,9 @@ explains what to set.
 (Railway's `RAILWAY_GIT_COMMIT_SHA`), matching the latest commit once a deploy
 has finished. An app window left open reloads itself on its next page change
 after a new deploy. If it shows an older commit, check that the service
-deploys `main` and that the latest deploy succeeded (**Deployments** tab).
+deploys `main` and that the latest deploy succeeded (**Deployments** tab; a
+failed one shows why under **⋯ → View logs**). Error screens show the version
+too, next to what went wrong.
 
 ## Installing the app
 

@@ -10,11 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ResponsiveSheet } from "@/components/ui/sheet";
+import { guardSheet } from "@/components/ui/sheet-error-boundary";
 import { api, errorMessage } from "@/lib/api-client";
 import { formatMonth, type MonthKey } from "@/lib/dates";
 import type { BudgetLine } from "@/lib/types";
 
-export function BudgetSheet({
+/** A crash inside closes the sheet with a message instead of breaking the page. */
+export const BudgetSheet = guardSheet(BudgetSheetContent);
+
+function BudgetSheetContent({
   open,
   onOpenChange,
   month,

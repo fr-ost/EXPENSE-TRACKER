@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ResponsiveSheet } from "@/components/ui/sheet";
+import { guardSheet } from "@/components/ui/sheet-error-boundary";
 import { Switch } from "@/components/ui/switch";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { describeSchedule, formatDate } from "@/lib/dates";
@@ -39,7 +40,10 @@ function draftFromRule(rule: RecurringView): TransactionDraft {
   };
 }
 
-export function RecurringSheet({ open, onOpenChange, rule }: { open: boolean; onOpenChange: (open: boolean) => void; rule?: RecurringView }) {
+/** A crash inside closes the sheet with a message instead of breaking the page. */
+export const RecurringSheet = guardSheet(RecurringSheetContent);
+
+function RecurringSheetContent({ open, onOpenChange, rule }: { open: boolean; onOpenChange: (open: boolean) => void; rule?: RecurringView }) {
   const router = useRouter();
   const { accounts, today } = useAppData();
   const formId = React.useId();

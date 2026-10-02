@@ -71,6 +71,20 @@ describe("money", () => {
     // Showing an amount never throws, whatever the field holds.
     expect(["", ".", "-", "-.", "0.", ".5", "1,200.", "abc"].map((v) => formatMoney(v))).toEqual(["৳0", "৳0", "৳0", "৳0", "৳0", "৳0.50", "৳1,200", "৳abc"]);
   });
+
+  it("follows 5543.51 typed one key at a time", () => {
+    // The amount that used to crash the app at its "." (on Sep 28's version).
+    let field = "";
+    for (const key of "5543.51") {
+      field = sanitizeAmountInput(field + key);
+      expect(() => formatMoney(field)).not.toThrow();
+      expect(() => toMinor(field) - toMinor("1000.00")).not.toThrow(); // the update-balance difference
+    }
+    expect(field).toBe("5543.51");
+    expect(toMinor("5543.")).toBe(554300n);
+    expect(formatMoney("5543.")).toBe("৳5,543");
+    expect(formatMoney(field)).toBe("৳5,543.51");
+  });
 });
 
 describe("dates", () => {

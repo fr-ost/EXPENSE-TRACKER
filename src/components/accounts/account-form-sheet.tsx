@@ -13,6 +13,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ResponsiveSheet } from "@/components/ui/sheet";
+import { guardSheet } from "@/components/ui/sheet-error-boundary";
 import { Switch } from "@/components/ui/switch";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { ACCOUNT_TYPE_META, ACCOUNT_TYPES, CURRENCIES, isPaletteKey, type AccountType, type PaletteKey } from "@/lib/domain";
@@ -31,7 +32,10 @@ const DEFAULT_COLORS: Record<AccountType, PaletteKey> = {
   OTHER: "slate",
 };
 
-export function AccountFormSheet({
+/** A crash inside closes the sheet with a message instead of breaking the page. */
+export const AccountFormSheet = guardSheet(AccountFormSheetContent);
+
+function AccountFormSheetContent({
   open,
   onOpenChange,
   account,

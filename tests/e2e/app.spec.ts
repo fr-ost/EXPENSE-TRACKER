@@ -298,11 +298,14 @@ test("@mobile phone layout: tab bar and bottom-sheet entry", async ({ page }) =>
 
   // Opening the sheet doesn't put the cursor in a field: the keyboard waits for a tap.
   expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
-  // Typing a decimal point is fine, and the tab bar steps aside while typing.
+  // Typing a decimal point is fine (it once crashed the app), and the tab bar
+  // steps aside while typing.
   await sheet.getByLabel(/Amount/).tap();
-  await page.keyboard.type("12.");
-  await expect(sheet.getByLabel(/Amount/)).toHaveValue("12.");
+  await page.keyboard.type("5543.");
+  await expect(sheet.getByLabel(/Amount/)).toHaveValue("5543.");
   await expect(tabBar).toBeHidden();
+  await page.keyboard.type("51");
+  await expect(sheet.getByRole("button", { name: /Add expense · ৳5,543\.51/ })).toBeVisible();
   await expect(page.getByText("Something went wrong")).toHaveCount(0);
 
   // A tap on the handle closes the sheet; the page stays usable.
@@ -311,4 +314,13 @@ test("@mobile phone layout: tab bar and bottom-sheet entry", async ({ page }) =>
   await expect(tabBar).toBeVisible();
   await tabs.getByRole("link", { name: "Activity" }).tap();
   await expect(page).toHaveURL(/\/transactions/);
+
+  // The same amount as an account's balance update.
+  await page.goto(`/accounts/${(await created.json()).id}`);
+  await page.getByRole("button", { name: "Update balance" }).first().tap();
+  const update = page.getByRole("dialog");
+  await update.getByLabel(/Balance in/).tap();
+  await page.keyboard.type("5543.51");
+  await expect(update.getByRole("button", { name: /Update balance · ৳5,543\.51/ })).toBeVisible();
+  await expect(page.getByText(/Something went wrong|couldn.t load|hit a problem/)).toHaveCount(0);
 });

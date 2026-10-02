@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ResponsiveSheet } from "@/components/ui/sheet";
+import { SheetCrashGuard } from "@/components/ui/sheet-error-boundary";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/dates";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/domain";
@@ -62,7 +63,10 @@ export function TransactionSheetProvider({ children }: { children: React.ReactNo
   return (
     <SheetContext.Provider value={api}>
       {children}
-      <TransactionSheet key={state.key} state={state} onClose={close} />
+      {/* A crash anywhere in the sheet closes it with a message; the app carries on. */}
+      <SheetCrashGuard key={state.key} open={state.open} onClose={close}>
+        <TransactionSheet state={state} onClose={close} />
+      </SheetCrashGuard>
     </SheetContext.Provider>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { clientVersion, describeError } from "@/lib/error-details";
+
+const noSubscription = () => () => {};
 
 /**
  * Last-resort screen when the root layout itself fails. It replaces the whole
@@ -9,6 +12,9 @@ import { useEffect } from "react";
  * version of the app if one was deployed.
  */
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+  // Only in the browser: the server render doesn't know it, and must match.
+  const version = useSyncExternalStore(noSubscription, clientVersion, () => null);
+
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -51,6 +57,11 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
           >
             Try again
           </button>
+          {/* Enough, in a screenshot, to find the cause. */}
+          <p style={{ margin: "24px 0 0", color: "#8b8b97", font: "12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace", overflowWrap: "anywhere" }}>
+            {describeError(error)}
+            {version && ` · version ${version}`}
+          </p>
         </main>
       </body>
     </html>

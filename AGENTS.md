@@ -47,7 +47,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   Add new message formats as parser tests first (`tests/unit/sms-parse.test.ts`).
 - Displaying money (`formatMoney`) must never throw: it runs during render,
   and amount fields hold partial input like "12.". `ResponsiveSheet` wraps its
-  content in `SheetErrorBoundary`, so a crash in a form stays in its sheet.
+  content in `SheetErrorBoundary`, so a crash in a form stays in its sheet;
+  sheet components are exported through `guardSheet` (the transaction sheet
+  sits in a `SheetCrashGuard`), so a crash in a sheet's own render only closes
+  that sheet. Error screens show `describeError` and the version, so a
+  screenshot is enough to find the cause.
 - Phones: never auto-focus a field on a touch screen (`useAutoFocusFields`);
   the keyboard opens on a tap. Sheets drag by the handle only and move for the
   keyboard only on iOS; Android resizes the page (`interactiveWidget` in the
