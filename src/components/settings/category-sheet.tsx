@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { useAutoFocusFields } from "@/hooks/use-media-query";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { EXPENSE_SCOPES, ICON_KEYS, SCOPE_META, isIconKey, isPaletteKey, type CategoryKind, type ExpenseScope, type IconKey, type PaletteKey } from "@/lib/domain";
 import type { CategoryWithUsage } from "@/lib/types";
@@ -34,6 +35,7 @@ export function CategorySheet({
   kind: CategoryKind;
 }) {
   const router = useRouter();
+  const canAutoFocus = useAutoFocusFields();
   const [name, setName] = React.useState(category?.name ?? "");
   const [icon, setIcon] = React.useState<IconKey>(isIconKey(category?.icon) ? category.icon : "circle-dashed");
   const [color, setColor] = React.useState<PaletteKey>(isPaletteKey(category?.color) ? category.color : "blue");
@@ -104,7 +106,7 @@ export function CategorySheet({
           <div className="flex items-end gap-3">
             <IconBadge icon={icon} color={color} size="lg" />
             <Field label="Name" error={errors.name} className="flex-1">
-              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoFocus={!category} className="h-11" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoFocus={!category && canAutoFocus} className="h-11" />
             </Field>
           </div>
 

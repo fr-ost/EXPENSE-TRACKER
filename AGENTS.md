@@ -46,9 +46,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   the message's key, date and time). Card limits are never balances.
   Add new message formats as parser tests first (`tests/unit/sms-parse.test.ts`).
 - Displaying money (`formatMoney`) must never throw: it runs during render,
-  and amount fields hold partial input like "12.".
+  and amount fields hold partial input like "12.". `ResponsiveSheet` wraps its
+  content in `SheetErrorBoundary`, so a crash in a form stays in its sheet.
+- Phones: never auto-focus a field on a touch screen (`useAutoFocusFields`);
+  the keyboard opens on a tap. Sheets drag by the handle only and move for the
+  keyboard only on iOS; Android resizes the page (`interactiveWidget` in the
+  root layout). Page transitions are CSS (`animate-page-in`): nothing may keep
+  a page invisible until JavaScript runs.
 - `deploymentId` is Railway's commit SHA (skew protection: an open app reloads
-  after a deploy); Settings shows it as the version.
+  after a deploy); Settings shows it as the version. Railway deploys `main`.
 - The service worker (`public/sw.js`) must never cache pages or API responses.
   Icons are rendered from one drawing: `node scripts/generate-icons.mjs`.
 - Rate limiting keys on the leftmost `X-Forwarded-For` (Railway). Next.js fills

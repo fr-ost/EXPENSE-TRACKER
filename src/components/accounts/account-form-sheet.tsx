@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 import { useAppData } from "@/components/app-data";
+import { useAutoFocusFields } from "@/hooks/use-media-query";
 import { DateField } from "@/components/forms/date-field";
 import { PalettePicker } from "@/components/forms/palette-picker";
 import { AppIcon, paletteVar } from "@/components/icon";
@@ -51,6 +52,7 @@ export function AccountFormSheet({
   const formId = React.useId();
   const editing = !!account;
   const hasHistory = (account?.transactionCount ?? 0) > 0;
+  const canAutoFocus = useAutoFocusFields();
   const initialType = account?.type ?? defaults?.type ?? "CASH";
 
   const initialBalance = normalizeMoney(account?.openingBalance ?? defaults?.openingBalance ?? "0");
@@ -129,7 +131,7 @@ export function AccountFormSheet({
             onChange={(e) => setName(e.target.value)}
             placeholder={type === "MOBILE_WALLET" ? "e.g. bKash" : type === "BANK" ? "e.g. City Bank savings" : "e.g. Cash wallet"}
             maxLength={60}
-            autoFocus={!editing}
+            autoFocus={!editing && canAutoFocus}
             className="h-11"
           />
         </Field>

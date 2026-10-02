@@ -254,6 +254,7 @@ function MobileTabBar({ pathname, onAdd, onMore }: { pathname: string; onAdd: ()
   return (
     <nav
       aria-label="Main"
+      data-tabbar
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-canvas/90 pb-safe backdrop-blur-xl md:hidden"
     >
       <div className="flex h-[var(--bottom-nav-height)] items-stretch px-2">

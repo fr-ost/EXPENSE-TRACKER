@@ -46,9 +46,11 @@ pleasant to use every day, on a phone or a desktop.
 ## Deploying to Railway
 
 1. **Create a project** and add a **PostgreSQL** database service.
-2. **Add a service from this GitHub repository.** Railway reads
-   `railway.json`: it builds with `npm run build`, and `npm start` applies the
-   database migrations and starts the app. The health check is `/api/health`.
+2. **Add a service from this GitHub repository**, deploying the `main`
+   branch (service **Settings → Source → Branch**); every push to `main`
+   deploys. Railway reads `railway.json`: it builds with `npm run build`, and
+   `npm start` applies the database migrations and starts the app. The health
+   check is `/api/health`.
 3. **Set two variables** on the service (Variables tab):
 
    | Variable         | Value |
@@ -72,7 +74,8 @@ explains what to set.
 **Which version is running:** **Settings → App** shows the deployed commit
 (Railway's `RAILWAY_GIT_COMMIT_SHA`), matching the latest commit once a deploy
 has finished. An app window left open reloads itself on its next page change
-after a new deploy.
+after a new deploy. If it shows an older commit, check that the service
+deploys `main` and that the latest deploy succeeded (**Deployments** tab).
 
 ## Installing the app
 
@@ -190,6 +193,7 @@ A single Next.js 16 (App Router) application with PostgreSQL via Prisma 7.
 | Dates          | Calendar dates (`DATE`) plus an optional time of day, "today" resolved in your timezone (Settings), deterministic formatting so server and browser always agree. |
 | SMS            | The parser (`src/lib/sms`) is pure TypeScript and runs in the browser as you paste; the server re-validates every entry and checks for duplicates. |
 | UI             | Tailwind CSS v4 design tokens (`src/app/globals.css`), shadcn/ui-style primitives on Radix (`src/components/ui`), Motion, Recharts, Sonner, Vaul. |
+| Phones         | Sheets open without focusing a field, so the keyboard opens only on a tap; the page shrinks above the keyboard (`interactive-widget=resizes-content`) and the tab bar steps aside while typing; sheets drag by their handle only. Page transitions are CSS, so a page never waits for JavaScript to appear, and a crash inside a sheet stays in that sheet. |
 
 ```
 prisma/                  schema + migrations (views, CHECK constraints, default categories)

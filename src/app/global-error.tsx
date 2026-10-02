@@ -5,8 +5,10 @@ import { useEffect } from "react";
 /**
  * Last-resort screen when the root layout itself fails. It replaces the whole
  * document, so it carries its own minimal styles (the app's CSS isn't loaded).
+ * "Try again" reloads the page: that starts clean and picks up a newer
+ * version of the app if one was deployed.
  */
-export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
+export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -34,7 +36,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
           </p>
           <button
             type="button"
-            onClick={() => retry()}
+            onClick={() => window.location.reload()}
             style={{
               height: 44,
               padding: "0 20px",

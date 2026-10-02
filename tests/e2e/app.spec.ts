@@ -271,11 +271,44 @@ test("signing out ends the session", async ({ page }) => {
 
 test("@mobile phone layout: tab bar and bottom-sheet entry", async ({ page }) => {
   await signIn(page);
+  // An account of its own, so the form shows even when this test runs alone.
+  const created = await page.request.post("/api/accounts", {
+    headers: { Origin: new URL(page.url()).origin },
+    data: {
+      name: "Phone wallet",
+      type: "CASH",
+      currency: "BDT",
+      openingBalance: "500",
+      openingDate: new Date().toISOString().slice(0, 10),
+      icon: null,
+      color: "green",
+      isActive: true,
+    },
+  });
+  expect(created.ok()).toBe(true);
   await page.goto("/dashboard");
   const tabs = page.getByRole("navigation", { name: "Main" }).last();
+  const tabBar = page.locator("[data-tabbar]");
   await expect(tabs.getByRole("link", { name: "Activity" })).toBeVisible();
-  await tabs.getByRole("button", { name: "New transaction" }).click();
-  await expect(page.getByRole("dialog", { name: "New transaction" })).toBeVisible();
+  await tabs.getByRole("button", { name: "New transaction" }).tap();
+  const sheet = page.getByRole("dialog", { name: "New transaction" });
+  await expect(sheet).toBeVisible();
   const hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(hasOverflow).toBe(false);
+
+  // Opening the sheet doesn't put the cursor in a field: the keyboard waits for a tap.
+  expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
+  // Typing a decimal point is fine, and the tab bar steps aside while typing.
+  await sheet.getByLabel(/Amount/).tap();
+  await page.keyboard.type("12.");
+  await expect(sheet.getByLabel(/Amount/)).toHaveValue("12.");
+  await expect(tabBar).toBeHidden();
+  await expect(page.getByText("Something went wrong")).toHaveCount(0);
+
+  // A tap on the handle closes the sheet; the page stays usable.
+  await sheet.locator("[data-vaul-handle]").tap();
+  await expect(sheet).toBeHidden();
+  await expect(tabBar).toBeVisible();
+  await tabs.getByRole("link", { name: "Activity" }).tap();
+  await expect(page).toHaveURL(/\/transactions/);
 });

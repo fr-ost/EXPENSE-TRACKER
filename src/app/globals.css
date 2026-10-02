@@ -180,6 +180,7 @@
   --animate-sheet-in: sheet-in var(--duration-slow) var(--ease-out);
   --animate-sheet-out: sheet-out var(--duration-base) var(--ease-in-out);
   --animate-rise: rise var(--duration-slow) var(--ease-out) both;
+  --animate-page-in: page-in var(--duration-slow) var(--ease-out);
 }
 
 @keyframes fade-in {
@@ -217,6 +218,12 @@
 @keyframes rise {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Only a start state: the page ends on its own styles, so no transform is left
+   behind on it (one would pin fixed-position children to the page). */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
 }
 
 @keyframes shimmer {
@@ -311,6 +318,23 @@
 @media (max-width: 640px) {
   :root {
     --radius-xl: 16px;
+  }
+}
+
+/* A sheet's drag handle reaches only as far as its own strip: Vaul's larger
+   touch area would cover the top of the title row and the backdrop. */
+[data-vaul-handle] > [data-vaul-handle-hitarea] {
+  width: 100%;
+  height: 100%;
+}
+
+/* Typing on a phone: the keyboard takes the bottom of the screen, so the tab
+   bar steps aside instead of riding up on it. Fields that open a picker
+   rather than the keyboard (date, time, select) leave it alone. */
+@media (pointer: coarse) {
+  body:has(:is(input:is(:not([type]), [type="text"], [type="search"], [type="email"], [type="tel"], [type="url"], [type="number"], [type="password"]), textarea, [contenteditable="true"]):focus)
+    [data-tabbar] {
+    display: none;
   }
 }
 

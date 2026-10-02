@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useAppData } from "@/components/app-data";
+import { useAutoFocusFields } from "@/hooks/use-media-query";
 import { currencySymbol, groupAmountInput, sanitizeAmountInput } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,8 @@ export function AmountInput({
   tone?: "neutral" | "positive";
 }) {
   const { settings } = useAppData();
+  // On a phone the keyboard opens only when the field is tapped.
+  const canAutoFocus = useAutoFocusFields();
   const [focused, setFocused] = React.useState(false);
   const id = React.useId();
   const display = focused ? value : groupAmountInput(value, settings.numberFormat);
@@ -59,7 +62,7 @@ export function AmountInput({
             size={1}
             inputMode="decimal"
             autoComplete="off"
-            autoFocus={autoFocus}
+            autoFocus={autoFocus && canAutoFocus}
             placeholder="0"
             value={display}
             onFocus={() => setFocused(true)}
