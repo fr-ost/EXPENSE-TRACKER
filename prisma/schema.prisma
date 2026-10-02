@@ -207,21 +207,25 @@ model Transaction {
 /// balance match at each checkpoint, so entries dated before a checkpoint
 /// never change the balance after it.
 model BalanceCheckpoint {
-  id         String           @id @default(cuid())
-  accountId  String
-  account    Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  date       DateTime         @db.Date
+  id          String           @id @default(cuid())
+  accountId   String
+  account     Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date        DateTime         @db.Date
   /// "HH:MM" (local time); null means the end of the day…
-  time       String?          @db.Char(5)
+  time        String?          @db.Char(5)
   /// …unless it was recorded that same day: then the local time it was
   /// recorded ("HH:MM:SS").
-  loggedTime String?          @db.Char(8)
-  balance    Decimal          @db.Decimal(14, 2)
-  source     CheckpointSource @default(MANUAL)
-  note       String?          @db.VarChar(500)
+  loggedTime  String?          @db.Char(8)
+  balance     Decimal          @db.Decimal(14, 2)
+  source      CheckpointSource @default(MANUAL)
+  note        String?          @db.VarChar(500)
   /// For balances read from an SMS, so importing the message again adds nothing.
-  smsKey     String?          @unique @db.VarChar(64)
-  createdAt  DateTime         @default(now())
+  smsKey      String?          @unique @db.VarChar(64)
+  /// For an SMS: when the message was sent ("HH:MM" when it says). The newest
+  /// message sets the balance as of when it was read (`date` / `loggedTime`).
+  messageDate DateTime?        @db.Date
+  messageTime String?          @db.Char(5)
+  createdAt   DateTime         @default(now())
 
   @@index([accountId, date])
 }

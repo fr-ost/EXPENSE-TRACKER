@@ -13,12 +13,13 @@ import { Textarea } from "@/components/ui/input";
 import { Card } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/switch";
 import { api, errorMessage } from "@/lib/api-client";
-import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
+import { landsBefore, latestReportedBalance } from "@/lib/known-balance";
 import { fromMinor, toMinor, type Money } from "@/lib/money";
 import { splitMessages } from "@/lib/sms/parse";
 import type { AccountSummary, TransactionView } from "@/lib/types";
 import { SmsCard } from "./sms-card";
 import {
+  isBalanceOnly,
   buildItem,
   itemPayload,
   messageKey,
@@ -194,7 +195,14 @@ export function SmsImporter() {
       if (!sendable.length) return 0;
       try {
         const { results } = await api<{ results: Array<{ saved: boolean }> }>("/api/sms/balance", {
-          body: { items: sendable.map(({ item, balance }) => ({ text: item.text, balance })) },
+          body: {
+            items: sendable.map(({ item, balance }) => ({
+              text: item.text,
+              balance,
+              // A balance-only message has no transaction to place it: it says when.
+              reportedAt: isBalanceOnly(item) ? { date: item.draft.date, time: item.draft.time || null } : null,
+            })),
+          },
         });
         sendable.forEach(({ item }, index) => patchItem(item.id, { balanceSaved: results[index]?.saved ?? false }));
         const saved = results.filter((r) => r.saved).length;
@@ -370,7 +378,7 @@ export function SmsImporter() {
       const entry = byAccount.get(effect.accountId) ?? { latest: null, pending: 0n, waiting: false };
       const account = accounts.find((a) => a.id === effect.accountId);
       // Something older than the account's latest known balance is already part of it.
-      const counts = !account || !landsBefore(item.draft.date, item.draft.time, latestKnownBalance(account), today);
+      const counts = !account || !landsBefore(item.draft.date, item.draft.time, latestReportedBalance(account), today);
       if (PENDING_STATUSES.includes(item.status) && counts) {
         entry.pending += effect.delta;
         entry.waiting = true;

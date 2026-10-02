@@ -50,7 +50,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   the server (`src/lib/server/services/sms.ts`) re-validates through
   `resolveEntry`, keys each message `sms:<fingerprint>:<part>` (0 transaction,
   1 fee, b its balance update) and flags likely duplicates via the
-  `TransactionLeg` view. A reported balance is recorded only with its own
+  `TransactionLeg` view. An SMS balance replaces the account's balance
+  (`saveSmsCheckpoint`): the newest message — none sent later, no manual
+  update for a later moment — is anchored at the moment it is read, so the
+  account shows exactly that; an older one stays history at its own moment
+  (`messageDate` / `messageTime` keep when it was sent). A message that only
+  reports a balance is saved by `saveSmsBalances` with `reportedAt`. A
+  reported balance is recorded only with its own
   transaction and deleted with it (`deleteTransaction`): on add, on a repeat
   of a message added earlier ("exists", or `saveSmsBalances`), or when a
   flagged duplicate is confirmed with `sameAs` (the recorded transaction takes

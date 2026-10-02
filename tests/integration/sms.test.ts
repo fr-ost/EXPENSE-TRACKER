@@ -206,7 +206,7 @@ describe("SMS import", () => {
     expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
     expect((await checkSms([{ text: CASH_OUT, description: "" }]))[0]).toMatchObject({ balanceSaved: true });
     // Saving it again, or for a message never added, changes nothing.
-    expect(await saveSmsBalances([{ text: CASH_OUT, balance: { accountId: bkash, amount: "500.00" } }, { text: PAYMENT, balance: { accountId: bkash, amount: "1.00" } }])).toEqual([
+    expect(await saveSmsBalances([{ text: CASH_OUT, balance: { accountId: bkash, amount: "500.00" }, reportedAt: null }, { text: PAYMENT, balance: { accountId: bkash, amount: "1.00" }, reportedAt: null }], { today: TODAY })).toEqual([
       { saved: true },
       { saved: false },
     ]);
@@ -248,5 +248,113 @@ describe("SMS import", () => {
     input.items[0].balance = { accountId: await makeAccount({ name: "Elsewhere" }), amount: "1.00" };
     await importSms(input, TODAY);
     expect(await prisma.balanceCheckpoint.count()).toBe(0);
+  });
+});
+
+describe("an SMS balance replaces the balance", () => {
+  const DAY = "2026-10-03";
+  let bkash: string;
+  let income: string;
+  let food: string;
+
+  beforeEach(async () => {
+    await resetData();
+    // Hisab shows ৳5,000.
+    bkash = await makeAccount({ name: "bKash", type: "MOBILE_WALLET", openingBalance: "5000", openingDate: "2026-09-01" });
+    income = await categoryId("INCOME", "Other");
+    food = await categoryId("EXPENSE", "Food");
+  });
+
+  const received = (amount: string, balance: string, time: string | null, date = DAY) => {
+    const text = `You have received Tk ${amount} from 01711111111. Balance Tk ${balance}. TrxID R${date}${time ?? ""}${amount} at ${date}`;
+    return smsImportInput.parse({
+      items: [
+        {
+          text,
+          allowDuplicate: true,
+          balance: { accountId: bkash, amount: balance },
+          transaction: { type: "INCOME", amount, date, time, accountId: bkash, categoryId: income, description: "Received", notes: text },
+        },
+      ],
+    });
+  };
+  const spend = (amount: string, clockTime: string, date = DAY) =>
+    createTransaction(
+      { type: "EXPENSE", amount, date, time: null, accountId: bkash, categoryId: food, scope: "PERSONAL", description: "", notes: null },
+      { today: DAY, time: clockTime },
+    );
+  const balance = async () => (await getAccount(bkash, DAY)).balance;
+
+  it("sets the balance to what the newest SMS says — nothing added on top", async () => {
+    await importSms(received("500", "8000", "10:05"), DAY, "15:00:00");
+    expect(await balance()).toBe("8000.00");
+    const [update] = await listBalanceUpdates(bkash);
+    // Shown as the message: sent at 10:05, replacing ৳5,500.
+    expect(update).toMatchObject({ date: DAY, time: "10:05", balance: "8000.00", source: "SMS", previous: "5500.00" });
+  });
+
+  it("takes what was recorded before it was read as included, and counts what comes after", async () => {
+    await spend("700", "12:00:00"); // typed in at noon, after the 10:05 message
+    await importSms(received("500", "8000", "10:05"), DAY, "15:00:00");
+    expect(await balance()).toBe("8000.00");
+    await spend("100", "16:00:00"); // after the SMS was read
+    expect(await balance()).toBe("7900.00");
+  });
+
+  it("a message from an earlier day still sets today's balance when it's the newest", async () => {
+    await spend("700", "09:00:00", "2026-10-02");
+    await importSms(received("500", "8000", "10:05", "2026-10-01"), DAY, "15:00:00");
+    expect(await balance()).toBe("8000.00");
+  });
+
+  it("an older message is kept as history and never overrides a newer one", async () => {
+    await importSms(received("100", "7000", "12:00"), DAY, "15:00:00");
+    await importSms(received("200", "6500", "10:00"), DAY, "15:05:00");
+    expect(await balance()).toBe("7000.00");
+  });
+
+  it("a balance you entered for a later moment wins over an older message", async () => {
+    await prisma.balanceCheckpoint.create({ data: { accountId: bkash, date: new Date(`${DAY}T00:00:00Z`), time: "18:00", balance: "4000", source: "MANUAL" } });
+    await importSms(received("500", "8000", "10:05"), DAY, "20:00:00");
+    expect(await balance()).toBe("4000.00");
+  });
+
+  it("a message that only reports a balance sets it, once", async () => {
+    const text = "Your bKash account balance is Tk 8,000.00.";
+    const item = { text, balance: { accountId: bkash, amount: "8000.00" }, reportedAt: { date: DAY, time: null } };
+    expect(await saveSmsBalances([item], { today: DAY, time: "15:00:00" })).toEqual([{ saved: true }]);
+    expect(await balance()).toBe("8000.00");
+    expect(await saveSmsBalances([item], { today: DAY, time: "16:00:00" })).toEqual([{ saved: true }]);
+    expect(await prisma.balanceCheckpoint.count()).toBe(1);
+    expect(await prisma.transaction.count()).toBe(0);
+    const [check] = await checkSms([{ text, description: "" }]);
+    expect(check.balanceSaved).toBe(true);
+    // Never for a card, never from the future.
+    const card = await makeAccount({ name: "Card", type: "CARD", openingDate: "2026-09-01" });
+    await expect(saveSmsBalances([{ ...item, text: "Card balance BDT 1.00", balance: { accountId: card, amount: "1.00" } }], { today: DAY })).rejects.toThrow();
+    await expect(saveSmsBalances([{ ...item, text: "Balance Tk 2.00", reportedAt: { date: "2026-10-04", time: null } }], { today: DAY })).rejects.toThrow();
+  });
+});
+
+describe("an SMS stamped a minute ahead of the clock", () => {
+  it("still sets the balance after its own transaction", async () => {
+    await resetData();
+    const bkash = await makeAccount({ name: "bKash", type: "MOBILE_WALLET", openingBalance: "650", openingDate: "2026-09-01" });
+    const shopping = await categoryId("EXPENSE", "Shopping");
+    const text = "Payment Tk 50.00 to Daraz (01712345678) successful. Balance Tk 600.00. TrxID AHEAD0001 at 03/10/2026 15:01";
+    await importSms(
+      smsImportInput.parse({
+        items: [
+          {
+            text,
+            balance: { accountId: bkash, amount: "600.00" },
+            transaction: { type: "EXPENSE", amount: "50", date: "2026-10-03", time: "15:01", accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Daraz", notes: text },
+          },
+        ],
+      }),
+      "2026-10-03",
+      "15:00:20",
+    );
+    expect((await getAccount(bkash, "2026-10-03")).balance).toBe("600.00");
   });
 });

@@ -166,7 +166,7 @@ function shownTime(row: { time: string | null; loggedTime: string | null; source
   return row.time ?? (row.source === "MANUAL" && row.loggedTime ? row.loggedTime.slice(0, 5) : null);
 }
 
-/** Balance updates for an account, newest first, with the correction each one implied. */
+/** Balance updates for an account, newest first, with what each one replaced. */
 export async function listBalanceUpdates(accountId: string, limit = 20): Promise<BalanceUpdateView[]> {
   const rows = await prisma.$queryRaw<
     Array<{
@@ -174,6 +174,8 @@ export async function listBalanceUpdates(accountId: string, limit = 20): Promise
       date: Date;
       time: string | null;
       loggedTime: string | null;
+      messageDate: Date | null;
+      messageTime: string | null;
       balance: string;
       source: "MANUAL" | "SMS";
       note: string | null;
@@ -181,7 +183,8 @@ export async function listBalanceUpdates(accountId: string, limit = 20): Promise
       kind: string | null;
     }>
   >`
-    SELECT c."id", c."date", c."time", c."loggedTime", c."balance"::text AS "balance", c."source"::text AS "source", c."note",
+    SELECT c."id", c."date", c."time", c."loggedTime", c."messageDate", c."messageTime",
+           c."balance"::text AS "balance", c."source"::text AS "source", c."note",
            bc."amount"::text AS "correction", bc."kind"
     FROM "BalanceCheckpoint" c
     -- Filtering the view by account lets the database work through that account's history only.
@@ -189,16 +192,22 @@ export async function listBalanceUpdates(accountId: string, limit = 20): Promise
     WHERE c."accountId" = ${accountId}
     ORDER BY c."date" DESC, COALESCE(c."time", c."loggedTime", '24:00')::text COLLATE "C" DESC, c."createdAt" DESC
     LIMIT ${limit}`;
-  return rows.map((row) => ({
-    id: row.id,
-    date: fromDbDate(row.date),
-    time: shownTime(row),
-    balance: money(row.balance),
-    source: row.source,
-    note: row.note,
-    startingPoint: row.kind === "HISTORY",
-    correction: row.kind === "HISTORY" ? money("0") : money(row.correction ?? "0"),
-  }));
+  return rows.map((row) => {
+    const balance = money(row.balance);
+    const correction = row.kind === "HISTORY" ? money("0") : money(row.correction ?? "0");
+    return {
+      id: row.id,
+      // An SMS shows when it was sent, not when it was read.
+      date: fromDbDate(row.messageDate ?? row.date),
+      time: row.source === "SMS" ? row.messageTime : shownTime(row),
+      balance,
+      source: row.source,
+      note: row.note,
+      startingPoint: row.kind === "HISTORY",
+      previous: subtractMoney(balance, correction),
+      correction,
+    };
+  });
 }
 
 export async function deleteBalanceUpdate(accountId: string, checkpointId: string) {

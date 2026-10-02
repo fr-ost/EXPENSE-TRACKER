@@ -19,12 +19,13 @@ import { TransactionFields } from "@/components/transactions/transaction-form";
 import type { TransactionDraft } from "@/components/transactions/transaction-draft";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/misc";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { formatDate, formatTime } from "@/lib/dates";
-import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
+import { landsBefore, latestReportedBalance } from "@/lib/known-balance";
 import { IGNORE_REASON_LABELS } from "@/lib/sms/parse";
 import { cn } from "@/lib/utils";
-import { missingAccount, reportedBalance, suggestAccount, type SmsItem, type SmsItemStatus } from "./sms-model";
+import { isBalanceOnly, missingAccount, reportedBalance, suggestAccount, type SmsItem, type SmsItemStatus } from "./sms-model";
 import type { BalanceCheck } from "./sms-suggest";
 
 const STATUS: Record<SmsItemStatus, { label: string; tone: "positive" | "warning" | "neutral" | "negative" | "info" }> = {
@@ -75,8 +76,11 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
   const issues = item.issues.filter(
     (issue) => !newAccount || !(missing === "own" ? issue.startsWith("Choose the account") : /cash/i.test(issue)),
   );
+  // "Your balance is Tk 8,000": nothing to add, it sets the account's balance.
+  const balanceOnly = status === "ignored" && isBalanceOnly(item);
+  const statusLabel = balanceOnly ? "Balance" : STATUS[status].label;
   // A message older than the account's latest known balance only fills in history.
-  const olderThanKnown = !!reported && landsBefore(draft.date, draft.time, latestKnownBalance(reported.account), today);
+  const olderThanKnown = !!reported && landsBefore(draft.date, draft.time, latestReportedBalance(reported.account), today);
 
   const updateDraft = (patch: Partial<TransactionDraft>) => {
     const fieldErrors = { ...item.fieldErrors };
@@ -110,13 +114,13 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
         "overflow-hidden rounded-xl border bg-surface shadow-xs",
         status === "duplicate" || status === "review" ? "border-warning/40" : status === "error" ? "border-negative/40" : "border-border",
       )}
-      aria-label={`${draft.description || "SMS"}: ${STATUS[status].label}`}
+      aria-label={`${balanceOnly ? "Balance" : draft.description || "SMS"}: ${statusLabel}`}
     >
       <div className={cn("flex flex-col gap-3 p-4 sm:p-5", (done || status === "ignored") && "bg-surface-subtle/60")}>
         <div className="flex items-start gap-3">
           <IconBadge icon={icon.icon} color={icon.color} />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <p className="truncate text-body font-medium text-text">{draft.description || "SMS transaction"}</p>
+            <p className="truncate text-body font-medium text-text">{balanceOnly ? "Balance" : draft.description || "SMS transaction"}</p>
             <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-small text-text-tertiary">
               {parsed.provider && <span className="font-medium text-text-secondary">{parsed.provider.name}</span>}
               {parsed.provider && <span aria-hidden>·</span>}
@@ -124,14 +128,20 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
                 {formatDate(draft.date, "medium")}
                 {draft.time && ` · ${formatTime(draft.time)}`}
               </span>
-              <Badge tone={STATUS[status].tone} className="ml-0.5">
+              <Badge tone={balanceOnly ? "info" : STATUS[status].tone} className="ml-0.5">
                 {status === "added" && <CheckCircle2Icon />}
-                {STATUS[status].label}
+                {statusLabel}
               </Badge>
             </p>
           </div>
-          <div className={cn("shrink-0 text-right text-heading font-semibold", status === "ignored" && "[&_*]:!text-text-tertiary")}>
-            {parsed.amount || draft.amount ? amount : <span className="text-text-quaternary">—</span>}
+          <div className={cn("shrink-0 text-right text-heading font-semibold", status === "ignored" && !balanceOnly && "[&_*]:!text-text-tertiary")}>
+            {balanceOnly && parsed.balance ? (
+              <Amount value={parsed.balance} currency={source?.currency} />
+            ) : parsed.amount || draft.amount ? (
+              amount
+            ) : (
+              <span className="text-text-quaternary">—</span>
+            )}
           </div>
         </div>
 
@@ -194,8 +204,8 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
                   </span>
                 ) : (
                   <span className="text-caption text-text-tertiary">
-                    Hisab{balance.afterPending ? " after adding" : ""}:{" "}
-                    {format(balance.expected, { currency: balance.account.currency, decimals: "always" })} — the difference is corrected
+                    Replaces {format(balance.expected, { currency: balance.account.currency, decimals: "always" })}, what Hisab
+                    {balance.afterPending ? " would show after adding" : " shows now"}
                   </span>
                 ))
               )}
@@ -233,7 +243,11 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
           </div>
         )}
 
-        {status === "ignored" && parsed.ignored && <p className="sm:pl-12 text-small text-text-secondary">{IGNORE_REASON_LABELS[parsed.ignored]}.</p>}
+        {balanceOnly ? (
+          <BalanceOnly item={item} reported={reported} olderThanKnown={olderThanKnown} onChange={actions.onChange} onSave={actions.onSaveBalance} />
+        ) : (
+          status === "ignored" && parsed.ignored && <p className="sm:pl-12 text-small text-text-secondary">{IGNORE_REASON_LABELS[parsed.ignored]}.</p>
+        )}
 
         {status === "review" && issues.length > 0 && (
           <ul className="sm:ml-12 flex flex-col gap-1 rounded-lg bg-warning-soft px-3 py-2 text-small text-warning-text">
@@ -295,7 +309,7 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
               Adding
             </Button>
           )}
-          {status === "ignored" && (
+          {status === "ignored" && !balanceOnly && (
             <Button size="sm" variant="outline" onClick={() => actions.onChange({ status: "review" })}>
               Review anyway
             </Button>
@@ -389,5 +403,69 @@ export function SmsCard({ item, actions, balance }: { item: SmsItem; actions: Sm
         )}
       </AnimatePresence>
     </motion.li>
+  );
+}
+
+/** A message that only reports a balance: set the account's balance to it. */
+function BalanceOnly({
+  item,
+  reported,
+  olderThanKnown,
+  onChange,
+  onSave,
+}: {
+  item: SmsItem;
+  reported: ReturnType<typeof reportedBalance>;
+  olderThanKnown: boolean;
+  onChange: SmsCardActions["onChange"];
+  onSave: () => void;
+}) {
+  const { accounts } = useAppData();
+  const format = useFormatMoney();
+  const choices = accounts.filter((a) => a.isActive && a.type !== "CARD");
+  if (!reported) {
+    return (
+      <div className="sm:ml-12 flex flex-wrap items-center gap-2 rounded-lg bg-surface-subtle px-3 py-2 text-small">
+        <span className="text-text-secondary">Which account is this balance for?</span>
+        <Select value={item.draft.accountId || undefined} onValueChange={(accountId) => onChange({ draft: { ...item.draft, accountId } })}>
+          <SelectTrigger className="h-8 w-48" aria-label="Account for this balance">
+            <SelectValue placeholder="Choose account" />
+          </SelectTrigger>
+          <SelectContent>
+            {choices.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+  const amount = format(reported.amount, { currency: reported.account.currency, decimals: "always" });
+  if (item.balanceSaved) {
+    return (
+      <p className="sm:ml-12 flex items-center gap-1.5 text-small text-positive-text">
+        <CheckCircle2Icon className="size-3.5 shrink-0" />
+        {reported.account.name} balance set to {amount}
+      </p>
+    );
+  }
+  return (
+    <div className="sm:ml-12 flex items-center justify-between gap-3 rounded-lg bg-surface-subtle px-3 py-2 text-small">
+      <span className="flex min-w-0 flex-col">
+        <span className="text-text-secondary">
+          Set {reported.account.name} balance to <span className="font-medium text-text">{amount}</span>
+        </span>
+        <span className="text-caption text-text-tertiary">
+          {olderThanKnown
+            ? `It’s older than ${reported.account.name}’s latest balance, which stays current.`
+            : `Replaces ${format(reported.account.balance, { currency: reported.account.currency, decimals: "always" })}, what Hisab shows now.`}
+        </span>
+      </span>
+      <Button size="sm" onClick={onSave}>
+        Set balance
+      </Button>
+    </div>
   );
 }

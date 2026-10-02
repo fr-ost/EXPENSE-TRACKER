@@ -201,3 +201,17 @@ describe("SMS suggestions", () => {
     expect(undated.ready).toBe(false);
   });
 });
+
+describe("balance-only messages", () => {
+  it("are kept for their balance, not added", async () => {
+    const { buildItem, isBalanceOnly, needsBalanceSaved } = await import("@/components/sms/sms-model");
+    const bkash = account("a-bkash", "bKash", "MOBILE_WALLET", "5000.00");
+    const item = buildItem("Your bKash account balance is Tk 8,000.00.", { accounts: [bkash], categories, today, remembered: {} });
+    expect(item.status).toBe("ignored");
+    expect(isBalanceOnly(item)).toBe(true);
+    expect(needsBalanceSaved(item, [bkash], today)).toBe(true);
+    expect(needsBalanceSaved({ ...item, balanceSaved: true }, [bkash], today)).toBe(false);
+    const otp = buildItem("Your bKash verification code is 123456.", { accounts: [bkash], categories, today, remembered: {} });
+    expect(isBalanceOnly(otp)).toBe(false);
+  });
+});

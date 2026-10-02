@@ -28,6 +28,8 @@ interface AccountRow {
   scheduledNet: string;
   checkpointDate: string | null;
   checkpointTime: string | null;
+  reportedDate: string | null;
+  reportedTime: string | null;
   checkpointBalance: string | null;
   checkpointSource: CheckpointSource | null;
 }
@@ -56,6 +58,8 @@ async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): P
       COALESCE(l."future", 0)::text AS "scheduledNet",
       to_char(c."date", 'YYYY-MM-DD') AS "checkpointDate",
       c."time" AS "checkpointTime",
+      to_char(c."reportedDate", 'YYYY-MM-DD') AS "reportedDate",
+      c."reportedTime",
       c."balance"::text AS "checkpointBalance",
       c."source"::text AS "checkpointSource"
     FROM "Account" a
@@ -78,8 +82,11 @@ async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): P
     ) t ON t."accountId" = a."id"
     LEFT JOIN LATERAL (
       SELECT cp."date", cp."balance", cp."source",
-             -- As shown in the list of updates: see shownTime in balances.ts.
-             COALESCE(cp."time", CASE WHEN cp."source" = 'MANUAL' THEN left(cp."loggedTime", 5) END) AS "time"
+             -- Where it holds from (an SMS balance: from when it was read).
+             COALESCE(cp."time", left(cp."loggedTime", 5)) AS "time",
+             -- When it was true (an SMS: when it was sent); see shownTime in balances.ts.
+             COALESCE(cp."messageDate", cp."date") AS "reportedDate",
+             CASE WHEN cp."source" = 'SMS' THEN cp."messageTime" ELSE COALESCE(cp."time", left(cp."loggedTime", 5)) END AS "reportedTime"
       FROM "BalanceCheckpoint" cp
       WHERE cp."accountId" = a."id" AND cp."date" <= ${asOf}::date
       ORDER BY cp."date" DESC, COALESCE(cp."time", cp."loggedTime", '24:00')::text COLLATE "C" DESC, cp."createdAt" DESC
@@ -88,7 +95,7 @@ async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): P
     ${where}
     ORDER BY a."isActive" DESC, a."sortOrder" ASC, a."createdAt" ASC`;
 
-  return rows.map(({ checkpointDate, checkpointTime, checkpointBalance, checkpointSource, ...row }) => {
+  return rows.map(({ checkpointDate, checkpointTime, checkpointBalance, checkpointSource, reportedDate, reportedTime, ...row }) => {
     const balance = money(row.balance);
     const openingBalance = money(row.openingBalance);
     const inflow = money(row.inflow);
@@ -103,7 +110,14 @@ async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): P
       scheduledNet: money(row.scheduledNet),
       lastUpdate:
         checkpointDate && checkpointBalance && checkpointSource
-          ? { date: checkpointDate, time: checkpointTime, balance: money(checkpointBalance), source: checkpointSource }
+          ? {
+              date: checkpointDate,
+              time: checkpointTime,
+              reportedDate: reportedDate ?? checkpointDate,
+              reportedTime,
+              balance: money(checkpointBalance),
+              source: checkpointSource,
+            }
           : null,
     };
   });

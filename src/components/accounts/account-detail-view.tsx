@@ -62,7 +62,6 @@ export function AccountDetailView({
     setUpdateKey((k) => k + 1);
     setUpdateOpen(true);
   };
-  const hasCorrections = !isZero(account.corrections);
   const lastUpdate = account.lastUpdate;
 
   async function setActive(isActive: boolean) {
@@ -194,23 +193,16 @@ export function AccountDetailView({
         </div>
       </header>
 
-      <dl
-        className={`mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border ${hasCorrections ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
-      >
+      <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3">
         <Stat label={`Opening · ${formatDate(account.openingDate, "medium")}`}>
           <Amount value={account.openingBalance} currency={account.currency} />
         </Stat>
         <Stat label="Money in">
           <Amount value={account.inflow} currency={account.currency} tone="income" />
         </Stat>
-        <Stat label="Money out" className={hasCorrections ? undefined : "col-span-2 sm:col-span-1"}>
+        <Stat label="Money out" className="col-span-2 sm:col-span-1">
           <Amount value={account.outflow} currency={account.currency} />
         </Stat>
-        {hasCorrections && (
-          <Stat label="Corrections">
-            <Amount value={account.corrections} currency={account.currency} sign="always" />
-          </Stat>
-        )}
       </dl>
 
       {(account.transactionCount > 0 || balanceUpdates.length > 0) && (

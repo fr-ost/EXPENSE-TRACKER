@@ -23,6 +23,16 @@ export function latestKnownBalance(account: Pick<AccountSummary, "openingDate" |
 }
 
 /**
+ * The latest moment Hisab knows a balance was true — for an SMS, when it was
+ * sent. A message older than this doesn't become the current balance.
+ */
+export function latestReportedBalance(account: Pick<AccountSummary, "openingDate" | "lastUpdate">): KnownBalance {
+  const update = account.lastUpdate;
+  if (!update || update.reportedDate < account.openingDate) return { date: account.openingDate, time: "00:00", opening: true };
+  return { date: update.reportedDate, time: update.reportedTime, opening: false };
+}
+
+/**
  * Whether something dated `date` (at `time`, "" when none) lands before a
  * known balance, which then already includes it: it only shapes the history
  * before it. Without a time, an entry recorded today counts from now, and one

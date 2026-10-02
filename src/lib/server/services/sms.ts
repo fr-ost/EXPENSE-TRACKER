@@ -5,7 +5,7 @@ import { addDays, fromDbDate, toDbDate, type Clock, type ISODate } from "@/lib/d
 import type { EntryType, ExpenseScope } from "@/lib/domain";
 import { normalizeMoney, type Money } from "@/lib/money";
 import { normalizeSmsText } from "@/lib/sms/parse";
-import type { SmsImportInput } from "@/lib/validation";
+import type { SmsBalanceInput, SmsImportInput } from "@/lib/validation";
 import { prisma, type Tx } from "../db";
 import { AppError, invalid } from "../errors";
 import { isUniqueViolation } from "./mappers";
@@ -148,27 +148,64 @@ interface Placed {
 const PLACED = { id: true, idempotencyKey: true, accountId: true, toAccountId: true, date: true, time: true, loggedTime: true } as const;
 
 /**
- * The balance the message reports becomes a balance update for the account it
- * belongs to, placed right after the message's own transaction (same moment,
- * and a balance update comes after the movements at its moment). Idempotent
- * per message. Returns whether the message's balance is saved.
+ * An SMS balance replaces the account's balance — nothing is added to it. The
+ * newest message for an account (none sent later, and no balance you entered
+ * for a later moment) sets the balance as of now: everything already recorded
+ * is taken as included, so the account shows exactly what the bank or wallet
+ * said. An older message is kept as history at its own moment. Idempotent per
+ * message.
  */
-async function recordReportedBalance(client: Tx, item: ReportedBalance, row: Placed): Promise<boolean> {
+async function saveSmsCheckpoint(
+  client: Tx,
+  input: { key: string; accountId: string; amount: Money; messageDate: ISODate; messageTime: string | null; loggedTime: string | null },
+  clock: Clock,
+): Promise<void> {
+  const at = input.messageTime ?? "24:00";
+  const [{ newer }] = await client.$queryRaw<[{ newer: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM "BalanceCheckpoint" c
+      WHERE c."accountId" = ${input.accountId} AND (
+        (c."source" = 'SMS' AND (c."messageDate" > ${input.messageDate}::date OR (
+          c."messageDate" = ${input.messageDate}::date AND COALESCE(c."messageTime", '24:00')::text COLLATE "C" > ${at}::text COLLATE "C")))
+        OR (c."source" = 'MANUAL' AND (c."date" > ${input.messageDate}::date OR (
+          c."date" = ${input.messageDate}::date AND COALESCE(c."time", c."loggedTime", '24:00')::text COLLATE "C" > ${at}::text COLLATE "C")))
+      )
+    ) AS "newer"`;
+  const current = !newer && input.messageDate <= clock.today;
+  // It holds from now — or from its own time, if the message is stamped later
+  // than now (clocks differ by a minute or two), so it still follows its own
+  // transaction.
+  const ahead = !!input.messageTime && input.messageDate === clock.today && !!clock.time && input.messageTime > clock.time.slice(0, 5);
+  await client.balanceCheckpoint.create({
+    data: {
+      accountId: input.accountId,
+      balance: input.amount,
+      source: "SMS",
+      smsKey: input.key,
+      messageDate: toDbDate(input.messageDate),
+      messageTime: input.messageTime,
+      ...(current && !ahead
+        ? { date: toDbDate(clock.today), time: null, loggedTime: clock.time ?? null }
+        : { date: toDbDate(input.messageDate), time: input.messageTime, loggedTime: input.messageTime ? null : input.loggedTime }),
+    },
+  });
+}
+
+/**
+ * The balance a message reports, for the account it belongs to (see
+ * saveSmsCheckpoint). Returns whether the message's balance is saved.
+ */
+async function recordReportedBalance(client: Tx, item: ReportedBalance, row: Placed, clock: Clock): Promise<boolean> {
   const accountIds = [row.accountId, row.toAccountId].filter((v): v is string => !!v);
   if (!item.balance || !accountIds.includes(item.balance.accountId)) return false;
   const key = smsKey(item.text, "b");
   if (await client.balanceCheckpoint.findUnique({ where: { smsKey: key }, select: { id: true } })) return true;
-  await client.balanceCheckpoint.create({
-    data: {
-      accountId: item.balance.accountId,
-      date: row.date,
-      time: row.time ?? null,
-      loggedTime: row.loggedTime ?? null,
-      balance: item.balance.amount,
-      source: "SMS",
-      smsKey: key,
-    },
-  });
+  const messageDate = typeof row.date === "string" ? row.date : fromDbDate(row.date);
+  await saveSmsCheckpoint(
+    client,
+    { key, accountId: item.balance.accountId, amount: item.balance.amount, messageDate, messageTime: row.time ?? null, loggedTime: row.loggedTime ?? null },
+    clock,
+  );
   return true;
 }
 
@@ -202,7 +239,7 @@ async function linkToRecorded(tx: Tx, item: ImportItem, targetId: string, mainKe
     },
     select: PLACED,
   });
-  return { status: "exists", ids: [linked.id], balanceSaved: await recordReportedBalance(tx, item, linked) };
+  return { status: "exists", ids: [linked.id], balanceSaved: await recordReportedBalance(tx, item, linked, clock) };
 }
 
 async function importOne(item: ImportItem, clock: Clock): Promise<SmsImportResult> {
@@ -218,7 +255,7 @@ async function importOne(item: ImportItem, clock: Clock): Promise<SmsImportResul
       if (existing.length) {
         // Added before — perhaps before balances were read from SMS: record it now.
         const main = existing.find((row) => row.idempotencyKey === mainKey);
-        return { status: "exists", ids: existing.map((row) => row.id), balanceSaved: main ? await recordReportedBalance(tx, item, main) : false };
+        return { status: "exists", ids: existing.map((row) => row.id), balanceSaved: main ? await recordReportedBalance(tx, item, main, clock) : false };
       }
       if (item.sameAs) return linkToRecorded(tx, item, item.sameAs, mainKey, clock);
 
@@ -234,7 +271,7 @@ async function importOne(item: ImportItem, clock: Clock): Promise<SmsImportResul
         const feeRow = await resolveEntry(tx, item.fee, clock);
         created.push(await tx.transaction.create({ data: { ...feeRow, idempotencyKey: feeKey }, select: { id: true } }));
       }
-      return { status: "added", ids: created.map((c) => c.id), balanceSaved: await recordReportedBalance(tx, item, row) };
+      return { status: "added", ids: created.map((c) => c.id), balanceSaved: await recordReportedBalance(tx, item, row, clock) };
     });
   } catch (error) {
     if (error instanceof PossibleDuplicate) return { status: "possible_duplicate", similar: error.similar };
@@ -257,16 +294,37 @@ export async function importSms(input: SmsImportInput, today: ISODate, time?: st
 }
 
 /**
- * Record the balances of messages added earlier (e.g. before balances were
- * read from SMS). A message that was never added records nothing.
+ * Record the balances messages report without adding anything: messages added
+ * earlier (e.g. before balances were read from SMS), and messages that only
+ * report a balance ("Your balance is Tk 8,000"), dated `reportedAt`.
  */
-export async function saveSmsBalances(items: ReportedBalance[]): Promise<Array<{ saved: boolean }>> {
+export async function saveSmsBalances(items: SmsBalanceInput["items"], clock: Clock): Promise<Array<{ saved: boolean }>> {
   const results: Array<{ saved: boolean }> = [];
   for (const item of items) {
     const saved = await prisma
       .$transaction(async (tx) => {
         const main = await tx.transaction.findUnique({ where: { idempotencyKey: smsKey(item.text, 0) }, select: PLACED });
-        return main ? recordReportedBalance(tx, item, main) : false;
+        if (main) return recordReportedBalance(tx, item, main, clock);
+        if (!item.reportedAt) return false;
+        const key = smsKey(item.text, "b");
+        if (await tx.balanceCheckpoint.findUnique({ where: { smsKey: key }, select: { id: true } })) return true;
+        const account = await tx.account.findUnique({ where: { id: item.balance.accountId }, select: { type: true } });
+        if (!account) throw invalid("That account no longer exists.");
+        if (account.type === "CARD") throw invalid("A card's SMS reports a limit or amount due, not a balance.");
+        if (item.reportedAt.date > clock.today) throw invalid("The message is dated in the future.");
+        await saveSmsCheckpoint(
+          tx,
+          {
+            key,
+            accountId: item.balance.accountId,
+            amount: item.balance.amount,
+            messageDate: item.reportedAt.date,
+            messageTime: item.reportedAt.time,
+            loggedTime: loggedTimeFor(item.reportedAt.date, item.reportedAt.time, clock),
+          },
+          clock,
+        );
+        return true;
       })
       .catch(async (error: unknown) => {
         // Saved at the same moment by another request.

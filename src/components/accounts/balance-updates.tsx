@@ -13,7 +13,7 @@ import { formatRelativeDay, formatTime, type ISODate } from "@/lib/dates";
 import { isZero } from "@/lib/money";
 import type { AccountSummary, BalanceUpdateView } from "@/lib/types";
 
-/** The balances entered or read from SMS, with what each one corrected. */
+/** The balances entered or read from SMS, with what each one replaced. */
 export function BalanceUpdates({
   account,
   updates,
@@ -48,7 +48,7 @@ export function BalanceUpdates({
     <Card className="mb-6">
       <CardHeader
         title="Balance updates"
-        description="What you checked or an SMS reported. Older entries added later don't change a balance after one."
+        description="What you checked or an SMS reported. Each replaces the balance; the newest SMS sets it as it was read."
         action={
           <Button variant="ghost" size="sm" onClick={onUpdate}>
             Update
@@ -76,10 +76,9 @@ export function BalanceUpdates({
               ) : isZero(update.correction) ? (
                 <Badge tone="positive">Matched</Badge>
               ) : (
-                <>
-                  <Amount value={update.correction} currency={account.currency} sign="always" tone="signed" className="text-small font-medium" />
-                  <span className="text-caption text-text-tertiary">corrected</span>
-                </>
+                <span className="text-caption text-text-tertiary">
+                  was <Amount value={update.previous} currency={account.currency} className="text-small font-medium text-text-secondary" />
+                </span>
               )}
             </div>
             <Button
@@ -98,7 +97,7 @@ export function BalanceUpdates({
         open={!!removing}
         onOpenChange={(open) => !open && setRemoving(null)}
         title="Remove this balance update?"
-        description="The balance will again follow the recorded transactions from the previous update on. Its correction moves to the next update, if there is one."
+        description="The balance will again follow the recorded transactions from the previous update on."
         confirmLabel="Remove"
         destructive
         loading={busy}

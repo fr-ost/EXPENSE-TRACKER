@@ -1,17 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
+import { landsBefore, latestKnownBalance, latestReportedBalance } from "@/lib/known-balance";
 
 const today = "2026-09-28";
 
 describe("where an entry lands against the latest known balance", () => {
   const opening = latestKnownBalance({ openingDate: "2026-09-01", lastUpdate: null });
-  const update = latestKnownBalance({ openingDate: "2026-01-01", lastUpdate: { date: today, time: "14:05", balance: "500.00", source: "MANUAL" } });
-  const smsNoTime = latestKnownBalance({ openingDate: "2026-01-01", lastUpdate: { date: "2026-09-20", time: null, balance: "1.00", source: "SMS" } });
+  const update = latestKnownBalance({ openingDate: "2026-01-01", lastUpdate: { date: today, time: "14:05", reportedDate: today, reportedTime: "14:05", balance: "500.00", source: "MANUAL" } });
+  const smsNoTime = latestKnownBalance({ openingDate: "2026-01-01", lastUpdate: { date: "2026-09-20", time: null, reportedDate: "2026-09-20", reportedTime: null, balance: "1.00", source: "SMS" } });
+
+  it("tells when an SMS balance was true from when it took effect", () => {
+    // Sent at 10:05, read at 15:30: it holds from 15:30, and a message from 12:00 is newer.
+    const read = { openingDate: "2026-01-01", lastUpdate: { date: today, time: "15:30", reportedDate: today, reportedTime: "10:05", balance: "8000.00", source: "SMS" as const } };
+    expect(latestKnownBalance(read)).toMatchObject({ date: today, time: "15:30" });
+    expect(latestReportedBalance(read)).toMatchObject({ date: today, time: "10:05" });
+    expect(landsBefore(today, "12:00", latestReportedBalance(read), today)).toBe(false);
+    expect(landsBefore(today, "12:00", latestKnownBalance(read), today)).toBe(true);
+  });
 
   it("uses the newer of the opening balance and the last update", () => {
     expect(opening).toEqual({ date: "2026-09-01", time: "00:00", opening: true });
     expect(update).toMatchObject({ date: today, time: "14:05", opening: false });
-    const updateBeforeOpening = { date: "2025-12-01", time: null, balance: "1.00", source: "MANUAL" as const };
+    const updateBeforeOpening = { date: "2025-12-01", time: null, reportedDate: "2025-12-01", reportedTime: null, balance: "1.00", source: "MANUAL" as const };
     expect(latestKnownBalance({ openingDate: "2026-01-01", lastUpdate: updateBeforeOpening })).toMatchObject({ opening: true });
   });
 

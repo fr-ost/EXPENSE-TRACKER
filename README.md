@@ -18,7 +18,9 @@ pleasant to use every day, on a phone or a desktop.
 - **Import from SMS** — paste bank or bKash / Nagad / Rocket messages (or
   share them to the installed app on Android): Hisab reads the amount, bank,
   type, date and time and adds them — never the same message twice — and the
-  balance in the message becomes the account's balance.
+  balance in the newest message *replaces* the account's balance (nothing is
+  added on top). A message that only reports a balance ("your balance is
+  Tk 8,000") sets it too.
 - **Update balance** — enter what an account actually holds; Hisab corrects
   for whatever wasn't recorded. Older transactions added later never change a
   balance after it, so back-filling history can't push a balance negative.

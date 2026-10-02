@@ -211,5 +211,14 @@ export function rematch(
 
 /** Added earlier, but the balance it reports isn't recorded yet (and can be). */
 export function needsBalanceSaved(item: SmsItem, accounts: AccountSummary[], today: ISODate): boolean {
-  return item.status === "exists" && item.includeBalance && !item.balanceSaved && !!reportedBalance(item, accounts, today);
+  const waiting = item.status === "exists" || (item.status === "ignored" && isBalanceOnly(item));
+  return waiting && item.includeBalance && !item.balanceSaved && !!reportedBalance(item, accounts, today);
+}
+
+/**
+ * A message that only reports a balance ("Your balance is Tk 8,000"): no
+ * transaction to add, but it sets the account's balance.
+ */
+export function isBalanceOnly(item: Pick<SmsItem, "parsed">): boolean {
+  return item.parsed.ignored === "no_amount" && !!item.parsed.balance;
 }

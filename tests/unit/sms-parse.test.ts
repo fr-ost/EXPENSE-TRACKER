@@ -294,3 +294,16 @@ describe("more formats", () => {
     });
   });
 });
+
+describe("messages that only report a balance", () => {
+  it("read the balance, with no transaction to add", () => {
+    for (const text of [
+      "Your bKash account balance is Tk 8,000.00. Thank you.",
+      "Dear Customer, your A/C 1234***5678 available balance is BDT 8,000.00 as on 03-10-2026 10:15.",
+      "Avl Bal: BDT 8,000.00 in A/C **5678 on 03-Oct-2026",
+      "Nagad: Your account balance is Tk. 8,000.00",
+    ]) {
+      expect(parse(text), text).toMatchObject({ amount: null, balance: "8000.00", ignored: "no_amount" });
+    }
+  });
+});

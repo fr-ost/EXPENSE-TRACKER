@@ -32,7 +32,19 @@ export interface AccountSummary extends AccountRef {
   /** Net of transactions dated after today (not yet in the balance). */
   scheduledNet: Money;
   /** The most recent balance update, if any. */
-  lastUpdate: { date: ISODate; time: string | null; balance: Money; source: CheckpointSource } | null;
+  /**
+   * The latest balance update. `date` / `time`: where it holds from (an SMS
+   * balance holds from when it was read); `reportedDate` / `reportedTime`:
+   * when it was true (for an SMS, when the message was sent).
+   */
+  lastUpdate: {
+    date: ISODate;
+    time: string | null;
+    reportedDate: ISODate;
+    reportedTime: string | null;
+    balance: Money;
+    source: CheckpointSource;
+  } | null;
 }
 
 /** A balance update ("the account held exactly this much at this moment"). */
@@ -43,7 +55,9 @@ export interface BalanceUpdateView {
   balance: Money;
   source: CheckpointSource;
   note: string | null;
-  /** What the ledger had to add (+) or remove (−) to match; zero when it already matched. */
+  /** What Hisab had just before: the update replaced it. */
+  previous: Money;
+  /** balance − previous; zero when it already matched. */
   correction: Money;
   /** The earliest balance known for the account: it anchors older history instead of correcting it. */
   startingPoint: boolean;
