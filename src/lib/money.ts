@@ -84,6 +84,43 @@ export function percentOf(part: Money | bigint, whole: Money | bigint): number |
   return Number(basisPoints) / 100;
 }
 
+// ---------------------------------------------------------------------------
+// Exchange rates
+// ---------------------------------------------------------------------------
+
+/** Units of the main currency for one unit of another: up to 6 decimals ("122.45"). */
+export type Rate = string;
+
+const RATE_PATTERN = /^(\d{1,9})(?:\.(\d{1,6}))?$/;
+
+/** A usable rate: a positive decimal with at most 6 decimals. */
+export function isRate(value: string): boolean {
+  return RATE_PATTERN.test(value.trim()) && /[1-9]/.test(value);
+}
+
+/** "0122.450000" → "122.45" */
+export function normalizeRate(rate: Rate): Rate {
+  const [whole, fraction = ""] = rate.trim().split(".");
+  const kept = fraction.replace(/0+$/, "");
+  return `${BigInt(whole || "0")}${kept ? `.${kept}` : ""}`;
+}
+
+/**
+ * An amount in another currency, in the main one: exact, rounded to the
+ * nearest paisa (halves away from zero, as Postgres ROUND does).
+ */
+export function convertMoney(value: Money | bigint, rate: Rate): Money {
+  const match = RATE_PATTERN.exec(rate.trim());
+  if (!match) throw new Error(`Invalid rate: "${rate}"`);
+  const [, whole, fraction = ""] = match;
+  const scale = 10n ** BigInt(fraction.length);
+  const product = toMinor(value) * BigInt(whole + fraction);
+  const quotient = product / scale;
+  const remainder = product % scale;
+  const away = (remainder < 0n ? -remainder : remainder) * 2n >= scale;
+  return fromMinor(away ? quotient + (product < 0n ? -1n : 1n) : quotient);
+}
+
 /** For chart rendering only — never feed the result back into calculations. */
 export function toChartNumber(value: Money | bigint): number {
   return Number(toMinor(value)) / 100;

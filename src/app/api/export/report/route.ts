@@ -4,6 +4,7 @@ import { exportTransactionRows } from "@/lib/server/export/transaction-rows";
 import { reportWorkbook } from "@/lib/server/export/xlsx";
 import { invalid } from "@/lib/server/errors";
 import { authed } from "@/lib/server/http";
+import { getCurrencies } from "@/lib/server/services/currency";
 import { buildReport, parseReportPeriod } from "@/lib/server/services/reports";
 import { getSettings, getToday } from "@/lib/server/settings";
 
@@ -14,7 +15,8 @@ export const GET = authed(async ({ request }) => {
   if (format !== "pdf" && format !== "xlsx") throw invalid("Choose pdf or xlsx.");
   const [settings, today] = await Promise.all([getSettings(), getToday()]);
   const period = parseReportPeriod(params, today);
-  const report = await buildReport(period, settings.baseCurrency, today);
+  const { conversion } = await getCurrencies(settings.baseCurrency);
+  const report = await buildReport(period, conversion, today);
   const name = period.kind === "month" ? period.month : String(period.year);
 
   if (format === "pdf") {

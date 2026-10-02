@@ -31,7 +31,7 @@ describe("SMS import", () => {
         {
           text: CASH_OUT,
           transaction: { type: "TRANSFER", amount: "2000.00", date: "2026-09-28", time: "10:05", accountId: bkash, toAccountId: cash, description: "Cash out", notes: CASH_OUT },
-          fee: { type: "EXPENSE", amount: "37.00", date: "2026-09-28", time: "10:05", accountId: bkash, categoryId: fees, scope: "OTHER", description: "Cash out fee" },
+          fee: { type: "EXPENSE", amount: "37.00", date: "2026-09-28", time: "10:05", accountId: bkash, categoryId: fees, scope: "PERSONAL", description: "Cash out fee" },
           ...overrides,
         },
       ],
@@ -126,9 +126,9 @@ describe("SMS import", () => {
   it("keeps a transaction's time when an edit doesn't mention it", async () => {
     const [result] = await importSms(cashOut(), TODAY);
     const id = result.status === "added" ? result.ids[1] : "";
-    await updateTransaction(id, { type: "EXPENSE", amount: "40", date: "2026-09-28", accountId: bkash, categoryId: fees, scope: "OTHER", description: "Fee", notes: null }, TODAY);
+    await updateTransaction(id, { type: "EXPENSE", amount: "40", date: "2026-09-28", accountId: bkash, categoryId: fees, scope: "PERSONAL", description: "Fee", notes: null }, TODAY);
     expect((await getTransaction(id)).time).toBe("10:05");
-    await updateTransaction(id, { type: "EXPENSE", amount: "40", date: "2026-09-28", time: null, accountId: bkash, categoryId: fees, scope: "OTHER", description: "Fee", notes: null }, TODAY);
+    await updateTransaction(id, { type: "EXPENSE", amount: "40", date: "2026-09-28", time: null, accountId: bkash, categoryId: fees, scope: "PERSONAL", description: "Fee", notes: null }, TODAY);
     expect((await getTransaction(id)).time).toBeNull();
   });
 

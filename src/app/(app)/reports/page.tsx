@@ -13,6 +13,7 @@ import { Card, CardHeader } from "@/components/ui/misc";
 import { formatMonth } from "@/lib/dates";
 import { SCOPE_META } from "@/lib/domain";
 import { loadPageContext } from "@/lib/server/page-context";
+import { getCurrencies } from "@/lib/server/services/currency";
 import { buildReport, parseReportPeriod } from "@/lib/server/services/reports";
 
 export const metadata: Metadata = { title: "Reports" };
@@ -20,7 +21,8 @@ export const metadata: Metadata = { title: "Reports" };
 export default async function ReportsPage({ searchParams }: PageProps<"/reports">) {
   const { settings, today } = await loadPageContext();
   const period = parseReportPeriod(await searchParams, today);
-  const report = await buildReport(period, settings.baseCurrency, today);
+  const { conversion } = await getCurrencies(settings.baseCurrency);
+  const report = await buildReport(period, conversion, today);
   const s = report.summary;
   const transactionsQuery = period.kind === "month" ? `month=${period.month}` : `year=${period.year}`;
   const family = report.scopes.find((x) => x.scope === "FAMILY");

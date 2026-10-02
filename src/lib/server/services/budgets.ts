@@ -1,17 +1,17 @@
 import "server-only";
 import { monthEnd, monthStart, toDbDate, type MonthKey } from "@/lib/dates";
+import { EXPENSE_SCOPES, type ExpenseScope } from "@/lib/domain";
 import { addMoney, percentOf, subtractMoney, toMinor, type Money } from "@/lib/money";
-import type { BudgetLine, CategoryTotal } from "@/lib/types";
+import type { BudgetLine } from "@/lib/types";
 import { prisma } from "../db";
-import { invalid } from "../errors";
-import { categoryTotals } from "./analytics";
-import { requireCategory } from "./categories";
+import { categoryTotals, scopeTotals } from "./analytics";
+import type { CurrencyBasis } from "./currency";
 import { money } from "./mappers";
 
 /** Thresholds for calm budget signals. */
 export const BUDGET_WARNING_PERCENT = 80;
 
-export function budgetStatus(percent: number): BudgetLine["status"] {
+export function budgetStatus(percent: number): Exclude<BudgetLine["status"], "none"> {
   if (percent > 100) return "over";
   if (percent >= 100) return "reached";
   if (percent >= BUDGET_WARNING_PERCENT) return "warning";
@@ -20,114 +20,80 @@ export function budgetStatus(percent: number): BudgetLine["status"] {
 
 export interface MonthBudgets {
   month: MonthKey;
+  /** Personal, then Family — with or without a budget set. */
   lines: BudgetLine[];
-  /** Spending this month in categories without a budget. */
-  unbudgeted: CategoryTotal[];
+  /** Sum of the budgets set, and of the spending they cover. */
   totalBudget: Money;
   totalSpent: Money;
 }
 
-interface BudgetRow {
-  id: string;
-  name: string;
-  kind: "EXPENSE";
-  icon: string;
-  color: string;
-  defaultScope: "FAMILY" | "PERSONAL" | "OTHER" | null;
-  isArchived: boolean;
-  budget: string;
-  effectiveFrom: string;
-  spent: string;
-}
-
 /**
- * Budgets in effect for a month (the latest row at or before it), with
- * spending from the ExpenseEntry view — so transfers counted as expense
- * count against their category's budget too.
+ * The Personal and Family budgets in effect for a month (the latest change at
+ * or before it), against everything marked as spent for each — whatever the
+ * category or currency, transfers counted as expense included.
  */
-export async function budgetsForMonth(month: MonthKey, currency: string): Promise<MonthBudgets> {
+export async function budgetsForMonth(month: MonthKey, fx: CurrencyBasis): Promise<MonthBudgets> {
   const start = monthStart(month);
   const end = monthEnd(month);
-  const [rows, spending] = await Promise.all([
-    prisma.$queryRaw<BudgetRow[]>`
-      WITH effective AS (
-        SELECT DISTINCT ON (b."categoryId") b."categoryId", b."amount", b."effectiveFrom"
-        FROM "Budget" b
-        WHERE b."effectiveFrom" <= ${start}::date
-        ORDER BY b."categoryId", b."effectiveFrom" DESC
-      ),
-      spent AS (
-        SELECT "categoryId", SUM("amount") AS "total" FROM "ExpenseEntry"
-        WHERE "currency" = ${currency} AND "date" BETWEEN ${start}::date AND ${end}::date
-        GROUP BY "categoryId"
-      )
-      SELECT c."id", c."name", c."kind"::text AS "kind", c."icon", c."color", c."defaultScope"::text AS "defaultScope", c."isArchived",
-             e."amount"::text AS "budget", to_char(e."effectiveFrom", 'YYYY-MM') AS "effectiveFrom",
-             COALESCE(s."total", 0)::text AS "spent"
-      FROM effective e
-      JOIN "Category" c ON c."id" = e."categoryId"
-      LEFT JOIN spent s ON s."categoryId" = c."id"
-      WHERE e."amount" > 0
-      ORDER BY c."sortOrder", c."name"`,
-    categoryTotals(start, end, currency, "EXPENSE"),
+  const [rows, spending, ...categoryLists] = await Promise.all([
+    prisma.$queryRaw<Array<{ scope: ExpenseScope; amount: string; effectiveFrom: string }>>`
+      SELECT DISTINCT ON (b."scope") b."scope"::text AS "scope", b."amount"::text AS "amount", to_char(b."effectiveFrom", 'YYYY-MM') AS "effectiveFrom"
+      FROM "ScopeBudget" b
+      WHERE b."effectiveFrom" <= ${start}::date
+      ORDER BY b."scope", b."effectiveFrom" DESC`,
+    scopeTotals(start, end, fx),
+    ...EXPENSE_SCOPES.map((scope) => categoryTotals(start, end, fx, "EXPENSE", scope)),
   ]);
 
-  const lines: BudgetLine[] = rows.map((row) => {
-    const budget = money(row.budget);
-    const spent = money(row.spent);
+  const lines = EXPENSE_SCOPES.map((scope, i): BudgetLine => {
+    const row = rows.find((r) => r.scope === scope && toMinor(money(r.amount)) > 0n);
+    const spent = spending.find((s) => s.scope === scope)?.total ?? "0.00";
+    const categories = categoryLists[i];
+    if (!row) return { scope, budget: null, spent, remaining: null, percent: 0, status: "none", effectiveFrom: null, categories };
+    const budget = money(row.amount);
     const percent = percentOf(spent, budget) ?? 0;
     return {
-      category: {
-        id: row.id,
-        name: row.name,
-        kind: "EXPENSE",
-        icon: row.icon,
-        color: row.color,
-        defaultScope: row.defaultScope,
-        isArchived: row.isArchived,
-      },
+      scope,
       budget,
       spent,
       remaining: subtractMoney(budget, spent),
       percent,
       status: budgetStatus(percent),
       effectiveFrom: row.effectiveFrom,
+      categories,
     };
   });
 
-  const budgeted = new Set(lines.map((l) => l.category.id));
+  const budgeted = lines.filter((l) => l.budget !== null);
   return {
     month,
     lines,
-    unbudgeted: spending.filter((c) => !budgeted.has(c.categoryId)),
-    totalBudget: addMoney(...lines.map((l) => l.budget)),
-    totalSpent: addMoney(...lines.map((l) => l.spent)),
+    totalBudget: addMoney(...budgeted.map((l) => l.budget!)),
+    totalSpent: addMoney(...budgeted.map((l) => l.spent)),
   };
 }
 
 /**
- * Set a category's monthly budget from `month` onward (until the next
- * change). An amount of 0 removes the budget from that month on.
+ * Set the Personal or Family monthly budget from `month` onward (until the
+ * next change). An amount of 0 removes the budget from that month on.
  */
-export async function setBudget(categoryId: string, month: MonthKey, amount: Money) {
+export async function setBudget(scope: ExpenseScope, month: MonthKey, amount: Money) {
   await prisma.$transaction(async (tx) => {
-    const category = await requireCategory(tx, categoryId, "EXPENSE");
-    if (category.isArchived) throw invalid("That category is archived.");
     const effectiveFrom = toDbDate(monthStart(month));
-    await tx.budget.upsert({
-      where: { categoryId_effectiveFrom: { categoryId, effectiveFrom } },
-      create: { categoryId, effectiveFrom, amount },
+    await tx.scopeBudget.upsert({
+      where: { scope_effectiveFrom: { scope, effectiveFrom } },
+      create: { scope, effectiveFrom, amount },
       update: { amount },
     });
     // Tidy: a zero row with nothing in effect before it is redundant.
     if (toMinor(amount) === 0n) {
-      const earlier = await tx.budget.findFirst({
-        where: { categoryId, effectiveFrom: { lt: effectiveFrom } },
+      const earlier = await tx.scopeBudget.findFirst({
+        where: { scope, effectiveFrom: { lt: effectiveFrom } },
         orderBy: { effectiveFrom: "desc" },
         select: { amount: true },
       });
       if (!earlier || toMinor(money(earlier.amount)) === 0n) {
-        await tx.budget.delete({ where: { categoryId_effectiveFrom: { categoryId, effectiveFrom } } });
+        await tx.scopeBudget.delete({ where: { scope_effectiveFrom: { scope, effectiveFrom } } });
       }
     }
   });

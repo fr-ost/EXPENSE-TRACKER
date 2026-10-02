@@ -232,7 +232,7 @@ describe("ledger balances", () => {
     ).rejects.toThrow();
     await expect(
       prisma.transaction.create({
-        data: { type: "EXPENSE", amount: "-5", date: new Date("2026-01-01"), accountId: cash, categoryId: food, scope: "OTHER" },
+        data: { type: "EXPENSE", amount: "-5", date: new Date("2026-01-01"), accountId: cash, categoryId: food, scope: "PERSONAL" },
       }),
     ).rejects.toThrow();
   });

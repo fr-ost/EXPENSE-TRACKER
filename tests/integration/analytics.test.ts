@@ -9,6 +9,8 @@ import {
   scopeTotals,
   yearReport,
 } from "@/lib/server/services/analytics";
+import { listAccounts } from "@/lib/server/services/accounts";
+import { balanceTotals, loadCurrencies, setManualRate, type Conversion } from "@/lib/server/services/currency";
 import { createTransaction } from "@/lib/server/services/transactions";
 import type { TransactionInput } from "@/lib/validation";
 import { categoryId, makeAccount, resetData } from "../support/fixtures";
@@ -38,7 +40,7 @@ describe("analytics — the specification's September 2026 example", () => {
     // September: income 80,000; direct expenses 25,000; plain transfer 20,000;
     // transfer counted as expense 10,000.
     await add({ ...base, type: "INCOME", accountId: bank, categoryId: salary, amount: "80000", date: "2026-09-01" });
-    await add({ ...base, type: "EXPENSE", accountId: bank, categoryId: housing, amount: "20000", date: "2026-09-03", scope: "OTHER" });
+    await add({ ...base, type: "EXPENSE", accountId: bank, categoryId: housing, amount: "20000", date: "2026-09-03", scope: "PERSONAL" });
     await add({ ...base, type: "EXPENSE", accountId: cash, categoryId: food, amount: "3000", date: "2026-09-10", scope: "PERSONAL" });
     await add({ ...base, type: "EXPENSE", accountId: cash, categoryId: food, amount: "2000", date: "2026-09-12", scope: "FAMILY" });
     await add({ ...base, type: "TRANSFER", accountId: bank, toAccountId: cash, amount: "20000", toAmount: null, countAsExpense: false, categoryId: null, scope: null, date: "2026-09-05" });
@@ -87,9 +89,8 @@ describe("analytics — the specification's September 2026 example", () => {
 
     const scopes = await scopeTotals("2026-09-01", "2026-09-30", "BDT");
     expect(Object.fromEntries(scopes.map((s) => [s.scope, s.total]))).toEqual({
+      PERSONAL: "23000.00",
       FAMILY: "12000.00",
-      PERSONAL: "3000.00",
-      OTHER: "20000.00",
     });
 
     const familyOnly = await categoryTotals("2026-09-01", "2026-09-30", "BDT", "EXPENSE", "FAMILY");
@@ -125,3 +126,85 @@ describe("analytics — the specification's September 2026 example", () => {
     expect(report.scopes.find((s) => s.scope === "FAMILY")?.total).toBe("12000.00");
   });
 });
+
+describe("analytics — every currency in the main one", () => {
+  const TODAY_FX = "2026-09-30";
+  const fx: Conversion = { base: "BDT", rates: { BDT: "1", USD: "122.45" } };
+  let bank: string;
+  let payoneer: string;
+
+  beforeAll(async () => {
+    await resetData();
+    bank = await makeAccount({ name: "Bank", type: "BANK", openingBalance: "10000", openingDate: "2026-01-01" });
+    payoneer = await makeAccount({ name: "Payoneer", type: "OTHER", currency: "USD", openingDate: "2026-01-01" });
+    const add = (t: TransactionInput) => createTransaction(t, { today: TODAY_FX });
+    const base = { description: "", notes: null };
+
+    // Income arrives in dollars; spending is mostly in taka.
+    await add({ ...base, type: "INCOME", accountId: payoneer, categoryId: await categoryId("INCOME", "Freelance"), amount: "1000.50", date: "2026-09-02" });
+    await add({ ...base, type: "EXPENSE", accountId: payoneer, categoryId: await categoryId("EXPENSE", "Subscriptions"), amount: "10.25", date: "2026-09-03", scope: "PERSONAL" });
+    await add({ ...base, type: "EXPENSE", accountId: bank, categoryId: await categoryId("EXPENSE", "Food"), amount: "5000", date: "2026-09-04", scope: "FAMILY" });
+    // Converting $500 brought ৳61,225: 122.45 a dollar.
+    await add({ ...base, type: "TRANSFER", accountId: payoneer, toAccountId: bank, amount: "500", toAmount: "61225", countAsExpense: false, categoryId: null, scope: null, date: "2026-09-10" });
+  });
+
+  it("counts income and spending in dollars at the rate, each amount rounded on its own", async () => {
+    const s = await periodSummary("2026-09-01", "2026-09-30", fx);
+    // 1,000.50 × 122.45 = 122,511.225 → 122,511.23; 10.25 × 122.45 = 1,255.1125 → 1,255.11.
+    expect(s).toMatchObject({
+      currency: "BDT",
+      income: "122511.23",
+      expenses: "6255.11",
+      netSavings: "116256.12",
+      transfers: "61225.00",
+      transferCount: 1,
+    });
+    expect(s.foreignIncome).toEqual([{ currency: "USD", amount: "1000.50" }]);
+    expect(s.foreignExpenses).toEqual([{ currency: "USD", amount: "10.25" }]);
+
+    const scopes = await scopeTotals("2026-09-01", "2026-09-30", fx);
+    expect(Object.fromEntries(scopes.map((x) => [x.scope, x.total]))).toEqual({ PERSONAL: "1255.11", FAMILY: "5000.00" });
+    const income = await categoryTotals("2026-09-01", "2026-09-30", fx, "INCOME");
+    expect(income.map((c) => [c.name, c.total])).toEqual([["Freelance", "122511.23"]]);
+    const [september] = (await monthlySeries("2026-09", "2026-09", fx)).slice(-1);
+    expect(september).toMatchObject({ income: "122511.23", expenses: "6255.11" });
+    const days = await dailySpending("2026-09-01", "2026-09-30", fx);
+    expect(cumulative(days).at(-1)?.total).toBe("6255.11");
+  });
+
+  it("leaves a currency without a rate out, rather than guessing", async () => {
+    const s = await periodSummary("2026-09-01", "2026-09-30", { base: "BDT", rates: { BDT: "1" } });
+    expect(s).toMatchObject({ income: "0.00", expenses: "5000.00", foreignIncome: [], foreignExpenses: [] });
+  });
+
+  it("uses the rate of your latest conversion, unless you set your own", async () => {
+    let currencies = await loadCurrencies("BDT");
+    expect(currencies.foreign).toEqual([
+      { currency: "USD", rate: "122.45", source: "conversion", manualRate: null, lastConversion: { rate: "122.45", date: "2026-09-10" } },
+    ]);
+    expect(currencies.conversion).toEqual({ base: "BDT", rates: { BDT: "1", USD: "122.45" } });
+
+    await setManualRate("BDT", "USD", "120");
+    currencies = await loadCurrencies("BDT");
+    expect(currencies.foreign[0]).toMatchObject({ rate: "120", source: "manual", manualRate: "120" });
+
+    await setManualRate("BDT", "USD", null);
+    currencies = await loadCurrencies("BDT");
+    expect(currencies.foreign[0]).toMatchObject({ rate: "122.45", source: "conversion" });
+    await expect(setManualRate("BDT", "BDT", "1")).rejects.toThrow();
+  });
+
+  it("adds up balances in every currency, and shows each currency's own total", async () => {
+    const accounts = await listAccounts(TODAY_FX);
+    // Taka: 10,000 − 5,000 + 61,225. Dollars: 1,000.50 − 10.25 − 500 = 490.25 → ৳60,031.11.
+    expect(balanceTotals(accounts, fx)).toEqual({
+      total: "126256.11",
+      byCurrency: [
+        { currency: "BDT", total: "66225.00", rate: "1" },
+        { currency: "USD", total: "490.25", rate: "122.45" },
+      ],
+    });
+    expect(balanceTotals(accounts, { base: "BDT", rates: { BDT: "1" } }).total).toBe("66225.00");
+  });
+});
+

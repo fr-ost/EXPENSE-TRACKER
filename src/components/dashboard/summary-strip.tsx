@@ -6,7 +6,7 @@ import { Amount, useFormatMoney } from "@/components/app-data";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatDate, formatMonth, monthStart, shiftMonth, type MonthKey } from "@/lib/dates";
 import { absMoney, compareMoney, isZero, percentOf, subtractMoney, type Money } from "@/lib/money";
-import type { PeriodSummary } from "@/lib/types";
+import type { CurrencyAmount, PeriodSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,6 +29,7 @@ export function SummaryStrip({ current, previous, month }: { current: PeriodSumm
         <Figure label="Income" className="border-b border-r border-border lg:border-b-0">
           <Amount value={current.income} tabular={false} />
           <Delta current={current.income} previous={previous.income} upIsGood vs={vs} />
+          <ForeignNote amounts={current.foreignIncome} />
         </Figure>
         <Figure label="Spending" className="border-b border-border lg:border-b-0 lg:border-r">
           <Amount value={current.expenses} tabular={false} />
@@ -36,6 +37,7 @@ export function SummaryStrip({ current, previous, month }: { current: PeriodSumm
           {!isZero(current.transferExpenses) && (
             <span className="text-caption text-text-tertiary">incl. {format(current.transferExpenses)} transfers</span>
           )}
+          <ForeignNote amounts={current.foreignExpenses} />
         </Figure>
         <Figure label="Saved" className="border-r border-border">
           <Amount value={current.netSavings} tabular={false} tone={current.netSavings.startsWith("-") ? "signed" : "none"} />
@@ -52,6 +54,13 @@ export function SummaryStrip({ current, previous, month }: { current: PeriodSumm
       </dl>
     </section>
   );
+}
+
+/** "incl. $1,000": what came in (or went out) in other currencies, counted at its rate. */
+function ForeignNote({ amounts }: { amounts: CurrencyAmount[] }) {
+  const format = useFormatMoney();
+  if (!amounts.length) return null;
+  return <span className="text-caption text-text-tertiary">incl. {amounts.map((a) => format(a.amount, { currency: a.currency })).join(" + ")}</span>;
 }
 
 function formatPercent(value: number) {
@@ -136,8 +145,8 @@ function Definitions({ summary }: { summary: PeriodSummary }) {
             <dd className="text-text-secondary">Income minus spending, and that as a share of income.</dd>
           </div>
           <p className="border-t border-border pt-3 text-caption text-text-tertiary">
-            Totals include {summary.currency} accounts only. Corrections from balance updates are not counted as income
-            or spending.
+            Totals are in {summary.currency}; other currencies count at your rates (Settings). Corrections from balance
+            updates are not counted as income or spending.
           </p>
         </dl>
       </PopoverContent>

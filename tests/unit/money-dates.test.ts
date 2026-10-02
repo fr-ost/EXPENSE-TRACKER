@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { addMonths, describeSchedule, formatDate, isValidISODate, timeInTimeZone, todayInTimeZone } from "@/lib/dates";
 import {
   addMoney,
+  convertMoney,
+  isRate,
+  normalizeRate,
   formatCompactNumber,
   formatMoney,
   fromMinor,
@@ -70,6 +73,19 @@ describe("money", () => {
     expect(() => toMinor(".")).toThrow();
     // Showing an amount never throws, whatever the field holds.
     expect(["", ".", "-", "-.", "0.", ".5", "1,200.", "abc"].map((v) => formatMoney(v))).toEqual(["৳0", "৳0", "৳0", "৳0", "৳0", "৳0.50", "৳1,200", "৳abc"]);
+  });
+
+  it("converts between currencies exactly, rounding halves away from zero", () => {
+    expect(convertMoney("1000.50", "122.45")).toBe("122511.23"); // 122,511.225
+    expect(convertMoney("10.25", "122.45")).toBe("1255.11"); // 1,255.1125
+    expect(convertMoney("-0.01", "0.5")).toBe("-0.01"); // −0.005
+    expect(convertMoney("490.25", "1")).toBe("490.25");
+    expect(convertMoney("100", "0.008163")).toBe("0.82");
+    expect(() => convertMoney("1", "-2")).toThrow();
+    expect(["122.45", "1", "0.000001", "999999999.999999"].map(isRate)).toEqual([true, true, true, true]);
+    expect(["0", "0.00", "", ".5", "1.1234567", "-1", "1,000"].map(isRate)).toEqual([false, false, false, false, false, false, false]);
+    expect(normalizeRate("0122.450000")).toBe("122.45");
+    expect(normalizeRate("120.000000")).toBe("120");
   });
 
   it("follows 5543.51 typed one key at a time", () => {

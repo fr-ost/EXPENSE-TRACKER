@@ -8,7 +8,9 @@ pleasant to use every day, on a phone or a desktop.
 `src/lib/domain.ts`.
 
 - **Accounts** — cash, bank, bKash / Nagad, cards, exchanges; any currency.
-  Balances are always derived from the ledger, never stored.
+  Balances are always derived from the ledger, never stored. The total adds
+  every currency up in the main one (taka and dollars together), with each
+  currency's own amount beside it.
 - **Transactions** — expenses, income and transfers, with fast entry
   (`N` on desktop, the ＋ tab on phones), an optional time of day, historical
   back-filling, search, filters, sorting, pagination, and CSV / Excel export
@@ -24,15 +26,20 @@ pleasant to use every day, on a phone or a desktop.
 - **Transfers that can count as spending** — money moves once between
   accounts; optionally it is also recognised as an expense (e.g. support sent
   to family) without being double counted.
-- **Family / Personal / Other** classification on every expense, with its own
+- **Personal / Family** on every expense ("spent for"), with its own
   analytics.
+- **Income in dollars, spending in taka** — each type starts on an account in
+  its usual currency (Settings); other currencies count in every total at your
+  exchange rate, or at the rate of your latest conversion.
 - **Dashboard** — a time-of-day greeting, total balance, the month at a glance
   with deltas, cash flow, spending pace, where the money went, budgets,
   recent activity.
-- **Budgets** — monthly per category, effective-dated (changing a budget never
-  rewrites past months), calm warnings at 80% / 100% / over.
+- **Budgets** — one monthly limit for Personal and one for Family: everything
+  marked as spent for it counts, whatever the category or currency.
+  Effective-dated (changing a budget never rewrites past months), calm
+  warnings at 80% / 100% / over.
 - **Recurring transactions** — weekly / monthly / yearly, posted exactly once.
-- **Reports** — monthly and yearly statements, category, family & personal,
+- **Reports** — monthly and yearly statements, category, personal & family,
   income sources, savings trend, account activity; PDF (Bengali names
   included) and Excel exports.
 - **Installable app** — install it from Chrome or Edge (desktop and Android)
@@ -177,9 +184,12 @@ screen, report and export reads from them.
 - **Transfers** in reports are pure movements between your accounts; transfers
   marked as expenses are reported separately (and included in spending), so
   every transfer lands in exactly one bucket.
-- Totals and analytics use accounts in your **main currency** (Settings).
-  Amounts in different currencies are never added together; cross-currency
-  transfers record the amount received.
+- Totals and analytics are in your **main currency** (Settings). Other
+  currencies count at their **exchange rate**: yours (Settings → Exchange
+  rates), or else the rate of your latest conversion between the two (a
+  transfer with the amount received). Each amount is converted and rounded on
+  its own, so every breakdown adds up to its total; a currency with no rate
+  yet is shown but not counted. Changing a rate re-values every total.
 
 ## Architecture
 
@@ -294,7 +304,9 @@ transfers counted as expense (once), edit/delete, future-dated entries,
 idempotent and concurrent creation, cross-currency transfers, account history
 protection, database CHECK constraints, monthly and yearly analytics (including
 the worked example: income 80,000 / spending 35,000 incl. a 10,000 transfer /
-transfers 20,000 / savings 45,000 / 56.25%), budgets and thresholds, recurring
+transfers 20,000 / savings 45,000 / 56.25%), income and spending in dollars
+counted at the rate (and balances added up across currencies), Personal /
+Family budgets and thresholds, recurring
 schedules and duplicate-free posting; the SMS parser on real message formats
 (wallets, banks, cards, Bengali, OTPs, adverts), account and category
 matching, idempotent and concurrent SMS import, duplicate detection; the
@@ -306,8 +318,8 @@ phone layout.
 
 ## Known limitations
 
-- Analytics cover the main currency only; other-currency accounts are shown
-  with their own balances but not converted.
+- One exchange rate per currency, applied to every date: past months are
+  re-valued when the rate changes, rather than kept at the rate of their day.
 - SMS reading is rule-based. Formats it doesn't know yet still import after a
   quick review; anything uncertain is never added without you.
 - Sharing an SMS into the app works on Android (Chrome's installed apps);

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BalanceTotal } from "@/components/balance-total";
 import { AccountBalances } from "@/components/dashboard/account-balances";
 import { BudgetProgress } from "@/components/dashboard/budget-progress";
-import { DashboardHero } from "@/components/dashboard/dashboard-hero";
 import { Greeting } from "@/components/dashboard/greeting";
 import { Onboarding } from "@/components/dashboard/onboarding";
 import { InstallBanner } from "@/components/pwa/install-app";
@@ -18,9 +18,10 @@ import { Card, CardHeader } from "@/components/ui/misc";
 import { formatDate, isValidMonthKey, minDate, monthEnd, monthKeyOf, monthStart, shiftMonth } from "@/lib/dates";
 import { greeting } from "@/lib/greeting";
 import { loadPageContext } from "@/lib/server/page-context";
-import { listAccounts, totalBalance } from "@/lib/server/services/accounts";
+import { listAccounts } from "@/lib/server/services/accounts";
 import { categoryTotals, cumulative, dailySpending, monthlySeries, periodSummary, scopeTotals } from "@/lib/server/services/analytics";
 import { budgetsForMonth } from "@/lib/server/services/budgets";
+import { balanceTotals, getCurrencies } from "@/lib/server/services/currency";
 import { recentTransactions } from "@/lib/server/services/transactions";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -31,7 +32,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const requested = (await searchParams).month;
   const month = typeof requested === "string" && isValidMonthKey(requested) && requested <= currentMonth ? requested : currentMonth;
   const previousMonth = shiftMonth(month, -1);
-  const currency = settings.baseCurrency;
+  // Every total is in the main currency; other currencies count at their rate.
+  const { conversion: fx, foreign } = await getCurrencies(settings.baseCurrency);
 
   const from = monthStart(month);
   const to = monthEnd(month);
@@ -40,14 +42,14 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
   const [accounts, summary, previousSummary, series, categories, scopes, pace, previousPace, budgets, recent] = await Promise.all([
     listAccounts(today),
-    periodSummary(from, to, currency),
-    periodSummary(monthStart(previousMonth), monthEnd(previousMonth), currency),
-    monthlySeries(shiftMonth(month, -11), month, currency),
-    categoryTotals(from, to, currency),
-    scopeTotals(from, to, currency),
-    from <= paceTo ? dailySpending(from, paceTo, currency) : Promise.resolve([]),
-    dailySpending(monthStart(previousMonth), monthEnd(previousMonth), currency),
-    budgetsForMonth(month, currency),
+    periodSummary(from, to, fx),
+    periodSummary(monthStart(previousMonth), monthEnd(previousMonth), fx),
+    monthlySeries(shiftMonth(month, -11), month, fx),
+    categoryTotals(from, to, fx),
+    scopeTotals(from, to, fx),
+    from <= paceTo ? dailySpending(from, paceTo, fx) : Promise.resolve([]),
+    dailySpending(monthStart(previousMonth), monthEnd(previousMonth), fx),
+    budgetsForMonth(month, fx),
     recentTransactions(6, today),
   ]);
 
@@ -56,10 +58,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   if (accounts.length === 0) {
     return <Onboarding greeting={hello} />;
   }
-
-  const foreign = [...new Set(accounts.map((a) => a.currency))]
-    .filter((c) => c !== currency)
-    .map((c) => ({ currency: c, total: totalBalance(accounts, c) }));
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
@@ -76,7 +74,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
       <InstallBanner />
 
-      <DashboardHero total={totalBalance(accounts, currency)} foreign={foreign} />
+      <BalanceTotal variant="hero" totals={balanceTotals(accounts, fx)} foreign={foreign} />
 
       <SummaryStrip current={summary} previous={previousSummary} month={month} />
 
@@ -117,7 +115,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         <Card>
           <CardHeader
             title="Budgets"
-            description={budgets.lines.length ? `${budgets.lines.length} budgeted categories` : undefined}
+            description="Personal and Family, this month"
             action={
               <Link href={`/budgets?month=${month}`} className="text-small font-medium text-accent-text hover:underline">
                 All budgets

@@ -75,6 +75,10 @@ export async function reportWorkbook(report: ReportData, rows: ExportRow[]): Pro
   ]);
   summary.addRow({});
   for (const scope of report.scopes) summary.addRow({ label: `${SCOPE_META[scope.scope].label} spending`, value: num(scope.total) });
+  if (report.rates.length) {
+    summary.addRow({});
+    for (const r of report.rates) summary.addRow({ label: `Exchange rate: 1 ${r.currency} in ${report.currency}`, value: r.rate });
+  }
 
   if (report.months) {
     const months = workbook.addWorksheet("Months");

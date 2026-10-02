@@ -131,7 +131,14 @@ export function reportPdf(report: ReportData, options: { grouping: NumberFormat;
     .font("Helvetica")
     .fontSize(9)
     .fillColor(MUTED)
-    .text(`${formatDate(report.from)} – ${formatDate(report.to)}  ·  Amounts in ${report.currency}  ·  Generated ${formatDate(options.generatedOn)}`);
+    .text(
+      [
+        `${formatDate(report.from)} – ${formatDate(report.to)}`,
+        `Amounts in ${report.currency}`,
+        ...report.rates.map((r) => `1 ${r.currency} = ${r.rate} ${report.currency}`),
+        `Generated ${formatDate(options.generatedOn)}`,
+      ].join("  ·  "),
+    );
 
   // Key figures
   doc.moveDown(1.2);

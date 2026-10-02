@@ -18,7 +18,7 @@ const STEPS = [
   {
     icon: GaugeIcon,
     title: "Set budgets",
-    description: "Monthly limits for the categories you want to watch, with calm warnings at 80% and 100%.",
+    description: "A monthly limit for Personal and for Family spending, with calm warnings at 80% and 100%.",
   },
 ];
 

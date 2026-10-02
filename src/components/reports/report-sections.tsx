@@ -64,7 +64,9 @@ export function Statement({ summary, transactionsQuery }: { summary: PeriodSumma
       <ul className="flex flex-col divide-y divide-border">{rows.map(renderRow)}</ul>
       <p className="mb-1 mt-5 text-caption font-medium text-text-tertiary">Not counted as income or spending</p>
       <ul className="flex flex-col divide-y divide-border">{outside.map(renderRow)}</ul>
-      <p className="mt-4 text-caption text-text-tertiary">Totals include {summary.currency} accounts only.</p>
+      <p className="mt-4 text-caption text-text-tertiary">
+        Totals are in {summary.currency}; other currencies count at your exchange rates.
+      </p>
     </div>
   );
 }
@@ -115,7 +117,7 @@ export function ScopeColumns({
   transactionsQuery: string;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {EXPENSE_SCOPES.map((scope) => {
         const total = scopes.find((s) => s.scope === scope);
         const top = scopeCategories[scope].slice(0, 4);

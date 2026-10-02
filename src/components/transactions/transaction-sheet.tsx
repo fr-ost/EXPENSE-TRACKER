@@ -73,13 +73,13 @@ export function TransactionSheetProvider({ children }: { children: React.ReactNo
 
 function TransactionSheet({ state, onClose }: { state: SheetState; onClose: () => void }) {
   const router = useRouter();
-  const { accounts, today } = useAppData();
+  const { accounts, today, settings } = useAppData();
   const format = useFormatMoney();
   const formId = React.useId();
   const editing = state.editing;
 
   const [draft, setDraft] = React.useState<TransactionDraft>(() =>
-    editing ? draftFromTransaction(editing) : newDraft(state.defaults, accounts, today),
+    editing ? draftFromTransaction(editing) : newDraft(state.defaults, accounts, today, settings),
   );
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [pending, setPending] = React.useState(false);

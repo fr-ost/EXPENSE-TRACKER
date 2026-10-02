@@ -1,6 +1,7 @@
 import "server-only";
 import { formatMonth, isValidMonthKey, monthEnd, monthKeyOf, monthStart, type ISODate, type MonthKey } from "@/lib/dates";
 import { EXPENSE_SCOPES, type ExpenseScope } from "@/lib/domain";
+import type { Rate } from "@/lib/money";
 import type { AccountActivity, CategoryTotal, DayPoint, MonthPoint, PeriodSummary, ScopeTotal } from "@/lib/types";
 import {
   accountActivity,
@@ -10,6 +11,7 @@ import {
   scopeTotals,
   yearReport,
 } from "./analytics";
+import { asConversion, type CurrencyBasis } from "./currency";
 
 export type ReportPeriod = { kind: "month"; month: MonthKey } | { kind: "year"; year: number };
 
@@ -18,7 +20,10 @@ export interface ReportData {
   label: string;
   from: ISODate;
   to: ISODate;
+  /** The main currency every total is in. */
   currency: string;
+  /** Other currencies counted, at these rates (main-currency units for one). */
+  rates: Array<{ currency: string; rate: Rate }>;
   summary: PeriodSummary;
   /** Year reports: one point per month. */
   months: MonthPoint[] | null;
@@ -27,7 +32,7 @@ export interface ReportData {
   categories: CategoryTotal[];
   incomeCategories: CategoryTotal[];
   scopes: ScopeTotal[];
-  /** Leading categories within Family / Personal / Other. */
+  /** Leading categories within Personal / Family. */
   scopeCategories: Record<ExpenseScope, CategoryTotal[]>;
   accounts: AccountActivity[];
   highestCategory: CategoryTotal | null;
@@ -56,14 +61,19 @@ export function periodRange(period: ReportPeriod): { from: ISODate; to: ISODate;
     : { from: `${period.year}-01-01`, to: `${period.year}-12-31`, label: String(period.year) };
 }
 
-export async function buildReport(period: ReportPeriod, currency: string, today: ISODate): Promise<ReportData> {
+export async function buildReport(period: ReportPeriod, fx: CurrencyBasis, today: ISODate): Promise<ReportData> {
   const { from, to, label } = periodRange(period);
   const currentMonth = monthKeyOf(today);
+  const conversion = asConversion(fx);
+  const currency = conversion.base;
+  const rates = Object.entries(conversion.rates)
+    .filter(([code]) => code !== currency)
+    .map(([code, rate]) => ({ currency: code, rate }));
 
   const [scopeCategoryLists, accounts, incomeCategories] = await Promise.all([
-    Promise.all(EXPENSE_SCOPES.map((scope) => categoryTotals(from, to, currency, "EXPENSE", scope))),
+    Promise.all(EXPENSE_SCOPES.map((scope) => categoryTotals(from, to, fx, "EXPENSE", scope))),
     accountActivity(from, to),
-    categoryTotals(from, to, currency, "INCOME"),
+    categoryTotals(from, to, fx, "INCOME"),
   ]);
   const scopeCategories = Object.fromEntries(EXPENSE_SCOPES.map((scope, i) => [scope, scopeCategoryLists[i]])) as Record<
     ExpenseScope,
@@ -71,7 +81,7 @@ export async function buildReport(period: ReportPeriod, currency: string, today:
   >;
 
   if (period.kind === "year") {
-    const year = await yearReport(period.year, currency);
+    const year = await yearReport(period.year, fx);
     // The current year is reported "to date": future months are omitted.
     const isCurrentYear = String(period.year) === today.slice(0, 4);
     return {
@@ -80,6 +90,7 @@ export async function buildReport(period: ReportPeriod, currency: string, today:
       from,
       to,
       currency,
+      rates,
       summary: year.summary,
       months: isCurrentYear ? year.months.filter((m) => m.month <= currentMonth) : year.months,
       daily: null,
@@ -94,10 +105,10 @@ export async function buildReport(period: ReportPeriod, currency: string, today:
   }
 
   const [summary, daily, categories, scopes] = await Promise.all([
-    periodSummary(from, to, currency),
-    dailySpending(from, to, currency),
-    categoryTotals(from, to, currency, "EXPENSE"),
-    scopeTotals(from, to, currency),
+    periodSummary(from, to, fx),
+    dailySpending(from, to, fx),
+    categoryTotals(from, to, fx, "EXPENSE"),
+    scopeTotals(from, to, fx),
   ]);
   return {
     period,
@@ -105,6 +116,7 @@ export async function buildReport(period: ReportPeriod, currency: string, today:
     from,
     to,
     currency,
+    rates,
     summary,
     months: null,
     daily,

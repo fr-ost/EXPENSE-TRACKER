@@ -20,6 +20,15 @@ export interface TransactionDraft {
   notes: string;
   /** False keeps it in reports without moving the account balance. */
   affectsBalance: boolean;
+  /** The account was picked by hand (or the entry exists): changing the type keeps it. */
+  accountChosen: boolean;
+}
+
+/** The currency each kind of entry usually comes in (null: the main currency). */
+export interface CurrencyPreferences {
+  baseCurrency: string;
+  incomeCurrency: string | null;
+  expenseCurrency: string | null;
 }
 
 export type DraftDefaults = Partial<Pick<TransactionDraft, "type" | "accountId" | "toAccountId" | "expenseCategoryId" | "incomeCategoryId" | "date">>;
@@ -43,20 +52,37 @@ function recalledAccount(type: EntryType): string | undefined {
   }
 }
 
+export function preferredCurrency(type: EntryType, preferences: CurrencyPreferences | undefined): string | null {
+  if (!preferences) return null;
+  if (type === "INCOME") return preferences.incomeCurrency ?? preferences.baseCurrency;
+  if (type === "EXPENSE") return preferences.expenseCurrency ?? preferences.baseCurrency;
+  return null;
+}
+
+/**
+ * The account a new entry starts on: the one last used for its type if it is
+ * in the currency that type usually comes in (income in dollars, spending in
+ * taka…), else the first account in that currency — cash first — else the
+ * last used, cash, or first account.
+ */
+export function defaultAccountId(type: EntryType, active: AccountSummary[], currency: string | null): string {
+  const remembered = active.find((a) => a.id === recalledAccount(type));
+  const fallback = remembered?.id ?? active.find((a) => a.type === "CASH")?.id ?? active[0]?.id ?? "";
+  if (!currency) return fallback;
+  if (remembered?.currency === currency) return remembered.id;
+  const inCurrency = active.filter((a) => a.currency === currency);
+  return inCurrency.find((a) => a.type === "CASH")?.id ?? inCurrency[0]?.id ?? fallback;
+}
+
 export function newDraft(
   defaults: DraftDefaults,
   accounts: AccountSummary[],
   today: ISODate,
+  preferences?: CurrencyPreferences,
 ): TransactionDraft {
   const type = defaults.type ?? "EXPENSE";
   const active = accounts.filter((a) => a.isActive);
-  const remembered = recalledAccount(type);
-  const accountId =
-    defaults.accountId ??
-    active.find((a) => a.id === remembered)?.id ??
-    active.find((a) => a.type === "CASH")?.id ??
-    active[0]?.id ??
-    "";
+  const accountId = defaults.accountId ?? defaultAccountId(type, active, preferredCurrency(type, preferences));
   const toAccountId = defaults.toAccountId ?? active.find((a) => a.id !== accountId)?.id ?? "";
   return {
     type,
@@ -73,6 +99,7 @@ export function newDraft(
     description: "",
     notes: "",
     affectsBalance: true,
+    accountChosen: !!defaults.accountId,
   };
 }
 
@@ -94,6 +121,7 @@ export function draftFromTransaction(tx: TransactionView): TransactionDraft {
     description: tx.description,
     notes: tx.notes ?? "",
     affectsBalance: tx.affectsBalance,
+    accountChosen: true,
   };
 }
 

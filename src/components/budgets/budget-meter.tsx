@@ -3,6 +3,7 @@
 import { CircleAlertIcon, TriangleAlertIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { useFormatMoney } from "@/components/app-data";
+import { SCOPE_META } from "@/lib/domain";
 import { absMoney } from "@/lib/money";
 import type { BudgetLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,7 @@ const FILL: Record<BudgetLine["status"], string> = {
   warning: "var(--warning)",
   reached: "var(--warning)",
   over: "var(--negative)",
+  none: "var(--border-strong)",
 };
 
 /** Budget meter: fill colour carries severity; the track is a light step of the same hue. */
@@ -23,7 +25,7 @@ export function BudgetMeter({ line, className }: { line: BudgetLine; className?:
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.min(Math.round(line.percent), 100)}
-      aria-label={`${line.category.name}: ${Math.round(line.percent)}% of budget used`}
+      aria-label={`${SCOPE_META[line.scope].label}: ${Math.round(line.percent)}% of budget used`}
       className={cn("h-1 w-full overflow-hidden rounded-full", className)}
       style={{ background: `color-mix(in srgb, ${fill} 14%, var(--surface))` }}
     >
@@ -40,12 +42,15 @@ export function BudgetMeter({ line, className }: { line: BudgetLine; className?:
 
 export function BudgetStatusText({ line }: { line: BudgetLine }) {
   const format = useFormatMoney();
+  const remaining = line.remaining ?? "0.00";
   switch (line.status) {
+    case "none":
+      return <span className="text-caption text-text-tertiary">No budget set</span>;
     case "over":
       return (
         <span className="inline-flex items-center gap-1 text-caption font-medium text-negative-text">
           <TriangleAlertIcon className="size-3.5" aria-hidden />
-          Over by {format(absMoney(line.remaining))}
+          Over by {format(absMoney(remaining))}
         </span>
       );
     case "reached":
@@ -59,13 +64,13 @@ export function BudgetStatusText({ line }: { line: BudgetLine }) {
       return (
         <span className="inline-flex items-center gap-1 text-caption font-medium text-warning-text">
           <CircleAlertIcon className="size-3.5" aria-hidden />
-          {Math.round(line.percent)}% used · {format(line.remaining)} left
+          {Math.round(line.percent)}% used · {format(remaining)} left
         </span>
       );
     default:
       return (
         <span className="text-caption text-text-tertiary">
-          {Math.round(line.percent)}% used · {format(line.remaining)} left
+          {Math.round(line.percent)}% used · {format(remaining)} left
         </span>
       );
   }

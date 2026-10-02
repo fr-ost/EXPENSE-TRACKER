@@ -11,6 +11,9 @@ export interface AppSettings {
   timezone: string;
   numberFormat: NumberFormat;
   autoLockMinutes: number;
+  /** The currency a new income / expense starts in (null: the main currency). */
+  incomeCurrency: string | null;
+  expenseCurrency: string | null;
 }
 
 const settingsSelect = {
@@ -19,6 +22,8 @@ const settingsSelect = {
   timezone: true,
   numberFormat: true,
   autoLockMinutes: true,
+  incomeCurrency: true,
+  expenseCurrency: true,
 } as const;
 
 /**

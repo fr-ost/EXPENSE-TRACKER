@@ -44,8 +44,8 @@ const category = (id: string, name: string, kind: "EXPENSE" | "INCOME", defaultS
 const categories = [
   category("c-family", "Family", "EXPENSE", "FAMILY"),
   category("c-shopping", "Shopping", "EXPENSE", "PERSONAL"),
-  category("c-bills", "Bills", "EXPENSE", "OTHER"),
-  category("c-other", "Other", "EXPENSE", "OTHER"),
+  category("c-bills", "Bills", "EXPENSE", "PERSONAL"),
+  category("c-other", "Other", "EXPENSE", "PERSONAL"),
   category("c-salary", "Salary", "INCOME"),
   category("c-other-in", "Other", "INCOME"),
 ];

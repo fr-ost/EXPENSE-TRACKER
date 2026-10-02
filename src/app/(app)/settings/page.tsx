@@ -3,12 +3,14 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { InstallAppCard } from "@/components/pwa/install-app";
 import { CategoriesManager } from "@/components/settings/categories-manager";
+import { ExchangeRates } from "@/components/settings/exchange-rates";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { SessionsList } from "@/components/settings/security-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/misc";
 import { loadPageContext } from "@/lib/server/page-context";
 import { listCategories } from "@/lib/server/services/categories";
+import { getCurrencies } from "@/lib/server/services/currency";
 import { listSessions } from "@/lib/server/services/settings";
 import { appVersion } from "@/lib/server/version";
 
@@ -21,7 +23,11 @@ function timezones(current: string): string[] {
 
 export default async function SettingsPage() {
   const { settings, session } = await loadPageContext();
-  const [categories, sessions] = await Promise.all([listCategories(), listSessions(session.id)]);
+  const [categories, sessions, currencies] = await Promise.all([
+    listCategories(),
+    listSessions(session.id),
+    getCurrencies(settings.baseCurrency),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -31,6 +37,16 @@ export default async function SettingsPage() {
         <CardHeader title="Preferences" />
         <div className="px-5 pb-6 pt-4 sm:px-6">
           <PreferencesForm settings={settings} timezones={timezones(settings.timezone)} />
+        </div>
+      </Card>
+
+      <Card id="rates" className="scroll-mt-20">
+        <CardHeader
+          title="Exchange rates"
+          description={`Other currencies count in ${settings.baseCurrency} at these rates — in your total balance, income, spending and budgets.`}
+        />
+        <div className="px-5 pb-5 pt-4 sm:px-6">
+          <ExchangeRates base={settings.baseCurrency} foreign={currencies.foreign} />
         </div>
       </Card>
 

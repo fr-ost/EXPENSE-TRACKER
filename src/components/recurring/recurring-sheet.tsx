@@ -37,6 +37,7 @@ function draftFromRule(rule: RecurringView): TransactionDraft {
     description: rule.description,
     notes: rule.notes ?? "",
     affectsBalance: true,
+    accountChosen: true,
   };
 }
 
@@ -45,9 +46,9 @@ export const RecurringSheet = guardSheet(RecurringSheetContent);
 
 function RecurringSheetContent({ open, onOpenChange, rule }: { open: boolean; onOpenChange: (open: boolean) => void; rule?: RecurringView }) {
   const router = useRouter();
-  const { accounts, today } = useAppData();
+  const { accounts, today, settings } = useAppData();
   const formId = React.useId();
-  const [draft, setDraft] = React.useState<TransactionDraft>(() => (rule ? draftFromRule(rule) : newDraft({}, accounts, today)));
+  const [draft, setDraft] = React.useState<TransactionDraft>(() => (rule ? draftFromRule(rule) : newDraft({}, accounts, today, settings)));
   const [frequency, setFrequency] = React.useState<Frequency>(rule?.frequency ?? "MONTHLY");
   const [hasEnd, setHasEnd] = React.useState(!!rule?.endDate);
   const [endDate, setEndDate] = React.useState(rule?.endDate ?? draft.date);

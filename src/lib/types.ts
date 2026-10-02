@@ -4,7 +4,7 @@
  */
 import type { ISODate, MonthKey } from "./dates";
 import type { AccountType, CategoryKind, CheckpointSource, ExpenseScope, Frequency, TransactionType } from "./domain";
-import type { Money } from "./money";
+import type { Money, Rate } from "./money";
 
 export interface AccountRef {
   id: string;
@@ -140,6 +140,9 @@ export interface PeriodSummary {
   netSavings: Money;
   /** netSavings / income × 100; null when there is no income. */
   savingsRate: number | null;
+  /** Income and spending in other currencies, in their own currency (included above, converted). */
+  foreignIncome: CurrencyAmount[];
+  foreignExpenses: CurrencyAmount[];
 }
 
 export interface MonthPoint {
@@ -148,6 +151,31 @@ export interface MonthPoint {
   expenses: Money;
   savings: Money;
   savingsRate: number | null;
+}
+
+export interface CurrencyAmount {
+  currency: string;
+  amount: Money;
+}
+
+/** Another currency your accounts hold, and how it converts to the main one. */
+export interface ForeignCurrency {
+  currency: string;
+  /** Main-currency units for one unit, or null: then it is left out of totals. */
+  rate: Rate | null;
+  source: "manual" | "conversion" | null;
+  /** Your own rate, if you set one (it wins over conversions). */
+  manualRate: Rate | null;
+  /** The latest recorded conversion between this currency and the main one. */
+  lastConversion: { rate: Rate; date: ISODate } | null;
+}
+
+/** Balances added up in the main currency, and each currency's own total. */
+export interface BalanceTotals {
+  /** Every account in the main currency (currencies without a rate left out). */
+  total: Money;
+  /** The main currency first. */
+  byCurrency: Array<{ currency: string; total: Money; rate: Rate | null }>;
 }
 
 export interface CategoryTotal {
@@ -181,16 +209,22 @@ export interface AccountActivity extends AccountRef {
   transactionCount: number;
 }
 
+/** A month's Personal or Family budget and the spending that counts against it. */
 export interface BudgetLine {
-  category: CategoryRef;
-  budget: Money;
+  scope: ExpenseScope;
+  /** The monthly limit in effect, or null when none is set. */
+  budget: Money | null;
+  /** Everything marked as spent for this, in the main currency. */
   spent: Money;
-  remaining: Money;
-  /** Percent used (can exceed 100). */
+  /** budget − spent (negative when over); null without a budget. */
+  remaining: Money | null;
+  /** Percent used (can exceed 100); 0 without a budget. */
   percent: number;
-  status: "ok" | "warning" | "reached" | "over";
-  /** First month this budget amount applies from. */
-  effectiveFrom: MonthKey;
+  status: "ok" | "warning" | "reached" | "over" | "none";
+  /** First month the budget amount applies from. */
+  effectiveFrom: MonthKey | null;
+  /** Where it went, by category. */
+  categories: CategoryTotal[];
 }
 
 export interface RecurringView {

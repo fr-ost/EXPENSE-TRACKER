@@ -18,7 +18,7 @@ import { ENTRY_TYPES, TRANSACTION_TYPE_LABELS, type EntryType } from "@/lib/doma
 import { landsBefore, latestKnownBalance } from "@/lib/known-balance";
 import { currencySymbol, sanitizeAmountInput } from "@/lib/money";
 import type { AccountSummary } from "@/lib/types";
-import { selectableCategories, type TransactionDraft } from "./transaction-draft";
+import { defaultAccountId, preferredCurrency, selectableCategories, type TransactionDraft } from "./transaction-draft";
 
 const TYPE_OPTIONS = ENTRY_TYPES.map((type) => ({ value: type, label: TRANSACTION_TYPE_LABELS[type] }));
 
@@ -50,7 +50,7 @@ export function TransactionFields({
   /** Offer to keep it out of the account balance, and say when it lands before a known balance. */
   withBalanceOption?: boolean;
 }) {
-  const { categories, today } = useAppData();
+  const { categories, today, settings } = useAppData();
   const format = useFormatMoney();
   const [showNotes, setShowNotes] = React.useState(!!draft.notes);
 
@@ -116,8 +116,15 @@ export function TransactionFields({
 
   const setType = (type: EntryType) => {
     const patch: Partial<TransactionDraft> = { type };
-    if (type === "TRANSFER" && (!draft.toAccountId || draft.toAccountId === draft.accountId)) {
-      patch.toAccountId = accounts.find((a) => a.id !== draft.accountId)?.id ?? "";
+    // A new entry follows the currency its type usually comes in (income in
+    // dollars, spending in taka…) until an account is picked by hand.
+    const usual = preferredCurrency(type, settings);
+    if (!draft.accountChosen && usual) {
+      patch.accountId = defaultAccountId(type, accounts.filter((a) => a.isActive), usual) || draft.accountId;
+    }
+    const accountId = patch.accountId ?? draft.accountId;
+    if (type === "TRANSFER" && (!draft.toAccountId || draft.toAccountId === accountId)) {
+      patch.toAccountId = accounts.find((a) => a.id !== accountId)?.id ?? "";
     }
     update(patch);
   };
@@ -160,7 +167,7 @@ export function TransactionFields({
             label="From"
             accounts={accounts}
             value={draft.accountId}
-            onChange={(accountId) => update({ accountId })}
+            onChange={(accountId) => update({ accountId, accountChosen: true })}
             error={errors.accountId}
             disabledId={draft.toAccountId}
           />
@@ -188,7 +195,7 @@ export function TransactionFields({
             label={draft.type === "INCOME" ? "Received in" : "Paid from"}
             accounts={accounts}
             value={draft.accountId}
-            onChange={(accountId) => update({ accountId })}
+            onChange={(accountId) => update({ accountId, accountChosen: true })}
             error={errors.accountId}
           />
           <DateField label={dateLabel} value={draft.date} onChange={(date) => update({ date })} today={today} error={errors.date} {...timeProps} />

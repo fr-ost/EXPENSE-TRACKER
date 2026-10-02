@@ -56,7 +56,7 @@ function ruleToInput(rule: RecurringInput | RuleRow, date: ISODate): Transaction
   };
   switch (rule.type) {
     case "EXPENSE":
-      return { ...common, type: "EXPENSE", categoryId: rule.categoryId!, scope: rule.scope ?? "OTHER" };
+      return { ...common, type: "EXPENSE", categoryId: rule.categoryId!, scope: rule.scope ?? "PERSONAL" };
     case "INCOME":
       return { ...common, type: "INCOME", categoryId: rule.categoryId! };
     default:

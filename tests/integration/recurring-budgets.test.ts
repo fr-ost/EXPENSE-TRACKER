@@ -48,7 +48,7 @@ describe("recurring posting", () => {
       toAmount: null,
       categoryId: await categoryId("EXPENSE", "Housing"),
       countAsExpense: false,
-      scope: "OTHER",
+      scope: "PERSONAL",
       description: "Rent",
       notes: null,
       frequency: "MONTHLY",
@@ -136,6 +136,7 @@ describe("budgets", () => {
   let cash: string;
   let bank: string;
   let food: string;
+  let bills: string;
   let family: string;
 
   beforeEach(async () => {
@@ -143,49 +144,60 @@ describe("budgets", () => {
     cash = await makeAccount({ name: "Cash", openingBalance: "100000", openingDate: "2025-01-01" });
     bank = await makeAccount({ name: "Bank", type: "BANK", openingBalance: "100000", openingDate: "2025-01-01" });
     food = await categoryId("EXPENSE", "Food");
+    bills = await categoryId("EXPENSE", "Bills");
     family = await categoryId("EXPENSE", "Family");
   });
 
-  const spend = (category: string, amount: string, date: string) =>
+  const spend = (category: string, amount: string, date: string, scope: "PERSONAL" | "FAMILY" = "PERSONAL", accountId = cash) =>
     createTransaction(
-      { type: "EXPENSE", accountId: cash, categoryId: category, amount, date, scope: "PERSONAL", description: "", notes: null },
+      { type: "EXPENSE", accountId, categoryId: category, amount, date, scope, description: "", notes: null },
       { today: "2026-12-31" },
     );
+  const line = async (month: string, scope: "PERSONAL" | "FAMILY", fx: Parameters<typeof budgetsForMonth>[1] = "BDT") =>
+    (await budgetsForMonth(month, fx)).lines.find((l) => l.scope === scope)!;
 
-  it("applies a budget from its month onward without rewriting history", async () => {
-    await setBudget(food, "2026-01", "9000");
-    await setBudget(food, "2026-06", "12000");
-    expect((await budgetsForMonth("2025-12", "BDT")).lines).toHaveLength(0);
-    expect((await budgetsForMonth("2026-03", "BDT")).lines[0].budget).toBe("9000.00");
-    expect((await budgetsForMonth("2026-09", "BDT")).lines[0]).toMatchObject({ budget: "12000.00", effectiveFrom: "2026-06" });
+  it("has a Personal and a Family budget, applied from their month onward without rewriting history", async () => {
+    expect((await budgetsForMonth("2026-09", "BDT")).lines.map((l) => [l.scope, l.budget, l.status])).toEqual([
+      ["PERSONAL", null, "none"],
+      ["FAMILY", null, "none"],
+    ]);
+    await setBudget("FAMILY", "2026-01", "9000");
+    await setBudget("FAMILY", "2026-06", "12000");
+    expect((await line("2025-12", "FAMILY")).budget).toBeNull();
+    expect((await line("2026-03", "FAMILY")).budget).toBe("9000.00");
+    expect(await line("2026-09", "FAMILY")).toMatchObject({ budget: "12000.00", effectiveFrom: "2026-06" });
+    expect((await line("2026-09", "PERSONAL")).budget).toBeNull();
 
-    await setBudget(food, "2026-10", "0");
-    expect((await budgetsForMonth("2026-11", "BDT")).lines).toHaveLength(0);
-    expect((await budgetsForMonth("2026-09", "BDT")).lines).toHaveLength(1);
+    await setBudget("FAMILY", "2026-10", "0");
+    expect((await line("2026-11", "FAMILY")).budget).toBeNull();
+    expect((await line("2026-09", "FAMILY")).budget).toBe("12000.00");
   });
 
   it("warns at 80%, flags 100%, and reports overspending", async () => {
     expect([budgetStatus(79.99), budgetStatus(80), budgetStatus(100), budgetStatus(100.01)]).toEqual(["ok", "warning", "reached", "over"]);
 
-    await setBudget(food, "2026-09", "10000");
+    await setBudget("PERSONAL", "2026-09", "10000");
     await spend(food, "8000", "2026-09-05");
-    let [line] = (await budgetsForMonth("2026-09", "BDT")).lines;
-    expect(line).toMatchObject({ spent: "8000.00", remaining: "2000.00", percent: 80, status: "warning" });
+    expect(await line("2026-09", "PERSONAL")).toMatchObject({ spent: "8000.00", remaining: "2000.00", percent: 80, status: "warning" });
 
     await spend(food, "2500", "2026-09-20");
-    [line] = (await budgetsForMonth("2026-09", "BDT")).lines;
-    expect(line).toMatchObject({ spent: "10500.00", remaining: "-500.00", status: "over" });
+    expect(await line("2026-09", "PERSONAL")).toMatchObject({ spent: "10500.00", remaining: "-500.00", status: "over" });
   });
 
-  it("counts transfers marked as expense against the category budget", async () => {
+  it("counts everything marked Family against the Family budget, whatever the category", async () => {
+    await setBudget("FAMILY", "2026-09", "20000");
+    await setBudget("PERSONAL", "2026-09", "20000");
+    // A bill paid for the family is family spending, even though it's "Bills".
+    await spend(bills, "3000", "2026-09-02", "FAMILY");
+    await spend(food, "2000", "2026-09-03", "FAMILY");
+    await spend(food, "1000", "2026-09-04", "PERSONAL");
     const familyWallet = await makeAccount({ name: "Family wallet", openingDate: "2025-01-01" });
-    await setBudget(family, "2026-09", "10000");
     await createTransaction(
       {
         type: "TRANSFER",
         accountId: bank,
         toAccountId: familyWallet,
-        amount: "10000",
+        amount: "4000",
         toAmount: null,
         countAsExpense: true,
         categoryId: family,
@@ -196,14 +208,27 @@ describe("budgets", () => {
       },
       { today: "2026-12-31" },
     );
+
+    const familyLine = await line("2026-09", "FAMILY");
+    expect(familyLine).toMatchObject({ spent: "9000.00", remaining: "11000.00", percent: 45, status: "ok" });
+    expect(familyLine.categories.map((c) => [c.name, c.total])).toEqual([
+      ["Family", "4000.00"],
+      ["Bills", "3000.00"],
+      ["Food", "2000.00"],
+    ]);
+    expect(await line("2026-09", "PERSONAL")).toMatchObject({ spent: "1000.00" });
     const month = await budgetsForMonth("2026-09", "BDT");
-    expect(month.lines[0]).toMatchObject({ spent: "10000.00", status: "reached" });
+    expect([month.totalBudget, month.totalSpent]).toEqual(["40000.00", "10000.00"]);
   });
 
-  it("lists unbudgeted spending separately", async () => {
-    await setBudget(food, "2026-09", "10000");
-    await spend(await categoryId("EXPENSE", "Transport"), "300", "2026-09-02");
-    const month = await budgetsForMonth("2026-09", "BDT");
-    expect(month.unbudgeted.map((c) => c.name)).toEqual(["Transport"]);
+  it("counts spending in other currencies at their rate", async () => {
+    const usd = await makeAccount({ name: "Card USD", currency: "USD", openingBalance: "500", openingDate: "2025-01-01" });
+    await setBudget("PERSONAL", "2026-09", "5000");
+    await spend(food, "1000", "2026-09-02");
+    await spend(food, "12.50", "2026-09-03", "PERSONAL", usd);
+    // Without a rate, the dollars can't be counted…
+    expect((await line("2026-09", "PERSONAL")).spent).toBe("1000.00");
+    // …at ৳120 per dollar they are: 12.50 × 120 = 1,500.
+    expect((await line("2026-09", "PERSONAL", { base: "BDT", rates: { BDT: "1", USD: "120" } })).spent).toBe("2500.00");
   });
 });

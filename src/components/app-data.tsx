@@ -13,6 +13,8 @@ export interface ClientSettings {
   timezone: string;
   numberFormat: NumberFormat;
   autoLockMinutes: number;
+  incomeCurrency: string | null;
+  expenseCurrency: string | null;
 }
 
 interface AppData {

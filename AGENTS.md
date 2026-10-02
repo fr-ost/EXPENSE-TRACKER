@@ -27,7 +27,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Money: `NUMERIC(14,2)` in SQL, decimal strings in TypeScript, `bigint` minor
   units for arithmetic (`src/lib/money.ts`). Never do money maths in floats.
 - Income / spending / transfer classification is defined once: the SQL views in
-  the init migration and `isRecognizedExpense` in `src/lib/domain.ts`.
+  the migrations and `isRecognizedExpense` in `src/lib/domain.ts`.
+- Currencies: analytics take a `Conversion` (`services/currency.ts`): totals in
+  the main currency, each amount converted at its rate and rounded on its own
+  (`ROUND(amount * fx.rate, 2)` joined on the `ratesTable`); a currency without
+  a rate is left out. A rate is the owner's (`ExchangeRate`) or else the latest
+  conversion transfer's. A plain currency code means just that currency.
+  `convertMoney` does the same maths in TypeScript.
+- Spending is for `PERSONAL` or `FAMILY` (`ExpenseScope`, no third value), and
+  budgets are per scope (`ScopeBudget`, effective-dated), never per category.
+- New transactions start on an account in the type's usual currency
+  (`User.incomeCurrency` / `expenseCurrency`, null = main; `defaultAccountId`)
+  until an account is picked by hand.
 - Transaction entry rules live in `resolveEntry` (`src/lib/server/services/transactions.ts`).
 - Every page calls `loadPageContext()`; every API handler is wrapped in `authed()`.
 - The password is the `ADMIN_PASSWORD` env var (plain text, compared in

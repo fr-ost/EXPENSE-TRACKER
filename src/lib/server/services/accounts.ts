@@ -250,8 +250,3 @@ export async function deleteAccount(id: string) {
   }
   await prisma.account.delete({ where: { id } });
 }
-
-/** Sum of balances for accounts in one currency (other currencies can't be added). */
-export function totalBalance(accounts: AccountSummary[], currency: string): Money {
-  return fromMinor(accounts.filter((a) => a.currency === currency).reduce((sum, a) => sum + toMinor(a.balance), 0n));
-}

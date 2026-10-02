@@ -17,7 +17,7 @@ import {
   PALETTE_KEYS,
   TRANSACTION_TYPES,
 } from "./domain";
-import { MAX_MINOR, toMinor } from "./money";
+import { MAX_MINOR, isRate, toMinor } from "./money";
 
 // "12." is what an amount field holds while typing "12.50"; it means 12.
 const AMOUNT_INPUT = /^\d{1,12}(\.\d{0,2})?$/;
@@ -314,9 +314,19 @@ export const categoryInput = z
 export type CategoryInput = z.infer<typeof categoryInput>;
 
 export const budgetInput = z.object({
-  categoryId: id,
+  scope: z.enum(EXPENSE_SCOPES),
   month: monthKey,
   amount: nonNegativeAmount,
+});
+
+/** Your own exchange rate for a currency; null goes back to the latest conversion. */
+export const rateInput = z.object({
+  currency: z.enum(CURRENCY_CODES),
+  rate: z
+    .string()
+    .trim()
+    .refine(isRate, "Enter a rate above 0, like 122.50")
+    .nullable(),
 });
 
 export const recurringInput = z
@@ -379,6 +389,9 @@ export const settingsInput = z.object({
     .number()
     .int()
     .refine((v) => (AUTO_LOCK_OPTIONS as readonly number[]).includes(v), "Choose an option"),
+  /** The currency a new income / expense starts in; null is the main currency. */
+  incomeCurrency: z.enum(CURRENCY_CODES).nullable().default(null),
+  expenseCurrency: z.enum(CURRENCY_CODES).nullable().default(null),
 });
 export type SettingsInput = z.infer<typeof settingsInput>;
 

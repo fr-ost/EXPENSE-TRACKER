@@ -145,7 +145,7 @@ export async function updateBalance(
           loggedTime,
           accountId,
           categoryId: category.id,
-          scope: type === "EXPENSE" ? (input.scope ?? category.defaultScope ?? "OTHER") : null,
+          scope: type === "EXPENSE" ? (input.scope ?? category.defaultScope ?? "PERSONAL") : null,
           description: type === "EXPENSE" ? "Unrecorded spending" : "Unrecorded income",
           notes: input.note,
         },

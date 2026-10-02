@@ -35,11 +35,11 @@ enum CategoryKind {
   EXPENSE
 }
 
-/// Who an expense was for. Drives the Family / Personal / Other analytics.
+/// Who an expense was for: your family or yourself. Each has its own
+/// monthly budget (ScopeBudget).
 enum ExpenseScope {
   FAMILY
   PERSONAL
-  OTHER
 }
 
 enum RecurrenceFrequency {
@@ -71,6 +71,9 @@ model User {
   numberFormat    NumberFormat @default(SOUTH_ASIAN)
   /// Minutes of inactivity before the app locks. 0 disables auto-lock.
   autoLockMinutes Int          @default(15)
+  /// The currency a new income / expense starts in (null: baseCurrency).
+  incomeCurrency  String?      @db.Char(3)
+  expenseCurrency String?      @db.Char(3)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   sessions        Session[]
@@ -143,7 +146,6 @@ model Category {
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
   transactions Transaction[]
-  budgets      Budget[]
   recurring    RecurringTransaction[]
 
   @@unique([kind, name])
@@ -224,19 +226,31 @@ model BalanceCheckpoint {
   @@index([accountId, date])
 }
 
-/// Effective-dated monthly budget. The budget for month M is the row with the
-/// latest `effectiveFrom` <= M, so changing a budget never rewrites history.
-/// An amount of 0 means "no budget from this month on".
-model Budget {
-  id            String   @id @default(cuid())
-  categoryId    String
-  category      Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  effectiveFrom DateTime @db.Date
-  amount        Decimal  @db.Decimal(14, 2)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+/// Effective-dated monthly budget for Family or Personal spending, whatever
+/// the category. The budget for month M is the row with the latest
+/// `effectiveFrom` <= M, so changing a budget never rewrites history. An
+/// amount of 0 means "no budget from this month on".
+model ScopeBudget {
+  id            String       @id @default(cuid())
+  scope         ExpenseScope
+  effectiveFrom DateTime     @db.Date
+  amount        Decimal      @db.Decimal(14, 2)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  @@unique([categoryId, effectiveFrom])
+  @@unique([scope, effectiveFrom])
+}
+
+/// What one unit of `currency` is worth in `base` (the main currency), set by
+/// the owner. Without one, the rate of the latest conversion between the two
+/// is used (services/currency.ts).
+model ExchangeRate {
+  base      String   @db.Char(3)
+  currency  String   @db.Char(3)
+  rate      Decimal  @db.Decimal(18, 6)
+  updatedAt DateTime @updatedAt
+
+  @@id([base, currency])
 }
 
 /// A rule that materialises transactions on schedule. Occurrence k falls on

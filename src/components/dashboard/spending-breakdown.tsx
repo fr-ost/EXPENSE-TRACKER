@@ -10,8 +10,8 @@ import type { MonthKey } from "@/lib/dates";
 import type { CategoryTotal, ScopeTotal } from "@/lib/types";
 
 /**
- * Where the month's spending went: Family / Personal / Other as one
- * part-to-whole bar, then the leading categories ranked.
+ * Where the month's spending went: Personal / Family as one part-to-whole
+ * bar, then the leading categories ranked.
  */
 export function SpendingBreakdown({
   scopes,
@@ -44,7 +44,7 @@ export function SpendingBreakdown({
             valueText: format(s.total),
           }))}
         />
-        <ul className="grid grid-cols-3 gap-2">
+        <ul className="grid grid-cols-2 gap-2">
           {scopes.map((s) => (
             <li key={s.scope}>
               <Link

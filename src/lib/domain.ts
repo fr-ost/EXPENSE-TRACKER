@@ -34,13 +34,13 @@ export const ACCOUNT_TYPE_META: Record<AccountType, { label: string; icon: IconK
   OTHER: { label: "Other", icon: "wallet", hint: "Anything else" },
 };
 
-export const EXPENSE_SCOPES = ["FAMILY", "PERSONAL", "OTHER"] as const;
+/** Who spending was for. Each has its own monthly budget. */
+export const EXPENSE_SCOPES = ["PERSONAL", "FAMILY"] as const;
 export type ExpenseScope = (typeof EXPENSE_SCOPES)[number];
 
 export const SCOPE_META: Record<ExpenseScope, { label: string; description: string; color: PaletteKey }> = {
-  FAMILY: { label: "Family", description: "Spending for your family or household members", color: "terracotta" },
   PERSONAL: { label: "Personal", description: "Spending on yourself", color: "violet" },
-  OTHER: { label: "Other", description: "Shared, household and everything else", color: "gray" },
+  FAMILY: { label: "Family", description: "Spending for your family or household", color: "terracotta" },
 };
 
 export const CATEGORY_KINDS = ["EXPENSE", "INCOME"] as const;

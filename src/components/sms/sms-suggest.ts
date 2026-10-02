@@ -278,6 +278,8 @@ export function suggestFromSms(parsed: ParsedSms, ctx: SuggestContext): SmsSugge
     description: parsed.description,
     notes: parsed.text.slice(0, 2000),
     affectsBalance: true,
+    // The message says which account it is.
+    accountChosen: true,
   };
 
   let fee: TransactionDraft | null = null;
@@ -291,7 +293,7 @@ export function suggestFromSms(parsed: ParsedSms, ctx: SuggestContext): SmsSugge
       toAccountId: "",
       expenseCategoryId: feeCategory?.id ?? "",
       incomeCategoryId: "",
-      scope: feeCategory?.defaultScope ?? "OTHER",
+      scope: feeCategory?.defaultScope ?? "PERSONAL",
       countAsExpense: false,
       description: FEE_LABELS[parsed.channel] ?? `${parsed.provider?.name ?? "Bank"} fee`,
     };

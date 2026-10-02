@@ -13,6 +13,24 @@ import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { AUTO_LOCK_OPTIONS, CURRENCIES, NUMBER_FORMAT_LABELS, NUMBER_FORMATS, type NumberFormat } from "@/lib/domain";
 import { formatMoney } from "@/lib/money";
 
+function CurrencySelect({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {CURRENCIES.map((c) => (
+          <SelectItem key={c.code} value={c.code}>
+            {c.code}
+            <span className="text-text-tertiary">{c.name}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function autoLockLabel(minutes: number) {
   if (minutes === 0) return "Never";
   return minutes === 1 ? "After 1 minute" : minutes === 60 ? "After 1 hour" : `After ${minutes} minutes`;
@@ -48,20 +66,14 @@ export function PreferencesForm({ settings, timezones }: { settings: ClientSetti
         <Field label="Your name" optional hint="Used in the greeting on the overview." error={errors.displayName}>
           <Input value={values.displayName} onChange={(e) => set("displayName", e.target.value)} maxLength={60} placeholder="e.g. Rafi" />
         </Field>
-        <Field label="Main currency" hint="Totals and analytics use accounts in this currency." error={errors.baseCurrency}>
-          <Select value={values.baseCurrency} onValueChange={(v) => set("baseCurrency", v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCIES.map((c) => (
-                <SelectItem key={c.code} value={c.code}>
-                  {c.code}
-                  <span className="text-text-tertiary">{c.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Field label="Main currency" hint="Totals are shown in it; other currencies count at their exchange rate." error={errors.baseCurrency}>
+          <CurrencySelect value={values.baseCurrency} onChange={(v) => set("baseCurrency", v)} />
+        </Field>
+        <Field label="Income usually in" hint="A new income starts on an account in this currency." error={errors.incomeCurrency}>
+          <CurrencySelect value={values.incomeCurrency ?? values.baseCurrency} onChange={(v) => set("incomeCurrency", v)} />
+        </Field>
+        <Field label="Spending usually in" hint="A new expense starts on an account in this currency." error={errors.expenseCurrency}>
+          <CurrencySelect value={values.expenseCurrency ?? values.baseCurrency} onChange={(v) => set("expenseCurrency", v)} />
         </Field>
         <Field label="Timezone" hint="Decides what “today” is." error={errors.timezone}>
           <Select value={values.timezone} onValueChange={(v) => set("timezone", v)}>

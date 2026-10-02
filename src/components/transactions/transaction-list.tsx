@@ -150,7 +150,8 @@ function TransactionRow({
               {node}
             </React.Fragment>
           ))}
-          {tx.scope && tx.scope !== "OTHER" && (
+          {/* Personal is the usual; Family is worth a mark. */}
+          {tx.scope === "FAMILY" && (
             <span className="inline-flex items-center gap-1">
               <span aria-hidden className="text-text-quaternary">·</span>
               <span aria-hidden className="size-1.5 rounded-full" style={{ background: `var(--palette-${SCOPE_META[tx.scope].color})` }} />

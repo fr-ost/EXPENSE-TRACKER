@@ -248,6 +248,70 @@ test("an SMS for something typed in by hand: confirm it's the same one and the b
   await expect(page.getByRole("link", { name: /bKash/ })).toContainText("৳600");
 });
 
+test("income in dollars counts at your rate, in the total and the month; budgets are Personal and Family", async ({ page }) => {
+  await signIn(page);
+  const origin = new URL(page.url()).origin;
+  const account = async (name: string, currency: string, openingBalance: string) => {
+    const response = await page.request.post("/api/accounts", {
+      headers: { Origin: origin },
+      data: { name, type: "OTHER", currency, openingBalance, openingDate: "2025-01-01", icon: null, color: null, isActive: true },
+    });
+    expect(response.ok()).toBe(true);
+  };
+  await account("Dollar wallet", "USD", "0");
+  await account("Taka wallet", "BDT", "1000");
+
+  // Income usually arrives in dollars.
+  await page.goto("/settings");
+  await page.getByLabel("Income usually in").click();
+  await page.getByRole("option", { name: /USD/ }).click();
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await expect(page.getByText("Preferences saved")).toBeVisible();
+
+  // A new income starts on the dollar account.
+  await page.goto("/dashboard");
+  await page.keyboard.press("n");
+  const sheet = page.getByRole("dialog", { name: "New transaction" });
+  await sheet.getByRole("radio", { name: "Income" }).click();
+  await expect(sheet.getByLabel("Received in")).toContainText("Dollar wallet");
+  await sheet.getByLabel(/Amount/).fill("100");
+  await sheet.getByRole("radio", { name: "Freelance" }).click();
+  await sheet.getByRole("button", { name: /Add income/ }).click();
+  await expect(page.getByText("Income added")).toBeVisible();
+
+  // Without a rate the dollars are shown but not counted; with one they are.
+  const total = page.getByRole("region", { name: "Total balance" });
+  await expect(total).toContainText("$100 in USD (not counted)");
+  const before = await total.locator(".sr-only").first().innerText();
+  await total.getByLabel(/Add the USD rate/).fill("120");
+  await total.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("USD now counts in your totals")).toBeVisible();
+  await expect(total).toContainText("$1 = ৳120");
+  const taka = (text: string) => Number(text.replace(/[^\d.-]/g, ""));
+  await expect.poll(async () => taka(await total.locator(".sr-only").first().innerText())).toBe(taka(before) + 12000);
+  // The month's income includes them, converted.
+  await expect(page.getByRole("region", { name: /summary/ })).toContainText("incl. $100");
+
+  // Budgets: a bill paid for the family counts against the Family budget.
+  await page.goto("/budgets");
+  const family = page.getByRole("region", { name: "Family budget" });
+  await family.getByRole("button", { name: "Set budget" }).click();
+  await page.getByRole("dialog", { name: "Family budget" }).getByLabel(/Monthly budget/).fill("50000");
+  await page.getByRole("button", { name: "Save budget" }).click();
+  await expect(page.getByText("Family: ৳50,000 a month")).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  await page.keyboard.press("n");
+  await sheet.getByLabel(/Amount/).fill("3000");
+  await sheet.getByRole("radio", { name: "Bills" }).click();
+  await sheet.getByRole("radiogroup", { name: "Spent for" }).getByRole("radio", { name: "Family" }).click();
+  await sheet.getByRole("button", { name: /Add expense/ }).click();
+  await expect(page.getByText("Expense added")).toBeVisible();
+  await expect(family).toContainText("/ ৳50,000");
+  await expect(family.getByRole("listitem").filter({ hasText: "Bills" })).toContainText("৳3,000");
+  await expect(page.getByRole("region", { name: "Personal budget" })).toContainText("Set budget");
+});
+
 test("a wrong password on the lock screen says how many tries are left", async ({ page }) => {
   await signIn(page);
   await page.goto("/budgets");
