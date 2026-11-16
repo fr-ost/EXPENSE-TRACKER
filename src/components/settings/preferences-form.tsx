@@ -89,7 +89,7 @@ export function PreferencesForm({ settings, timezones }: { settings: ClientSetti
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Auto-lock" hint="Lock after this long without activity." error={errors.autoLockMinutes}>
+        <Field label="Auto-lock" hint="With an app-lock PIN: lock after this long without activity." error={errors.autoLockMinutes}>
           <Select value={String(values.autoLockMinutes)} onValueChange={(v) => set("autoLockMinutes", Number(v))}>
             <SelectTrigger>
               <SelectValue />

@@ -1,8 +1,9 @@
 # Hisab
 
-A private, single-user personal finance ledger: income, expenses, transfers,
-budgets, recurring payments and reports — built to be exact with money and
-pleasant to use every day, on a phone or a desktop.
+A private personal finance ledger: income, expenses, transfers, budgets,
+recurring payments and reports — built to be exact with money and pleasant to
+use every day, on a phone or a desktop. People sign in with Google, and each
+has a ledger nobody else can see.
 
 *Hisab* (হিসাব) means "the accounts". Rename it by changing `APP_NAME` in
 `src/lib/domain.ts`.
@@ -46,9 +47,10 @@ pleasant to use every day, on a phone or a desktop.
   included) and Excel exports.
 - **Installable app** — install it from Chrome or Edge (desktop and Android)
   or add it to the iPhone home screen.
-- **Private by construction** — one account, no sign-up, the password lives
-  only in a server variable, server-side sessions, inactivity lock,
-  brute-force protection.
+- **Your own account** — sign in with Google (your account is created the
+  first time); everything you record belongs to you alone. An optional PIN
+  locks the app after a while without activity. Delete your account, and
+  everything in it, from Settings.
 
 ---
 
@@ -60,25 +62,45 @@ pleasant to use every day, on a phone or a desktop.
    deploys. Railway reads `railway.json`: it builds with `npm run build`, and
    `npm start` applies the database migrations and starts the app. The health
    check is `/api/health`.
-3. **Set two variables** on the service (Variables tab):
+3. **Generate the domain** (service **Settings → Networking → Generate
+   domain**): Google needs the address before anyone can sign in.
+4. **Connect it to Google** (once, in the
+   [Google Cloud console](https://console.cloud.google.com/)):
+   1. Create a project, and set up its OAuth consent screen (app name and
+      your email; audience **External**). No extra scopes are needed — Hisab
+      only asks who you are.
+   2. Create an **OAuth client ID** of type **Web application**. Under
+      **Authorised redirect URIs** add exactly
+      `https://YOUR-DOMAIN/api/auth/google/callback`.
+   3. Copy the client ID and the client secret.
+   4. While the consent screen is in **Testing**, only the test users you
+      list can sign in; **publish** it when anyone should be able to.
+5. **Set the variables** on the service (Variables tab):
 
-   | Variable         | Value |
-   | ---------------- | ----- |
-   | `DATABASE_URL`   | `${{Postgres.DATABASE_URL}}` (a reference to the database) |
-   | `ADMIN_PASSWORD` | your password, as plain text — e.g. `4821` or `hisab2026` |
+   | Variable               | Value |
+   | ---------------------- | ----- |
+   | `DATABASE_URL`         | `${{Postgres.DATABASE_URL}}` (a reference to the database) |
+   | `GOOGLE_CLIENT_ID`     | the OAuth client ID |
+   | `GOOGLE_CLIENT_SECRET` | the OAuth client secret |
+   | `OWNER_EMAIL`          | only when upgrading — see below |
+   | `APP_URL`              | optional: the app's address (`https://YOUR-DOMAIN`), if it isn't the one requests arrive at |
 
-   Any 1–10 letters or digits work; longer is safer. Surrounding spaces are
-   ignored.
-4. **Deploy**, then **Settings → Networking → Generate domain**, open it and
-   sign in. The first sign-in creates your account (named Shahriar Ahmed,
-   with Bangladeshi taka and Dhaka time — all editable in Settings).
+6. **Deploy**, open the domain and choose **Continue with Google**. Your
+   account is created the first time you sign in, with the usual categories,
+   Bangladeshi taka and your browser's timezone — all editable in Settings.
 
-**Changing the password:** edit `ADMIN_PASSWORD` in Railway and deploy the
-change. Every signed-in device is signed out; sign in with the new password.
-That is also the answer to a forgotten password.
+If the Google variables are missing, the app still starts and the sign-in
+page explains what to set.
 
-If `ADMIN_PASSWORD` is missing, the app still starts and the sign-in page
-explains what to set.
+**Upgrading from the password version.** Earlier versions had one owner who
+signed in with an `ADMIN_PASSWORD` variable. That ledger is kept, and goes to
+its owner's Google account: set `OWNER_EMAIL` to the Google address you will
+sign in with, **before** deploying this version. The first sign-in with that
+address (Google must have verified it) takes the ledger over; from then on it
+belongs to that Google account, and the variable can be removed. Anyone else
+who signs in gets a new, empty account. `ADMIN_PASSWORD` is no longer used —
+delete it. An app lock that asked for the password now asks for a PIN you set
+in **Settings → App lock**.
 
 **Which version is running:** **Settings → App** shows the deployed commit
 (Railway's `RAILWAY_GIT_COMMIT_SHA`), matching the latest commit once a deploy
@@ -200,6 +222,7 @@ A single Next.js 16 (App Router) application with PostgreSQL via Prisma 7.
 | Concern        | Decision |
 | -------------- | -------- |
 | Money          | `NUMERIC(14,2)` in Postgres; decimal strings over the wire; `bigint` minor units for any arithmetic in TypeScript (`src/lib/money.ts`). Floats are used only to draw charts. |
+| Users          | Every row carries its owner (`userId`). Every service takes the signed-in user's id first and puts it in every query; references between rows are composite foreign keys on `(userId, id)`, so the database itself refuses one user's entry on another's account or category. |
 | Ledger         | No stored balances. Views expand transactions into signed per-account movements and derive the correction that makes each known balance (opening balance, balance updates) hold; Postgres sums them in milliseconds for a personal data set (~80 ms for every account at 30,000 transactions). |
 | Invariants     | CHECK constraints make invalid rows impossible (transfer to the same account, expense without category, zero/negative amounts, malformed times, an adjustment kept out of the balance…). Entry rules that need other rows (active accounts, category kinds, currencies) live in one function, `resolveEntry`, run under row locks. |
 | Reads / writes | Server Components read through a service layer (`src/lib/server/services`). Writes go through REST route handlers under `/api`, then the client refreshes server data in place — no full reloads. |
@@ -216,9 +239,9 @@ scripts/generate-icons.mjs  renders every icon from the logo
 assets/fonts/            Noto Sans Bengali for PDF reports (SIL OFL)
 src/proxy.ts             cookie presence + CSRF checks (first line only)
 src/app/(app)/           authenticated pages
-src/app/api/             route handlers (all authenticated except login/logout/health)
+src/app/api/             route handlers (all authenticated except Google sign-in, logout, health)
 src/lib/sms/             SMS parser and bank/wallet list
-src/lib/server/auth/     password check, sessions, rate limiting, guards
+src/lib/server/auth/     Google sign-in, sessions, the PIN lock, rate limiting, guards
 src/lib/server/services/ accounts, transactions, SMS import, analytics, budgets, recurring, reports…
 src/lib/server/export/   CSV, Excel and PDF generation
 src/components/          UI, by feature
@@ -227,30 +250,38 @@ tests/                   unit + integration (Vitest, real Postgres), e2e (Playwr
 
 ## Security
 
-- **One account, no sign-up.** The owner's row is created on the first
-  successful sign-in and the database allows only one. Nothing in the app can
-  create users.
-- **Password** is the `ADMIN_PASSWORD` variable, compared in constant time.
-  It is never stored in the database, logged, or sent anywhere but the
-  sign-in request. Each session is bound to the password it was created with
-  (an HMAC of the session id), so changing the variable signs out every
-  device.
+- **Sign in with Google** (OpenID Connect, authorization-code flow with PKCE,
+  `state` and `nonce`). Hisab never sees a password and keeps no Google
+  token: it learns who signed in from the ID token, which must be signed by
+  Google, issued for this app, fresh, and carry this sign-in's nonce. People
+  are told apart by Google's permanent account id, never by email address.
+- **Each person's data is theirs alone.** Every query is limited to the
+  signed-in user, and the database refuses references across users. Asking
+  for someone else's account, transaction or category — by any id — is "not
+  found". Tests have two people try every route against each other, and a
+  check fails the build if a query lacks the user filter.
 - **Sessions** are random 256-bit tokens in an `HttpOnly`, `Secure`,
   `SameSite=Lax`, `__Host-` cookie. Only the SHA-256 of the token is stored.
   Sessions expire after 30 days, or after 7 days unused.
 - **Every request is checked twice**: the proxy rejects cookie-less requests,
   and every page and API handler validates the session against the database
   itself. Unauthenticated API calls get `401`, locked sessions `423`.
-- **Lock** — "Lock now" and auto-lock after inactivity (configurable, default
-  15 minutes) are enforced on the server: a locked session cannot read any
-  data until the password is entered again, even if the tab was closed. Five
-  wrong passwords on the lock screen sign that session out.
-- **Brute force** — sign-in allows 5 failed attempts per client and 30 overall
-  per 15 minutes (stored in the database, so it survives restarts). While
-  limited, even the correct password is refused, so the limiter never reveals
-  a correct guess. The client address is the first `X-Forwarded-For` entry,
-  which Railway's edge sets and clients can't override. Short passwords are
-  convenient; the limits are what keep them safe.
+- **App lock** — optional: set a PIN (Settings → App lock) and Hisab asks for
+  it after signing in, on "Lock now", and after a while without activity
+  (default 15 minutes). It is enforced on the server: a locked session cannot
+  read any data until the PIN is entered, even if the tab was closed. The PIN
+  is stored only as a scrypt hash. Wrong PINs are counted per person, across
+  devices: five in a row and every try waits — 1 minute, then 5, 30, then a
+  day — the right PIN included. A forgotten PIN is removed by signing in with
+  Google again, so it guards an unlocked device; it isn't a second password.
+- **Limits** — a client that keeps failing to sign in waits (20 failures per
+  15 minutes, per address; stored in the database). Writes are limited per
+  person (a burst of 120, then two a second). The client address is the first
+  `X-Forwarded-For` entry, which Railway's edge sets and clients can't
+  override.
+- **Deleting your account** (Settings, after typing DELETE) removes every row
+  you own and every session, at once. `/delete-account` explains this
+  publicly.
 - **CSRF** — state-changing API requests must be same-origin (checked with
   `Sec-Fetch-Site`, falling back to `Origin`) and JSON.
 - **Shared SMS** arrive through the URL fragment, which browsers never send to
@@ -269,7 +300,7 @@ Requirements: Node.js 22, PostgreSQL 14+.
 
 ```bash
 npm install                      # also generates the Prisma client
-cp .env.example .env             # then set DATABASE_URL and ADMIN_PASSWORD
+cp .env.example .env             # then set DATABASE_URL and the Google client (see .env.example)
 npm run db:deploy                # apply migrations (tables, views, default categories)
 npm run dev                      # http://localhost:3000
 ```
@@ -296,6 +327,10 @@ npm run build && npm run test:e2e   # end-to-end, against the production build
   `E2E_DATABASE_URL` (default `…/ledger_e2e_test`). Both databases are wiped on
   every run, so their names **must end in `_test`** — the suites refuse to run
   otherwise.
+- The e2e tests sign in through a local stand-in for Google
+  (`tests/e2e/fake-google.mjs`, selected with `GOOGLE_TEST_ORIGIN`), which
+  runs the same flow and signs real ID tokens. That variable is for tests
+  only: never set it on a deployment.
 - Set `CHROMIUM_PATH` to use an installed Chromium for e2e tests instead of
   running `npx playwright install chromium`.
 
@@ -311,12 +346,16 @@ counted at the rate (and balances added up across currencies), Personal /
 Family budgets and thresholds, recurring
 schedules and duplicate-free posting; the SMS parser on real message formats
 (wallets, banks, cards, Bengali, OTPs, adverts), account and category
-matching, idempotent and concurrent SMS import, duplicate detection; the
-password variable, session binding, unlock limits; and — end to end —
-authentication, locking, SMS import, balance updates, 401s on every API route (with and without
-a forged cookie), CSRF, cookie flags, security headers, open redirects, rate
-limiting, invalid input, public install files, the share target, and the
-phone layout.
+matching, idempotent and concurrent SMS import, duplicate detection; two
+people trying every read, write and import against each other's data; Google
+ID tokens (wrong app, issuer, nonce, key, algorithm; expired or stale),
+creating an account on first sign-in and handing the earlier ledger to its
+owner; sessions, the PIN lock and its waits; and — end to end — signing in
+through Google (cancelled, forged and replayed answers included), the PIN
+lock, deleting an account, every API route as someone else, SMS import,
+balance updates, 401s on every API route (with and without a forged cookie),
+CSRF, cookie flags, security headers, open redirects, rate limiting, invalid
+input, public install files, the share target, and the phone layout.
 
 ## Known limitations
 
@@ -326,9 +365,14 @@ phone layout.
   quick review; anything uncertain is never added without you.
 - Sharing an SMS into the app works on Android (Chrome's installed apps);
   on iPhone, copy and paste instead.
-- The per-client login limit relies on the platform proxy's
+- The per-client sign-in limit relies on the platform proxy's
   `X-Forwarded-For` (Railway sets it). Without such a proxy it can be
-  sidestepped; the global limit still applies.
+  sidestepped.
+- The write limit is kept in the server's memory: it starts afresh on a
+  deploy and is per server process.
+- The app lock keeps other people out of an unlocked device. Anyone who can
+  sign in to your Google account can remove the PIN — as they could read
+  your mail.
 - Recurring transactions post when the app is opened (at most once a minute
   per server). Nothing is lost if the app isn't opened for a while — missed
   occurrences are posted with their original dates the next time.

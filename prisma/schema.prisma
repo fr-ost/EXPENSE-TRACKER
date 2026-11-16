@@ -65,13 +65,27 @@ enum CheckpointSource {
 /// One person and their preferences. Everything else hangs off a user and is
 /// removed only by `deleteUserData` (nothing cascades from here except
 /// sessions), so no data disappears by accident.
+///
+/// People sign in with Google; nothing secret about that is stored here.
 model User {
   id              String       @id @default(cuid())
+  /// Google's permanent id for the account (the ID token's "sub"). Null only
+  /// for the owner from before Google sign-in, until they sign in with the
+  /// Google account named by OWNER_EMAIL and take the row over.
+  googleSub       String?      @unique @db.VarChar(255)
+  /// The Google account's address at the last sign-in. Shown in Settings;
+  /// never used to tell users apart (addresses can change hands).
+  email           String?      @db.VarChar(320)
   displayName     String       @default("") @db.VarChar(60)
   baseCurrency    String       @default("BDT") @db.Char(3)
   timezone        String       @default("Asia/Dhaka") @db.VarChar(64)
   numberFormat    NumberFormat @default(SOUTH_ASIAN)
-  /// Minutes of inactivity before the app locks. 0 disables auto-lock.
+  /// App lock: the PIN's scrypt hash (auth/pin.ts), or null when the lock is off.
+  pinHash         String?      @db.VarChar(255)
+  /// Wrong PINs in a row. Every fifth makes the next try wait (pinLockedUntil).
+  pinFailures     Int          @default(0)
+  pinLockedUntil  DateTime?
+  /// With a PIN: minutes of inactivity before the app locks. 0: only "Lock now".
   autoLockMinutes Int          @default(15)
   /// The currency a new income / expense starts in (null: baseCurrency).
   incomeCurrency  String?      @db.Char(3)
@@ -91,26 +105,22 @@ model User {
 /// Server-side session. `id` is the SHA-256 of the cookie token, so a database
 /// leak does not yield usable session cookies.
 model Session {
-  id            String    @id @db.Char(64)
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// HMAC of `id` keyed with the password the session was created with, so
-  /// changing ADMIN_PASSWORD signs out every session.
-  credential    String    @db.Char(64)
-  createdAt     DateTime  @default(now())
-  expiresAt     DateTime
-  lastSeenAt    DateTime  @default(now())
-  lockedAt      DateTime?
-  /// Wrong passwords entered on the lock screen; the session ends after 5.
-  failedUnlocks Int       @default(0)
-  userAgent     String?   @db.VarChar(255)
+  id         String    @id @db.Char(64)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  lastSeenAt DateTime  @default(now())
+  /// Locked until the PIN is entered. Only means something while the user has a PIN.
+  lockedAt   DateTime?
+  userAgent  String?   @db.VarChar(255)
 
   @@index([userId])
   @@index([expiresAt])
 }
 
-/// Sign-in attempts, used for brute-force protection. Stored in the
-/// database so limits survive restarts and redeploys.
+/// Sign-ins that came back from Google, used to slow down a client that keeps
+/// failing. Stored in the database so limits survive restarts and redeploys.
 model LoginAttempt {
   id        String   @id @default(cuid())
   ip        String   @db.VarChar(64)

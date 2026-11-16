@@ -6,13 +6,16 @@ import { listAccounts } from "@/lib/server/services/accounts";
 import { listCategories } from "@/lib/server/services/categories";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { userId, settings, today } = await loadPageContext();
+  const { userId, session, settings, today } = await loadPageContext();
   const [accounts, categories] = await Promise.all([listAccounts(userId, today), listCategories(userId)]);
 
   return (
     <AppDataProvider value={{ settings, today, accounts, categories }}>
       <TransactionSheetProvider>
-        <AppShell autoLockMinutes={settings.autoLockMinutes}>{children}</AppShell>
+        {/* Locking needs a PIN to come back with: without one there is no lock. */}
+        <AppShell autoLockMinutes={session.autoLockMinutes} canLock={session.hasPin}>
+          {children}
+        </AppShell>
       </TransactionSheetProvider>
     </AppDataProvider>
   );

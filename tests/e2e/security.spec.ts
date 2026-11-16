@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { E2E_PASSWORD, E2E_PORT } from "./env";
+import { APP_ORIGIN as ORIGIN, asUser, continueWithGoogle, person, signInApi } from "./auth";
+import { E2E_PORT } from "./env";
 
-const ORIGIN = `http://localhost:${E2E_PORT}`;
-const PUBLIC_ROUTES = new Set(["/api/auth/login", "/api/auth/logout", "/api/health"]);
+const PUBLIC_ROUTES = new Set(["/api/auth/google", "/api/auth/google/callback", "/api/auth/logout", "/api/health"]);
 
 /** Every API route and the HTTP methods it exports, read from the filesystem. */
 function apiRoutes(): Array<{ path: string; method: string }> {
@@ -70,31 +70,81 @@ test("protected pages redirect to sign-in, even with a forged cookie", async ({ 
 });
 
 test("cross-site and non-JSON writes are refused", async ({ request }) => {
-  const crossSite = await request.post("/api/auth/login", {
-    headers: { Origin: "https://evil.example", "Content-Type": "application/json" },
-    data: { password: E2E_PASSWORD },
-  });
-  expect(crossSite.status()).toBe(403);
+  const { cookie } = await signInApi(request, person("csrf", "Csrf Tester"));
+  const body = JSON.stringify({ name: "Sneaky", type: "CASH", currency: "BDT", openingBalance: "0", openingDate: "2025-01-01", icon: null, color: null, isActive: true });
 
-  const formPost = await request.post("/api/auth/login", {
-    headers: { Origin: ORIGIN, "Content-Type": "application/x-www-form-urlencoded" },
-    data: `password=${E2E_PASSWORD}`,
+  // Another site, riding on the signed-in browser's cookie.
+  const crossSite: Array<Record<string, string>> = [
+    { Origin: "https://evil.example", "Content-Type": "application/json", Cookie: cookie! },
+    { "Sec-Fetch-Site": "cross-site", "Content-Type": "application/json", Cookie: cookie! },
+    { "Sec-Fetch-Site": "same-site", "Content-Type": "application/json", Cookie: cookie! },
+  ];
+  for (const headers of crossSite) {
+    expect((await request.post("/api/accounts", { headers, data: body })).status()).toBe(403);
+    expect((await request.delete("/api/account", { headers, data: JSON.stringify({ confirm: "DELETE" }) })).status()).toBe(403);
+  }
+  expect((await request.post("/api/auth/logout", { headers: { Origin: "https://evil.example" } })).status()).toBe(403);
+
+  // A plain HTML form can't post JSON.
+  const formPost = await request.post("/api/accounts", {
+    headers: { Origin: ORIGIN, "Content-Type": "application/x-www-form-urlencoded", Cookie: cookie! },
+    data: "name=Sneaky",
   });
   expect(formPost.status()).toBe(415);
+
+  const accounts = await (await request.get("/api/accounts", { headers: asUser(cookie!) })).json();
+  expect(accounts.accounts).toEqual([]);
 });
 
-test("session cookie is HttpOnly, Secure, SameSite and host-only", async ({ request }) => {
-  const response = await request.post("/api/auth/login", {
-    headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Forwarded-For": "198.51.100.1" },
-    data: { password: E2E_PASSWORD },
+test("session and sign-in cookies are HttpOnly, Secure, SameSite and host-only", async ({ request }) => {
+  const start = await request.get("/api/auth/google", { maxRedirects: 0 });
+  const pending = start.headers()["set-cookie"];
+  const { setCookie } = await signInApi(request, person("cookie", "Cookie Tester"));
+  for (const [cookie, name] of [
+    [pending, "__Host-hisab_signin"],
+    [setCookie!, "__Host-hisab_session"],
+  ] as const) {
+    expect(cookie).toMatch(new RegExp(`^${name}=`));
+    expect(cookie).toMatch(/HttpOnly/i);
+    expect(cookie).toMatch(/Secure/i);
+    expect(cookie).toMatch(/SameSite=lax/i);
+    expect(cookie).toMatch(/Path=\//i);
+    expect(cookie).not.toMatch(/Domain=/i);
+  }
+  // The sign-in in progress is short-lived.
+  expect(pending).toMatch(/Max-Age=600/i);
+  // The browser is sent to Google with a state, a nonce and a PKCE challenge — never the client secret.
+  const sent = new URL(start.headers().location);
+  expect(Object.fromEntries(sent.searchParams)).toMatchObject({
+    response_type: "code",
+    scope: "openid email profile",
+    code_challenge_method: "S256",
+    redirect_uri: `${ORIGIN}/api/auth/google/callback`,
   });
-  expect(response.status()).toBe(200);
-  const setCookie = response.headers()["set-cookie"];
-  expect(setCookie).toMatch(/^__Host-hisab_session=/);
-  expect(setCookie).toMatch(/HttpOnly/i);
-  expect(setCookie).toMatch(/Secure/i);
-  expect(setCookie).toMatch(/SameSite=lax/i);
-  expect(setCookie).not.toMatch(/Domain=/i);
+  for (const key of ["state", "nonce", "code_challenge"]) expect(sent.searchParams.get(key)).toMatch(/^[\w-]{43}$/);
+  expect(start.headers().location).not.toContain("secret");
+});
+
+test("a sign-in that Google didn't vouch for signs nobody in", async ({ request }) => {
+  // Cancelled at Google.
+  expect(await signInApi(request, person("quitter", "Quitter", { deny: true }))).toMatchObject({ location: "/login?error=cancelled", cookie: null });
+
+  // ID tokens that are for another app, from another issuer, for another sign-in, expired, or not signed by Google.
+  for (const tamper of ["audience", "issuer", "nonce", "expired", "signature"] as const) {
+    const result = await signInApi(request, person(`forged-${tamper}`, "Forger", { tamper }));
+    expect(result, tamper).toMatchObject({ location: "/login?error=failed", cookie: null });
+  }
+
+  // An answer that doesn't match the sign-in this browser started…
+  const mallory = person("mallory", "Mallory");
+  expect(await signInApi(request, mallory, { alter: (url) => url.searchParams.set("state", "x".repeat(43)) })).toMatchObject({ location: "/login?error=failed", cookie: null });
+  expect(await signInApi(request, mallory, { alter: (url) => url.searchParams.set("code", "made-up-code") })).toMatchObject({ location: "/login?error=failed", cookie: null });
+  // …or that arrives in a browser that never started one (the classic sign-in CSRF).
+  expect(await signInApi(request, mallory, { withoutPending: true })).toMatchObject({ location: "/login?error=expired", cookie: null });
+
+  // The sign-in page says so, without detail.
+  expect(await (await request.get("/login?error=failed")).text()).toMatch(/Google sign-in didn(&#x27;|')t complete/);
+  expect(await (await request.get("/login?error=cancelled")).text()).toContain("Sign-in was cancelled.");
 });
 
 test("security headers are set", async ({ request }) => {
@@ -108,12 +158,17 @@ test("security headers are set", async ({ request }) => {
   expect(headers["x-powered-by"]).toBeUndefined();
 });
 
-test("post-login redirects cannot leave the site", async ({ page }) => {
+test("post-login redirects cannot leave the site", async ({ page, request }) => {
   await page.goto("/login?next=//evil.example/steal");
-  await page.getByPlaceholder("Password").fill(E2E_PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+  await continueWithGoogle(page, person("redirect", "Redirect Tester"));
   expect(new URL(page.url()).host).toBe(`localhost:${E2E_PORT}`);
+  expect(new URL(page.url()).pathname).toBe("/dashboard");
+
+  for (const next of ["https://evil.example/", "//evil.example", "/\\evil.example", "/api/account", "/login"]) {
+    const { location } = await signInApi(request, person("redirect", "Redirect Tester"), { next });
+    expect(location, next).toBe("/dashboard");
+  }
+  expect((await signInApi(request, person("redirect", "Redirect Tester"), { next: "/reports?period=year" })).location).toBe("/reports?period=year");
 });
 
 test("app-install files are public; everything else still needs a session", async ({ request }) => {
@@ -144,11 +199,7 @@ test("shared SMS: only from the share sheet, only with a session, never in a URL
   expect(signedOut.status()).toBe(303);
   expect(signedOut.headers().location).toMatch(/\/login\?next=%2Fsms$/);
 
-  const login = await request.post("/api/auth/login", {
-    headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Forwarded-For": "198.51.100.30" },
-    data: { password: E2E_PASSWORD },
-  });
-  const cookie = (login.headers()["set-cookie"] ?? "").split(";")[0];
+  const cookie = (await signInApi(request, person("sharer", "Sharer"))).cookie!;
   const shared = await request.post("/sms/share", { multipart: form, headers: { Cookie: cookie, "Sec-Fetch-Site": "none" }, maxRedirects: 0 });
   expect(shared.status()).toBe(303);
   expect(shared.headers().location).toBe(`/sms#shared=${encodeURIComponent(form.text)}`);
@@ -163,26 +214,21 @@ test("the health check is public but reveals nothing", async ({ request }) => {
   expect(await response.json()).toEqual({ status: "ok" });
 });
 
-test("password guessing is rate limited, and the limit hides whether a guess was right", async ({ request }) => {
-  const attempt = (password: string) =>
-    request.post("/api/auth/login", {
-      headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Forwarded-For": "203.0.113.77" },
-      data: { password },
-    });
-  for (let i = 0; i < 5; i++) expect((await attempt(`wrong-${i}`)).status()).toBe(401);
-  const limited = await attempt("wrong-again");
-  expect(limited.status()).toBe(429);
-  expect(Number(limited.headers()["retry-after"])).toBeGreaterThan(0);
-  // Even the correct password is refused while limited.
-  expect((await attempt(E2E_PASSWORD)).status()).toBe(429);
+test("a client that keeps failing to sign in is made to wait; others are not", async ({ request }) => {
+  const who = person("limited", "Limited");
+  const noisy = "203.0.113.77";
+  for (let i = 0; i < 20; i++) {
+    const failed = await signInApi(request, who, { ip: noisy, alter: (url) => url.searchParams.set("code", `guess-${i}`) });
+    expect(failed.location).toBe("/login?error=failed");
+  }
+  // Now even a genuine sign-in from there waits…
+  expect(await signInApi(request, who, { ip: noisy })).toMatchObject({ location: "/login?error=rate_limited", cookie: null });
+  // …while the same person, and everyone else, can sign in from anywhere else.
+  expect((await signInApi(request, who, { ip: "203.0.113.78" })).cookie).toBeTruthy();
 });
 
 test("invalid input is a 400 with field errors, never a server error", async ({ request }) => {
-  const login = await request.post("/api/auth/login", {
-    headers: { Origin: ORIGIN, "Content-Type": "application/json", "X-Forwarded-For": "198.51.100.9" },
-    data: { password: E2E_PASSWORD },
-  });
-  const cookie = (login.headers()["set-cookie"] ?? "").split(";")[0];
+  const cookie = (await signInApi(request, person("typo", "Typo Tester"))).cookie!;
   const post = (data: string) =>
     request.post("/api/transactions", { headers: { Origin: ORIGIN, "Content-Type": "application/json", Cookie: cookie }, data });
   const expense = (overrides: Record<string, unknown>) =>

@@ -384,9 +384,17 @@ export const createRecurringInput = z.object({
 // Auth & settings
 // ---------------------------------------------------------------------------
 
-export const passwordInput = z.object({
-  password: z.string().min(1, "Enter your password").max(256),
-});
+/** An app-lock PIN: 4 to 8 digits. */
+const pin = z.string().regex(/^\d{4,8}$/, "Use 4 to 8 digits");
+/** Whatever was typed as the current PIN (checked against the stored one). */
+const enteredPin = z.string().min(1, "Enter your PIN").max(32);
+
+export const unlockInput = z.object({ pin: enteredPin });
+export const setPinInput = z.object({ pin, currentPin: enteredPin.nullish().transform((v) => v ?? null) });
+export const removePinInput = z.object({ currentPin: enteredPin });
+
+/** Deleting your account takes the word itself, so it can't happen by accident. */
+export const deleteAccountInput = z.object({ confirm: z.literal("DELETE") });
 
 export const settingsInput = z.object({
   displayName: z.string().trim().max(60),

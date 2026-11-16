@@ -3,8 +3,8 @@ import { Client } from "pg";
 import { E2E_DATABASE_URL } from "./env";
 
 /**
- * Fresh schema from the real migrations. No user row: the owner is created on
- * the first sign-in, exactly as on a fresh Railway deploy.
+ * Fresh schema from the real migrations. No users: each is created on their
+ * first sign-in, exactly as on a fresh Railway deploy.
  */
 export default async function globalSetup() {
   const name = new URL(E2E_DATABASE_URL).pathname.replace(/^\//, "");

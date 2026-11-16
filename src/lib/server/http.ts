@@ -4,8 +4,9 @@ import { ZodError, type ZodType } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { fieldErrorsOf } from "@/lib/validation";
 import { requireApiSession } from "./auth/guard";
+import { takeWrite } from "./auth/rate-limit";
 import type { SessionState } from "./auth/session";
-import { AppError, invalid } from "./errors";
+import { AppError, invalid, tooManyRequests } from "./errors";
 import type { UserId } from "./user-id";
 
 export const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
@@ -74,10 +75,13 @@ interface HandlerArgs<P> {
   userId: UserId;
 }
 
+const READS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 /**
- * Wrap a Route Handler: enforces an unlocked session (401/423), awaits params
- * and converts thrown errors into consistent JSON responses. The handler gets
- * the signed-in user's id; ids in the URL or body never say whose data it is.
+ * Wrap a Route Handler: enforces an unlocked session (401/423), limits how
+ * fast one user can write (429), awaits params and converts thrown errors
+ * into consistent JSON responses. The handler gets the signed-in user's id;
+ * ids in the URL or body never say whose data it is.
  */
 export function authed<P extends Record<string, string> = Record<string, never>>(
   handler: (args: HandlerArgs<P>) => Promise<Response>,
@@ -86,6 +90,10 @@ export function authed<P extends Record<string, string> = Record<string, never>>
   return async (request: NextRequest, context: { params: Promise<P> }): Promise<Response> => {
     try {
       const session = await requireApiSession(options);
+      if (!READS.has(request.method)) {
+        const limit = takeWrite(session.userId);
+        if (!limit.allowed) throw tooManyRequests("That's a lot at once. Try again in a moment.", limit.retryAfterSeconds);
+      }
       const params = await context.params;
       return await handler({ request, params, session, userId: session.userId });
     } catch (error) {

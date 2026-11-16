@@ -1,11 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
-import { E2E_PASSWORD } from "./env";
+import { continueWithGoogle, signIn } from "./auth";
 
-async function signIn(page: Page) {
-  await page.goto("/login");
-  await page.getByPlaceholder("Password").fill(E2E_PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+/** Press "N" for a new transaction — again if the page wasn't listening yet. */
+async function pressN(page: Page) {
+  const sheet = page.getByRole("dialog", { name: "New transaction" });
+  await expect(async () => {
+    await page.keyboard.press("n");
+    await expect(sheet).toBeVisible({ timeout: 1500 });
+  }).toPass();
+  return sheet;
 }
 
 test.describe.configure({ mode: "serial" });
@@ -16,22 +19,23 @@ test("everything is private until signed in", async ({ page, request }) => {
 
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login\?next=%2Fdashboard/);
-  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
-  // No sign-up path exists.
-  await expect(page.getByText(/sign up|register|create account/i)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Welcome to Hisab" })).toBeVisible();
+  // Google is the only way in: there is no password to type or guess.
+  await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
+  await expect(page.locator("input")).toHaveCount(0);
 });
 
-test("a wrong password is rejected without detail", async ({ page }) => {
-  await page.goto("/login");
-  await page.getByPlaceholder("Password").fill("definitely-not-it");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Incorrect password." })).toBeVisible();
+test("signing in with Google returns to the page that was asked for", async ({ page }) => {
+  await page.goto("/transactions?month=2026-09");
+  await expect(page).toHaveURL(/\/login\?next=/);
+  await continueWithGoogle(page);
+  await expect(page).toHaveURL(/\/transactions\?month=2026-09$/);
 });
 
 test("first run: add an account, then an expense updates the balance in place", async ({ page }) => {
   await signIn(page);
-  // First sign-in creates the owner; the greeting uses the default name.
-  await expect(page.getByRole("heading", { name: /^Good (morning|afternoon|evening), Shahriar Ahmed$/ })).toBeVisible();
+  // The first sign-in created the account; the greeting uses the name Google gave.
+  await expect(page.getByRole("heading", { name: /^Good (morning|afternoon|evening), Rafi Tester$/ })).toBeVisible();
 
   await page.getByRole("link", { name: "Add your first account" }).click();
   await page.getByLabel("Name").fill("Cash wallet");
@@ -50,8 +54,7 @@ test("first run: add an account, then an expense updates the balance in place", 
   await expect(page.getByRole("link", { name: /City Bank/ })).toContainText("৳1,00,000");
 
   // Historical expense via the keyboard shortcut.
-  await page.keyboard.press("n");
-  const sheet = page.getByRole("dialog", { name: "New transaction" });
+  const sheet = await pressN(page);
   await sheet.getByLabel(/Amount/).fill("2000");
   await sheet.getByRole("radio", { name: "Food" }).click();
   await sheet.getByLabel("Date").fill("2025-03-05");
@@ -93,19 +96,49 @@ test("deleting a transaction restores the balance", async ({ page }) => {
   await expect(page.getByRole("link", { name: /Cash wallet/ })).toContainText("৳10,000");
 });
 
-test("lock hides everything until the password is entered again", async ({ page }) => {
+test("app lock: a PIN locks the app, opens it again, and is asked for after signing in", async ({ page }) => {
   await signIn(page);
+  // Without a PIN there is nothing to lock with.
+  await page.goto("/settings");
+  await expect(page.getByRole("button", { name: "Lock now" })).toHaveCount(0);
+
+  const lock = page.locator("#app-lock");
+  await lock.getByRole("button", { name: "Set a PIN" }).click();
+  await lock.getByLabel("PIN", { exact: true }).fill("4821");
+  await lock.getByLabel("Repeat it").fill("4812");
+  await lock.getByRole("button", { name: "Turn on app lock" }).click();
+  await expect(lock.getByText("The two PINs don't match.")).toBeVisible();
+  await lock.getByLabel("Repeat it").fill("4821");
+  await lock.getByRole("button", { name: "Turn on app lock" }).click();
+  await expect(page.getByText("App lock is on")).toBeVisible();
+
+  // Locked: no figures on screen, no data from the API.
   await page.goto("/accounts");
   await page.getByRole("button", { name: "Lock now" }).first().click();
-  await expect(page).toHaveURL(/\/lock/);
+  await expect(page).toHaveURL(/\/lock\?next=%2Faccounts/);
   await expect(page.getByText("৳")).toHaveCount(0);
+  expect((await page.request.get("/api/accounts")).status()).toBe(423);
 
-  const api = await page.request.get("/api/accounts");
-  expect(api.status()).toBe(423);
-
-  await page.getByPlaceholder("Password").fill(E2E_PASSWORD);
+  await page.getByPlaceholder("PIN").fill("0000");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "4 tries left" })).toBeVisible();
+  await page.getByPlaceholder("PIN").fill("4821");
   await page.getByRole("button", { name: "Unlock" }).click();
   await expect(page).toHaveURL(/\/accounts/);
+
+  // Signing out and in again is not a way around it.
+  await page.getByRole("button", { name: "Sign out" }).first().click();
+  await expect(page).toHaveURL(/\/login/);
+  await signIn(page);
+  await expect(page).toHaveURL(/\/lock/);
+  expect((await page.request.get("/api/accounts")).status()).toBe(423);
+
+  // A forgotten PIN: having just signed in with Google, it can be removed.
+  await page.getByText("Forgot your PIN?").click();
+  await page.getByRole("button", { name: "Remove PIN and open Hisab" }).click();
+  await expect(page).toHaveURL(/\/settings#app-lock/);
+  await expect(page.locator("#app-lock").getByRole("button", { name: "Set a PIN" })).toBeVisible();
+  expect((await page.request.get("/api/accounts")).status()).toBe(200);
 });
 
 test("an SMS is read and added once, and never twice", async ({ page }) => {
@@ -270,8 +303,7 @@ test("income in dollars counts at your rate, in the total and the month; budgets
 
   // A new income starts on the dollar account.
   await page.goto("/dashboard");
-  await page.keyboard.press("n");
-  const sheet = page.getByRole("dialog", { name: "New transaction" });
+  const sheet = await pressN(page);
   await sheet.getByRole("radio", { name: "Income" }).click();
   await expect(sheet.getByLabel("Received in")).toContainText("Dollar wallet");
   await sheet.getByLabel(/Amount/).fill("100");
@@ -301,7 +333,7 @@ test("income in dollars counts at your rate, in the total and the month; budgets
   await expect(page.getByText("Family: ৳50,000 a month")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  await page.keyboard.press("n");
+  await pressN(page);
   await sheet.getByLabel(/Amount/).fill("3000");
   await sheet.getByRole("radio", { name: "Bills" }).click();
   await sheet.getByRole("radiogroup", { name: "Spent for" }).getByRole("radio", { name: "Family" }).click();
@@ -310,19 +342,6 @@ test("income in dollars counts at your rate, in the total and the month; budgets
   await expect(family).toContainText("/ ৳50,000");
   await expect(family.getByRole("listitem").filter({ hasText: "Bills" })).toContainText("৳3,000");
   await expect(page.getByRole("region", { name: "Personal budget" })).toContainText("Set budget");
-});
-
-test("a wrong password on the lock screen says how many tries are left", async ({ page }) => {
-  await signIn(page);
-  await page.goto("/budgets");
-  await page.getByRole("button", { name: "Lock now" }).first().click();
-  await expect(page).toHaveURL(/\/lock\?next=%2Fbudgets/);
-  await page.getByPlaceholder("Password").fill("not-it");
-  await page.getByRole("button", { name: "Unlock" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "4 tries left" })).toBeVisible();
-  await page.getByPlaceholder("Password").fill(E2E_PASSWORD);
-  await page.getByRole("button", { name: "Unlock" }).click();
-  await expect(page).toHaveURL(/\/budgets/);
 });
 
 test("signing out ends the session", async ({ page }) => {

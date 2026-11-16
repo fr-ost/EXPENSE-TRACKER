@@ -2,16 +2,18 @@ import { LockKeyholeIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthScreen } from "@/components/auth/auth-screen";
-import { PasswordForm } from "@/components/auth/password-form";
+import { ForgotPin } from "@/components/auth/forgot-pin";
+import { PinForm } from "@/components/auth/pin-form";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { getSession } from "@/lib/server/auth/guard";
 import { safeRedirectPath } from "@/lib/safe-redirect";
+import { getSession } from "@/lib/server/auth/guard";
+import { canResetPin } from "@/lib/server/auth/pin";
 
 export const metadata: Metadata = { title: "Locked" };
 
-/** Renders no financial data — only a password prompt. */
+/** Renders no financial data — only a PIN prompt. */
 export default async function LockPage({ searchParams }: PageProps<"/lock">) {
-  const { next } = await searchParams;
+  const { next, forgot } = await searchParams;
   const destination = safeRedirectPath(next);
   const session = await getSession();
   if (!session) redirect("/login");
@@ -25,10 +27,11 @@ export default async function LockPage({ searchParams }: PageProps<"/lock">) {
         </span>
       }
       title="Locked"
-      description="Your ledger is locked. Enter your password to continue."
+      description="Enter your PIN to open your ledger."
       footer={<SignOutButton variant="link" className="text-small text-text-secondary" />}
     >
-      <PasswordForm endpoint="/api/auth/unlock" submitLabel="Unlock" redirectTo={destination} />
+      <PinForm redirectTo={destination} />
+      <ForgotPin signedInJustNow={canResetPin(session)} open={forgot === "1"} />
     </AuthScreen>
   );
 }

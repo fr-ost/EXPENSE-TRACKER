@@ -53,12 +53,23 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   until an account is picked by hand.
 - Transaction entry rules live in `resolveEntry` (`src/lib/server/services/transactions.ts`).
 - Every page calls `loadPageContext()`; every API handler is wrapped in
-  `authed()`. Both hand over the signed-in `userId` to pass to the services.
-- The password is the `ADMIN_PASSWORD` env var (plain text, compared in
-  constant time); nothing about it is stored. Sessions carry an HMAC keyed
-  with it (`Session.credential`), so changing it signs everyone out. The owner
-  (the first user) is created on first sign-in (`ensureOwner`), with the
-  starter categories every new user gets (`DEFAULT_CATEGORIES`).
+  `authed()`. Both hand over the signed-in `userId` to pass to the services;
+  `authed()` also limits writes per user (`takeWrite`).
+- People sign in with Google only (`auth/google.ts`: authorization-code flow
+  with PKCE, state and nonce; the ID token is verified with `jose`). A user
+  is their Google `sub` (`User.googleSub`), never their email. The first
+  sign-in creates the user with the starter categories (`signInWithGoogle`,
+  `DEFAULT_CATEGORIES`) and the browser's timezone. The one row without a
+  `googleSub` is the owner from the password days: the verified Google
+  address in `OWNER_EMAIL` takes it over. There are no passwords anywhere.
+  E2E tests sign in through `tests/e2e/fake-google.mjs` (`GOOGLE_TEST_ORIGIN`,
+  tests only).
+- The app lock is a PIN of the user's own (`auth/pin.ts`, scrypt hash on
+  `User`). Without one nothing locks. With one, a session starts locked after
+  sign-in, on "Lock now" and after `autoLockMinutes` idle; wrong PINs are
+  counted per user with growing waits; a forgotten PIN is removed only from a
+  session Google has just signed in and the PIN hasn't opened yet
+  (`canResetPin`).
 - SMS import: the parser (`src/lib/sms/parse.ts`) is pure and client-side;
   account/category suggestions live in `src/components/sms/sms-suggest.ts`;
   the server (`src/lib/server/services/sms.ts`) re-validates through
@@ -92,6 +103,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   after a deploy); Settings shows it as the version. Railway deploys `main`.
 - The service worker (`public/sw.js`) must never cache pages or API responses.
   Icons are rendered from one drawing: `node scripts/generate-icons.mjs`.
-- Rate limiting keys on the leftmost `X-Forwarded-For` (Railway). Next.js fills
-  that header from the socket when absent, so e2e tests simulate clients with it.
+- Sign-in rate limiting keys on the leftmost `X-Forwarded-For` (Railway).
+  Next.js fills that header from the socket when absent, so e2e tests simulate
+  clients with it. It is per client only: there is no secret to guess, and an
+  overall limit would let one client keep everyone out.
 - Checks: `npm run lint && npm run typecheck && npm test`; e2e: `npm run build && npm run test:e2e`.

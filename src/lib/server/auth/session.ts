@@ -3,7 +3,6 @@ import { createHash, randomBytes } from "node:crypto";
 import { SESSION_COOKIE } from "@/lib/auth-cookie";
 import { prisma } from "../db";
 import { asUserId, type UserId } from "../user-id";
-import { adminPassword, credentialMatches, requireAdminPassword, sessionCredential } from "./password";
 
 export { SESSION_COOKIE };
 
@@ -28,9 +27,17 @@ export function sessionCookieOptions(expiresAt: Date) {
 
 export interface SessionState {
   id: string;
+  /** Whose data this session may touch. */
   userId: UserId;
+  createdAt: Date;
   expiresAt: Date;
+  /** Waiting for the PIN. Always false for a user without one. */
   locked: boolean;
+  /** Locked, and not opened with the PIN since signing in with Google (see `canResetPin`). */
+  lockedSinceSignIn: boolean;
+  /** The user has set an app-lock PIN. */
+  hasPin: boolean;
+  /** Minutes of inactivity before the app locks; 0 when it never does (no PIN, or turned off). */
   autoLockMinutes: number;
 }
 
@@ -38,55 +45,63 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+/**
+ * A new session for someone Google has just signed in. With an app-lock PIN
+ * it starts locked: signing out and in again is not a way around the PIN.
+ */
 export async function createSession(userId: UserId, userAgent: string | null) {
   const token = randomBytes(32).toString("base64url");
   const id = hashToken(token);
-  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS);
-  const credential = sessionCredential(id, requireAdminPassword());
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + SESSION_MAX_AGE_MS);
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { pinHash: true } });
   await prisma.session.create({
-    data: { id, userId, credential, expiresAt, userAgent: userAgent?.slice(0, 255) ?? null },
+    // Locked at the very moment it was created: that is how "not opened since signing in" is told apart.
+    data: { id, userId, createdAt: now, expiresAt, userAgent: userAgent?.slice(0, 255) ?? null, lockedAt: user.pinHash ? now : null },
   });
   return { token, expiresAt };
 }
 
 /**
- * Resolve a cookie token to a session. Expired sessions, and sessions created
- * with a different password, are deleted. A session idle for longer than the
- * user's auto-lock period becomes locked server-side, so closing the tab does
- * not bypass the lock.
+ * Resolve a cookie token to a session; expired sessions are deleted. With an
+ * app-lock PIN, a session idle for longer than the user's auto-lock period
+ * becomes locked server-side, so closing the tab does not bypass the lock.
  */
 export async function readSession(token: string | undefined | null): Promise<SessionState | null> {
   if (!token || token.length > 100) return null;
-  // Without a configured password nobody is signed in (sessions are kept, so
-  // restoring the same variable brings them back).
-  const password = adminPassword();
-  if (!password) return null;
 
   const id = hashToken(token);
   const session = await prisma.session.findUnique({
     where: { id },
-    include: { user: { select: { autoLockMinutes: true } } },
+    include: { user: { select: { autoLockMinutes: true, pinHash: true } } },
   });
   if (!session) return null;
 
   const now = Date.now();
-  if (
-    session.expiresAt.getTime() <= now ||
-    now - session.lastSeenAt.getTime() > SESSION_IDLE_TIMEOUT_MS ||
-    !credentialMatches(session.credential, id, password)
-  ) {
+  if (session.expiresAt.getTime() <= now || now - session.lastSeenAt.getTime() > SESSION_IDLE_TIMEOUT_MS) {
     await prisma.session.deleteMany({ where: { id } });
     return null;
   }
 
-  const autoLockMinutes = session.user.autoLockMinutes;
-  let locked = session.lockedAt !== null;
+  const hasPin = session.user.pinHash !== null;
+  const autoLockMinutes = hasPin ? session.user.autoLockMinutes : 0;
+  let locked = hasPin && session.lockedAt !== null;
+  const lockedSinceSignIn = locked && session.lockedAt!.getTime() === session.createdAt.getTime();
   if (!locked && autoLockMinutes > 0 && now - session.lastSeenAt.getTime() > autoLockMinutes * 60_000) {
     await prisma.session.update({ where: { id }, data: { lockedAt: new Date() } });
     locked = true;
   }
 
-  return { id, userId: asUserId(session.userId), expiresAt: session.expiresAt, locked, autoLockMinutes };
+  return {
+    id,
+    userId: asUserId(session.userId),
+    createdAt: session.createdAt,
+    expiresAt: session.expiresAt,
+    locked,
+    lockedSinceSignIn,
+    hasPin,
+    autoLockMinutes,
+  };
 }
 
 /** Record activity (throttled). Only called for unlocked sessions. */
@@ -102,7 +117,7 @@ export async function lockSession(id: string): Promise<void> {
 }
 
 export async function unlockSession(id: string): Promise<void> {
-  await prisma.session.update({ where: { id }, data: { lockedAt: null, lastSeenAt: new Date(), failedUnlocks: 0 } });
+  await prisma.session.updateMany({ where: { id }, data: { lockedAt: null, lastSeenAt: new Date() } });
 }
 
 export async function deleteSession(id: string): Promise<void> {

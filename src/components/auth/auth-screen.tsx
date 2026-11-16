@@ -28,7 +28,7 @@ export function AuthScreen({
         {footer && <div className="mt-6 text-center">{footer}</div>}
       </div>
       <p className="absolute inset-x-0 bottom-6 text-center text-caption text-text-tertiary">
-        Private ledger · Only you can open this
+        Your ledger is private · Only you can open it
       </p>
     </main>
   );
