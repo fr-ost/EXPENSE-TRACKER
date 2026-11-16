@@ -7,7 +7,7 @@ import { smsBalanceInput } from "@/lib/validation";
 const MAX_BYTES = 256 * 1024;
 
 /** Record the balances messages report: ones added earlier, and ones that only report a balance. */
-export const POST = authed(async ({ request }) => {
+export const POST = authed(async ({ request, userId }) => {
   const { items } = await readJson(request, smsBalanceInput, MAX_BYTES);
-  return json({ results: await saveSmsBalances(items, await getClock()) });
+  return json({ results: await saveSmsBalances(userId, items, await getClock(userId)) });
 });

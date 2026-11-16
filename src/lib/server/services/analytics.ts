@@ -6,6 +6,7 @@ import { EXPENSE_SCOPES } from "@/lib/domain";
 import { compareMoney, fromMinor, percentOf, subtractMoney, toMinor } from "@/lib/money";
 import type { AccountActivity, CategoryTotal, CurrencyAmount, DayPoint, MonthPoint, PeriodSummary, ScopeTotal } from "@/lib/types";
 import { prisma } from "../db";
+import type { UserId } from "../user-id";
 import { asConversion, ratesTable, type CurrencyBasis } from "./currency";
 import { money } from "./mappers";
 
@@ -18,6 +19,9 @@ import { money } from "./mappers";
  * converted at its rate (`fx`, see currency.ts) and rounded on its own, so
  * every breakdown adds up to its total. Currencies without a rate are left
  * out. A plain currency code counts just that currency.
+ *
+ * Every read is filtered by "userId": one user's figures never include
+ * another's rows.
  */
 
 const EXPENSES = Prisma.raw('"ExpenseEntry"');
@@ -28,7 +32,7 @@ function foreignAmounts(rows: Array<{ currency: string; amount: string }> | null
   return (rows ?? []).map((row) => ({ currency: row.currency, amount: money(row.amount) }));
 }
 
-export async function periodSummary(from: ISODate, to: ISODate, fx: CurrencyBasis): Promise<PeriodSummary> {
+export async function periodSummary(userId: UserId, from: ISODate, to: ISODate, fx: CurrencyBasis): Promise<PeriodSummary> {
   const { base } = asConversion(fx);
   const [row] = await prisma.$queryRaw<
     Array<{
@@ -46,17 +50,18 @@ export async function periodSummary(from: ISODate, to: ISODate, fx: CurrencyBasi
     income AS (
       SELECT e."currency"::text AS "currency", e."amount", ROUND(e."amount" * fx."rate", 2) AS "converted"
       FROM "IncomeEntry" e JOIN fx ON fx."currency" = e."currency"
-      WHERE e."date" BETWEEN ${from}::date AND ${to}::date
+      WHERE e."userId" = ${userId} AND e."date" BETWEEN ${from}::date AND ${to}::date
     ),
     expenses AS (
       SELECT e."currency"::text AS "currency", e."type", e."amount", ROUND(e."amount" * fx."rate", 2) AS "converted"
       FROM "ExpenseEntry" e JOIN fx ON fx."currency" = e."currency"
-      WHERE e."date" BETWEEN ${from}::date AND ${to}::date
+      WHERE e."userId" = ${userId} AND e."date" BETWEEN ${from}::date AND ${to}::date
     ),
     transfers AS (
       SELECT ROUND(t."amount" * fx."rate", 2) AS "converted"
       FROM "Transaction" t JOIN "Account" a ON a."id" = t."accountId" JOIN fx ON fx."currency" = a."currency"
-      WHERE t."type" = 'TRANSFER' AND NOT t."countAsExpense" AND t."date" BETWEEN ${from}::date AND ${to}::date
+      WHERE t."userId" = ${userId} AND t."type" = 'TRANSFER' AND NOT t."countAsExpense"
+        AND t."date" BETWEEN ${from}::date AND ${to}::date
     )
     SELECT
       (SELECT COALESCE(SUM("converted"), 0) FROM income)::text AS "income",
@@ -65,7 +70,7 @@ export async function periodSummary(from: ISODate, to: ISODate, fx: CurrencyBasi
       (SELECT COALESCE(SUM("converted"), 0) FROM transfers)::text AS "transfers",
       (SELECT COUNT(*) FROM transfers)::int AS "transferCount",
       (SELECT COALESCE(SUM(ROUND(l."amount" * fx."rate", 2)), 0) FROM "LedgerEntry" l JOIN fx ON fx."currency" = l."currency"
-        WHERE l."type" = 'ADJUSTMENT' AND l."date" BETWEEN ${from}::date AND ${to}::date)::text AS "adjustments",
+        WHERE l."userId" = ${userId} AND l."type" = 'ADJUSTMENT' AND l."date" BETWEEN ${from}::date AND ${to}::date)::text AS "adjustments",
       (SELECT json_agg(json_build_object('currency', f."currency", 'amount', f."amount"::text) ORDER BY f."currency")
         FROM (SELECT "currency", SUM("amount") AS "amount" FROM income WHERE "currency" <> ${base} GROUP BY "currency") f) AS "foreignIncome",
       (SELECT json_agg(json_build_object('currency', f."currency", 'amount', f."amount"::text) ORDER BY f."currency")
@@ -93,7 +98,7 @@ export async function periodSummary(from: ISODate, to: ISODate, fx: CurrencyBasi
   };
 }
 
-export async function monthlySeries(first: MonthKey, last: MonthKey, fx: CurrencyBasis): Promise<MonthPoint[]> {
+export async function monthlySeries(userId: UserId, first: MonthKey, last: MonthKey, fx: CurrencyBasis): Promise<MonthPoint[]> {
   const start = monthStart(first);
   const end = monthEnd(last);
   const rows = await prisma.$queryRaw<Array<{ month: string; income: string; expenses: string }>>`
@@ -105,12 +110,12 @@ export async function monthlySeries(first: MonthKey, last: MonthKey, fx: Currenc
     inc AS (
       SELECT to_char(e."date", 'YYYY-MM') AS "month", SUM(ROUND(e."amount" * fx."rate", 2)) AS "total"
       FROM "IncomeEntry" e JOIN fx ON fx."currency" = e."currency"
-      WHERE e."date" BETWEEN ${start}::date AND ${end}::date GROUP BY 1
+      WHERE e."userId" = ${userId} AND e."date" BETWEEN ${start}::date AND ${end}::date GROUP BY 1
     ),
     exp AS (
       SELECT to_char(e."date", 'YYYY-MM') AS "month", SUM(ROUND(e."amount" * fx."rate", 2)) AS "total"
       FROM "ExpenseEntry" e JOIN fx ON fx."currency" = e."currency"
-      WHERE e."date" BETWEEN ${start}::date AND ${end}::date GROUP BY 1
+      WHERE e."userId" = ${userId} AND e."date" BETWEEN ${start}::date AND ${end}::date GROUP BY 1
     )
     SELECT months."month", COALESCE(inc."total", 0)::text AS "income", COALESCE(exp."total", 0)::text AS "expenses"
     FROM months LEFT JOIN inc USING ("month") LEFT JOIN exp USING ("month")
@@ -131,6 +136,7 @@ export async function monthlySeries(first: MonthKey, last: MonthKey, fx: Currenc
 }
 
 export async function categoryTotals(
+  userId: UserId,
   from: ISODate,
   to: ISODate,
   fx: CurrencyBasis,
@@ -144,7 +150,7 @@ export async function categoryTotals(
     SELECT c."id" AS "categoryId", c."name", c."icon", c."color",
            SUM(ROUND(e."amount" * fx."rate", 2))::text AS "total", COUNT(*)::int AS "count"
     FROM ${source} e JOIN fx ON fx."currency" = e."currency" JOIN "Category" c ON c."id" = e."categoryId"
-    WHERE e."date" BETWEEN ${from}::date AND ${to}::date ${scopeFilter}
+    WHERE e."userId" = ${userId} AND e."date" BETWEEN ${from}::date AND ${to}::date ${scopeFilter}
     GROUP BY c."id" ORDER BY SUM(ROUND(e."amount" * fx."rate", 2)) DESC, c."name"`;
 
   const grand = rows.reduce((sum, r) => sum + toMinor(money(r.total)), 0n);
@@ -154,12 +160,12 @@ export async function categoryTotals(
   });
 }
 
-export async function scopeTotals(from: ISODate, to: ISODate, fx: CurrencyBasis): Promise<ScopeTotal[]> {
+export async function scopeTotals(userId: UserId, from: ISODate, to: ISODate, fx: CurrencyBasis): Promise<ScopeTotal[]> {
   const rows = await prisma.$queryRaw<Array<{ scope: ExpenseScope; total: string; count: number }>>`
     WITH ${ratesTable(fx)}
     SELECT e."scope"::text AS "scope", SUM(ROUND(e."amount" * fx."rate", 2))::text AS "total", COUNT(*)::int AS "count"
     FROM "ExpenseEntry" e JOIN fx ON fx."currency" = e."currency"
-    WHERE e."date" BETWEEN ${from}::date AND ${to}::date
+    WHERE e."userId" = ${userId} AND e."date" BETWEEN ${from}::date AND ${to}::date
     GROUP BY e."scope"`;
   const grand = rows.reduce((sum, r) => sum + toMinor(money(r.total)), 0n);
   return EXPENSE_SCOPES.map((scope) => {
@@ -170,14 +176,14 @@ export async function scopeTotals(from: ISODate, to: ISODate, fx: CurrencyBasis)
 }
 
 /** Spending per calendar day, including zero days. */
-export async function dailySpending(from: ISODate, to: ISODate, fx: CurrencyBasis): Promise<DayPoint[]> {
+export async function dailySpending(userId: UserId, from: ISODate, to: ISODate, fx: CurrencyBasis): Promise<DayPoint[]> {
   const rows = await prisma.$queryRaw<Array<{ date: string; total: string }>>`
     WITH ${ratesTable(fx)},
     days AS (SELECT d::date AS "date" FROM generate_series(${from}::date, ${to}::date, interval '1 day') AS d),
     spent AS (
       SELECT e."date", SUM(ROUND(e."amount" * fx."rate", 2)) AS "total"
       FROM "ExpenseEntry" e JOIN fx ON fx."currency" = e."currency"
-      WHERE e."date" BETWEEN ${from}::date AND ${to}::date
+      WHERE e."userId" = ${userId} AND e."date" BETWEEN ${from}::date AND ${to}::date
       GROUP BY e."date"
     )
     SELECT to_char(days."date", 'YYYY-MM-DD') AS "date", COALESCE(spent."total", 0)::text AS "total"
@@ -196,7 +202,7 @@ export function cumulative(points: DayPoint[]): DayPoint[] {
 }
 
 /** Opening balance, money in/out and closing balance per account for a period. */
-export async function accountActivity(from: ISODate, to: ISODate): Promise<AccountActivity[]> {
+export async function accountActivity(userId: UserId, from: ISODate, to: ISODate): Promise<AccountActivity[]> {
   const rows = await prisma.$queryRaw<
     Array<{
       id: string;
@@ -220,7 +226,8 @@ export async function accountActivity(from: ISODate, to: ISODate): Promise<Accou
       (a."openingBalance" + COALESCE(SUM(l."amount") FILTER (WHERE l."date" <= ${to}::date), 0))::text AS "closingBalance",
       COUNT(l."transactionId") FILTER (WHERE l."date" BETWEEN ${from}::date AND ${to}::date)::int AS "transactionCount"
     FROM "Account" a
-    LEFT JOIN "LedgerEntry" l ON l."accountId" = a."id"
+    LEFT JOIN "LedgerEntry" l ON l."userId" = ${userId} AND l."accountId" = a."id"
+    WHERE a."userId" = ${userId}
     GROUP BY a."id"
     HAVING a."openingDate" <= ${to}::date OR COUNT(l."transactionId") FILTER (WHERE l."date" <= ${to}::date) > 0
     ORDER BY a."isActive" DESC, a."sortOrder", a."createdAt"`;
@@ -245,15 +252,15 @@ export interface YearReport {
   highestSpendingMonth: MonthPoint | null;
 }
 
-export async function yearReport(year: number, fx: CurrencyBasis): Promise<YearReport> {
+export async function yearReport(userId: UserId, year: number, fx: CurrencyBasis): Promise<YearReport> {
   const from = `${year}-01-01`;
   const to = `${year}-12-31`;
   const [summary, months, scopes, categories, incomeCategories] = await Promise.all([
-    periodSummary(from, to, fx),
-    monthlySeries(`${year}-01`, `${year}-12`, fx),
-    scopeTotals(from, to, fx),
-    categoryTotals(from, to, fx, "EXPENSE"),
-    categoryTotals(from, to, fx, "INCOME"),
+    periodSummary(userId, from, to, fx),
+    monthlySeries(userId, `${year}-01`, `${year}-12`, fx),
+    scopeTotals(userId, from, to, fx),
+    categoryTotals(userId, from, to, fx, "EXPENSE"),
+    categoryTotals(userId, from, to, fx, "INCOME"),
   ]);
   const highestSpendingMonth = months.reduce<MonthPoint | null>(
     (best, m) => (toMinor(m.expenses) > 0n && (!best || compareMoney(m.expenses, best.expenses) > 0) ? m : best),
@@ -272,9 +279,10 @@ export async function yearReport(year: number, fx: CurrencyBasis): Promise<YearR
 }
 
 /** Earliest and latest transaction dates (for period pickers). */
-export async function ledgerRange(): Promise<{ first: ISODate | null; last: ISODate | null }> {
+export async function ledgerRange(userId: UserId): Promise<{ first: ISODate | null; last: ISODate | null }> {
   const [row] = await prisma.$queryRaw<Array<{ first: string | null; last: string | null }>>`
-    SELECT to_char(MIN("date"), 'YYYY-MM-DD') AS "first", to_char(MAX("date"), 'YYYY-MM-DD') AS "last" FROM "Transaction"`;
+    SELECT to_char(MIN("date"), 'YYYY-MM-DD') AS "first", to_char(MAX("date"), 'YYYY-MM-DD') AS "last"
+    FROM "Transaction" WHERE "userId" = ${userId}`;
   return row;
 }
 

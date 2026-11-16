@@ -5,6 +5,7 @@ import type { BalanceUpdateView, RecordedBalance } from "@/lib/types";
 import type { BalanceUpdateInput } from "@/lib/validation";
 import { prisma, type Tx } from "../db";
 import { invalid, notFound } from "../errors";
+import type { UserId } from "../user-id";
 import { requireCategory } from "./categories";
 import { money } from "./mappers";
 import { loggedTimeFor } from "./transactions";
@@ -22,6 +23,7 @@ import { loggedTimeFor } from "./transactions";
  * today) or the end of the day.
  */
 export async function recordedBalanceAt(
+  userId: UserId,
   accountId: string,
   date: ISODate,
   time: string | null,
@@ -33,12 +35,12 @@ export async function recordedBalanceAt(
     SELECT
       (a."openingBalance" + COALESCE((
         SELECT SUM(l."amount") FROM "LedgerEntry" l
-        WHERE l."accountId" = a."id"
+        WHERE l."userId" = ${userId} AND l."accountId" = a."id"
           AND (l."date" < ${date}::date OR (l."date" = ${date}::date AND l."at" <= ${at}))
       ), 0))::text AS "balance",
       (a."openingDate" > ${date}::date AND NOT EXISTS (
         SELECT 1 FROM "BalanceCheckpoint" c
-        WHERE c."accountId" = a."id"
+        WHERE c."userId" = ${userId} AND c."accountId" = a."id"
           AND (c."date" < ${date}::date
                OR (c."date" = ${date}::date AND COALESCE(c."time", c."loggedTime", '24:00')::text COLLATE "C" <= ${at}))
       )) AS "startingPoint",
@@ -53,14 +55,14 @@ export async function recordedBalanceAt(
         UNION ALL
         SELECT c."date", COALESCE(c."time", c."loggedTime", '24:00')::text COLLATE "C", 1, false
         FROM "BalanceCheckpoint" c
-        WHERE c."accountId" = a."id"
+        WHERE c."userId" = ${userId} AND c."accountId" = a."id"
           AND (c."date" > ${date}::date
                OR (c."date" = ${date}::date AND COALESCE(c."time", c."loggedTime", '24:00')::text COLLATE "C" > ${at}))
       ) x
       ORDER BY x."date", x."at", x."rank"
       LIMIT 1
     ) n ON true
-    WHERE a."id" = ${accountId}`;
+    WHERE a."userId" = ${userId} AND a."id" = ${accountId}`;
   if (!row) throw notFound("Account");
   return {
     balance: money(row.balance),
@@ -93,6 +95,7 @@ const CLOCK_SKEW_MINUTES = 5;
  * the date is today (to the second), otherwise the end of that day.
  */
 export async function updateBalance(
+  userId: UserId,
   accountId: string,
   input: BalanceUpdateInput,
   today: ISODate,
@@ -109,13 +112,14 @@ export async function updateBalance(
   return prisma.$transaction(async (tx) => {
     // Serialises with transaction writes on this account (they take FOR SHARE).
     const [account] = await tx.$queryRaw<Array<{ id: string }>>`
-      SELECT "id" FROM "Account" WHERE "id" = ${accountId} FOR UPDATE`;
+      SELECT "id" FROM "Account" WHERE "userId" = ${userId} AND "id" = ${accountId} FOR UPDATE`;
     if (!account) throw notFound("Account");
 
-    const before = await recordedBalanceAt(accountId, input.date, input.time, clock, tx);
+    const before = await recordedBalanceAt(userId, accountId, input.date, input.time, clock, tx);
     const difference = subtractMoney(input.balance, before.balance);
     const checkpoint = await tx.balanceCheckpoint.create({
       data: {
+        userId,
         accountId,
         date: toDbDate(input.date),
         time: input.time,
@@ -135,9 +139,10 @@ export async function updateBalance(
       if (!input.categoryId) {
         throw invalid("Choose a category.", { categoryId: `Choose the ${type === "EXPENSE" ? "expense" : "income"} category.` });
       }
-      const category = await requireCategory(tx, input.categoryId, type);
+      const category = await requireCategory(tx, userId, input.categoryId, type);
       const created = await tx.transaction.create({
         data: {
+          userId,
           type,
           amount: absMoney(difference),
           date: toDbDate(input.date),
@@ -167,7 +172,7 @@ function shownTime(row: { time: string | null; loggedTime: string | null; source
 }
 
 /** Balance updates for an account, newest first, with what each one replaced. */
-export async function listBalanceUpdates(accountId: string, limit = 20): Promise<BalanceUpdateView[]> {
+export async function listBalanceUpdates(userId: UserId, accountId: string, limit = 20): Promise<BalanceUpdateView[]> {
   const rows = await prisma.$queryRaw<
     Array<{
       id: string;
@@ -188,8 +193,9 @@ export async function listBalanceUpdates(accountId: string, limit = 20): Promise
            bc."amount"::text AS "correction", bc."kind"
     FROM "BalanceCheckpoint" c
     -- Filtering the view by account lets the database work through that account's history only.
-    LEFT JOIN (SELECT * FROM "BalanceCorrection" WHERE "accountId" = ${accountId}) bc ON bc."checkpointId" = c."id"
-    WHERE c."accountId" = ${accountId}
+    LEFT JOIN (SELECT * FROM "BalanceCorrection" WHERE "userId" = ${userId} AND "accountId" = ${accountId}) bc
+      ON bc."checkpointId" = c."id"
+    WHERE c."userId" = ${userId} AND c."accountId" = ${accountId}
     ORDER BY c."date" DESC, COALESCE(c."time", c."loggedTime", '24:00')::text COLLATE "C" DESC, c."createdAt" DESC
     LIMIT ${limit}`;
   return rows.map((row) => {
@@ -210,7 +216,7 @@ export async function listBalanceUpdates(accountId: string, limit = 20): Promise
   });
 }
 
-export async function deleteBalanceUpdate(accountId: string, checkpointId: string) {
-  const result = await prisma.balanceCheckpoint.deleteMany({ where: { id: checkpointId, accountId } });
+export async function deleteBalanceUpdate(userId: UserId, accountId: string, checkpointId: string) {
+  const result = await prisma.balanceCheckpoint.deleteMany({ where: { id: checkpointId, userId, accountId } });
   if (result.count === 0) throw notFound("Balance update");
 }

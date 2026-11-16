@@ -5,15 +5,17 @@ import { accountInput } from "@/lib/validation";
 
 type Params = { id: string };
 
-export const GET = authed<Params>(async ({ params }) => json({ account: await getAccount(params.id, await getToday()) }));
+export const GET = authed<Params>(async ({ params, userId }) =>
+  json({ account: await getAccount(userId, params.id, await getToday(userId)) }),
+);
 
-export const PUT = authed<Params>(async ({ request, params }) => {
+export const PUT = authed<Params>(async ({ request, params, userId }) => {
   const input = await readJson(request, accountInput);
-  await updateAccount(params.id, input, await getToday());
+  await updateAccount(userId, params.id, input, await getToday(userId));
   return json({ id: params.id });
 });
 
-export const DELETE = authed<Params>(async ({ params }) => {
-  await deleteAccount(params.id);
+export const DELETE = authed<Params>(async ({ params, userId }) => {
+  await deleteAccount(userId, params.id);
   return json({ ok: true });
 });

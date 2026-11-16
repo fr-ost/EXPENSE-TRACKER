@@ -6,7 +6,7 @@ import { listRecurring, upcomingOccurrences } from "@/lib/server/services/recurr
 export const metadata: Metadata = { title: "Recurring" };
 
 export default async function RecurringPage() {
-  const { today } = await loadPageContext();
-  const rules = await listRecurring();
+  const { userId, today } = await loadPageContext();
+  const rules = await listRecurring(userId);
   return <RecurringView rules={rules} upcoming={upcomingOccurrences(rules, today)} today={today} />;
 }

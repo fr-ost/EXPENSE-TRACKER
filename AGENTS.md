@@ -10,13 +10,25 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Project notes (Hisab)
 
+- Every row belongs to one user (`userId`), and nobody may ever see or change
+  another user's rows. Every service takes a `UserId` first (branded; it comes
+  from the session via `authed()` / `loadPageContext()`, never from request
+  input) and puts it in every query: `where: { id, userId }` in Prisma,
+  `x."userId" = ${userId}` for each table or view read in raw SQL. Names and
+  keys are unique per user; references between rows are composite foreign keys
+  on `(userId, id)`, so the database refuses one user's entry on another's
+  account or category. Nothing cascades from `User`: `deleteUserData` removes
+  a user's rows in order. `tests/unit/user-scope.test.ts` (reads the source)
+  and `tests/integration/isolation.test.ts` (two users) guard this — extend
+  the second with every new service.
 - The transaction ledger is the only source of truth for balances. Never add a
   stored balance column; derive from the `LedgerEntry` view.
 - Known balances are anchors: the opening balance and each balance update
   (`BalanceCheckpoint`, manual or from an SMS). The `BalanceCorrection` view
   derives the correction that makes each hold, so entries dated before one
   never change the balance after it. Filter that view (and `LedgerEntry`) by
-  `accountId` for one account: it is then computed for that account only.
+  `userId`, and by `accountId` for one account: both are in every PARTITION
+  BY, so it is then computed for that user's (that account's) rows only.
 - Order within a day is (date, `at`, rank, createdAt): `at` is the time, else
   the hidden `loggedTime` ("HH:MM:SS", set only when an untimed entry is
   recorded on its own date, via `loggedTimeFor` and the server clock), else
@@ -40,16 +52,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   (`User.incomeCurrency` / `expenseCurrency`, null = main; `defaultAccountId`)
   until an account is picked by hand.
 - Transaction entry rules live in `resolveEntry` (`src/lib/server/services/transactions.ts`).
-- Every page calls `loadPageContext()`; every API handler is wrapped in `authed()`.
+- Every page calls `loadPageContext()`; every API handler is wrapped in
+  `authed()`. Both hand over the signed-in `userId` to pass to the services.
 - The password is the `ADMIN_PASSWORD` env var (plain text, compared in
   constant time); nothing about it is stored. Sessions carry an HMAC keyed
   with it (`Session.credential`), so changing it signs everyone out. The owner
-  row is created on first sign-in (`ensureOwner`).
+  (the first user) is created on first sign-in (`ensureOwner`), with the
+  starter categories every new user gets (`DEFAULT_CATEGORIES`).
 - SMS import: the parser (`src/lib/sms/parse.ts`) is pure and client-side;
   account/category suggestions live in `src/components/sms/sms-suggest.ts`;
   the server (`src/lib/server/services/sms.ts`) re-validates through
   `resolveEntry`, keys each message `sms:<fingerprint>:<part>` (0 transaction,
-  1 fee, b its balance update) and flags likely duplicates via the
+  1 fee, b its balance update; unique per user) and flags likely duplicates via the
   `TransactionLeg` view. An SMS balance replaces the account's balance
   (`saveSmsCheckpoint`): the newest message — none sent later, no manual
   update for a later moment — is anchored at the moment it is read, so the

@@ -4,10 +4,11 @@ import type { SessionInfo } from "@/lib/types";
 import type { SettingsInput } from "@/lib/validation";
 import { prisma } from "../db";
 import { invalid } from "../errors";
+import type { UserId } from "../user-id";
 
-export async function updateSettings(input: SettingsInput) {
+export async function updateSettings(userId: UserId, input: SettingsInput) {
   if (!isValidTimeZone(input.timezone)) throw invalid("Choose a valid timezone.", { timezone: "Unknown timezone." });
-  await prisma.user.updateMany({ data: input });
+  await prisma.user.update({ where: { id: userId }, data: input, select: { id: true } });
 }
 
 function ago(date: Date): string {
@@ -44,9 +45,10 @@ function describeUserAgent(userAgent: string | null): string {
   return os ? `${browser} on ${os}` : browser;
 }
 
-export async function listSessions(currentId: string): Promise<SessionInfo[]> {
+/** The user's own signed-in devices. */
+export async function listSessions(userId: UserId, currentId: string): Promise<SessionInfo[]> {
   const sessions = await prisma.session.findMany({
-    where: { expiresAt: { gt: new Date() } },
+    where: { userId, expiresAt: { gt: new Date() } },
     orderBy: { lastSeenAt: "desc" },
     select: { id: true, createdAt: true, lastSeenAt: true, userAgent: true },
   });

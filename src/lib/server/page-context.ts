@@ -4,9 +4,12 @@ import { requirePageSession } from "./auth/guard";
 import type { SessionState } from "./auth/session";
 import { ensureRecurringPosted } from "./services/recurring";
 import { getSettings, type AppSettings } from "./settings";
+import type { UserId } from "./user-id";
 
 export interface PageContext {
   session: SessionState;
+  /** Whose data this page shows: pass it to every service call. */
+  userId: UserId;
   settings: AppSettings;
   today: ISODate;
 }
@@ -18,8 +21,9 @@ export interface PageContext {
  */
 export async function loadPageContext(): Promise<PageContext> {
   const session = await requirePageSession();
-  const settings = await getSettings();
+  const userId = session.userId;
+  const settings = await getSettings(userId);
   const today = todayInTimeZone(settings.timezone);
-  await ensureRecurringPosted(today);
-  return { session, settings, today };
+  await ensureRecurringPosted(userId, today);
+  return { session, userId, settings, today };
 }

@@ -27,13 +27,13 @@ import { recentTransactions } from "@/lib/server/services/transactions";
 export const metadata: Metadata = { title: "Overview" };
 
 export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
-  const { settings, today } = await loadPageContext();
+  const { userId, settings, today } = await loadPageContext();
   const currentMonth = monthKeyOf(today);
   const requested = (await searchParams).month;
   const month = typeof requested === "string" && isValidMonthKey(requested) && requested <= currentMonth ? requested : currentMonth;
   const previousMonth = shiftMonth(month, -1);
   // Every total is in the main currency; other currencies count at their rate.
-  const { conversion: fx, foreign } = await getCurrencies(settings.baseCurrency);
+  const { conversion: fx, foreign } = await getCurrencies(userId, settings.baseCurrency);
 
   const from = monthStart(month);
   const to = monthEnd(month);
@@ -41,16 +41,16 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const paceTo = minDate(to, today);
 
   const [accounts, summary, previousSummary, series, categories, scopes, pace, previousPace, budgets, recent] = await Promise.all([
-    listAccounts(today),
-    periodSummary(from, to, fx),
-    periodSummary(monthStart(previousMonth), monthEnd(previousMonth), fx),
-    monthlySeries(shiftMonth(month, -11), month, fx),
-    categoryTotals(from, to, fx),
-    scopeTotals(from, to, fx),
-    from <= paceTo ? dailySpending(from, paceTo, fx) : Promise.resolve([]),
-    dailySpending(monthStart(previousMonth), monthEnd(previousMonth), fx),
-    budgetsForMonth(month, fx),
-    recentTransactions(6, today),
+    listAccounts(userId, today),
+    periodSummary(userId, from, to, fx),
+    periodSummary(userId, monthStart(previousMonth), monthEnd(previousMonth), fx),
+    monthlySeries(userId, shiftMonth(month, -11), month, fx),
+    categoryTotals(userId, from, to, fx),
+    scopeTotals(userId, from, to, fx),
+    from <= paceTo ? dailySpending(userId, from, paceTo, fx) : Promise.resolve([]),
+    dailySpending(userId, monthStart(previousMonth), monthEnd(previousMonth), fx),
+    budgetsForMonth(userId, month, fx),
+    recentTransactions(userId, 6, today),
   ]);
 
   const hello = <Greeting name={settings.displayName} timeZone={settings.timezone} initial={greeting(settings.timezone)} />;

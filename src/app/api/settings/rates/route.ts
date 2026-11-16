@@ -5,9 +5,9 @@ import { normalizeRate } from "@/lib/money";
 import { rateInput } from "@/lib/validation";
 
 /** Your own rate for a currency, or `rate: null` to use the latest conversion again. */
-export const PUT = authed(async ({ request }) => {
+export const PUT = authed(async ({ request, userId }) => {
   const input = await readJson(request, rateInput);
-  const settings = await getSettings();
-  await setManualRate(settings.baseCurrency, input.currency, input.rate === null ? null : normalizeRate(input.rate));
+  const settings = await getSettings(userId);
+  await setManualRate(userId, settings.baseCurrency, input.currency, input.rate === null ? null : normalizeRate(input.rate));
   return json({ ok: true });
 });

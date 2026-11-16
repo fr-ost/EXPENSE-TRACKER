@@ -4,13 +4,13 @@ import { categoryInput } from "@/lib/validation";
 
 type Params = { id: string };
 
-export const PUT = authed<Params>(async ({ request, params }) => {
+export const PUT = authed<Params>(async ({ request, params, userId }) => {
   const input = await readJson(request, categoryInput);
-  await updateCategory(params.id, input);
+  await updateCategory(userId, params.id, input);
   return json({ id: params.id });
 });
 
-export const DELETE = authed<Params>(async ({ params }) => {
-  await deleteCategory(params.id);
+export const DELETE = authed<Params>(async ({ params, userId }) => {
+  await deleteCategory(userId, params.id);
   return json({ ok: true });
 });

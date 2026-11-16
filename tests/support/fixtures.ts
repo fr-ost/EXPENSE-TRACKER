@@ -1,18 +1,31 @@
 import { prisma } from "@/lib/server/db";
 import { createAccount } from "@/lib/server/services/accounts";
+import { createUser } from "@/lib/server/services/users";
+import type { UserId } from "@/lib/server/user-id";
 import type { AccountInput } from "@/lib/validation";
 
-/** Wipe financial data; keeps the default categories from the migration. */
-export async function resetData() {
-  await prisma.$executeRawUnsafe(
-    'TRUNCATE "Transaction", "ScopeBudget", "ExchangeRate", "RecurringTransaction", "Account", "Session", "LoginAttempt" CASCADE',
-  );
-  await prisma.category.deleteMany({ where: { name: { startsWith: "Test " } } });
-  await prisma.category.updateMany({ data: { isArchived: false } });
+/** The user the tests act as: a new one, with the starter categories, after every `resetData()`. */
+export let me: UserId;
+
+/** A user with the starter categories. */
+export function makeUser(displayName = "Test user"): Promise<UserId> {
+  return prisma.$transaction((tx) => createUser(tx, { displayName }));
 }
 
-export async function makeAccount(overrides: Partial<AccountInput> & { name: string }) {
-  const account = await createAccount({
+/** Wipe everything, every user included. */
+export async function wipeDatabase(): Promise<void> {
+  await prisma.$executeRawUnsafe('TRUNCATE "User", "LoginAttempt" CASCADE');
+}
+
+/** Wipe everything and start over as a new user. */
+export async function resetData(): Promise<UserId> {
+  await wipeDatabase();
+  me = await makeUser();
+  return me;
+}
+
+export async function makeAccount(overrides: Partial<AccountInput> & { name: string }, userId: UserId = me) {
+  const account = await createAccount(userId, {
     type: "CASH",
     currency: "BDT",
     openingBalance: "0",
@@ -25,7 +38,7 @@ export async function makeAccount(overrides: Partial<AccountInput> & { name: str
   return account.id;
 }
 
-export async function categoryId(kind: "EXPENSE" | "INCOME", name: string) {
-  const category = await prisma.category.findFirstOrThrow({ where: { kind, name }, select: { id: true } });
+export async function categoryId(kind: "EXPENSE" | "INCOME", name: string, userId: UserId = me) {
+  const category = await prisma.category.findFirstOrThrow({ where: { userId, kind, name }, select: { id: true } });
   return category.id;
 }

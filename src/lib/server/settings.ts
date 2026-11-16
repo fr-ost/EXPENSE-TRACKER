@@ -3,7 +3,8 @@ import { cache } from "react";
 import { timeInTimeZone, todayInTimeZone, type ISODate } from "@/lib/dates";
 import { OWNER_NAME, type NumberFormat } from "@/lib/domain";
 import { prisma } from "./db";
-import { isUniqueViolation } from "./services/mappers";
+import { createUser } from "./services/users";
+import { asUserId, type UserId } from "./user-id";
 
 export interface AppSettings {
   displayName: string;
@@ -26,39 +27,38 @@ const settingsSelect = {
   expenseCurrency: true,
 } as const;
 
+/** Serialises the first sign-ins, so they create one owner between them. */
+const OWNER_LOCK = 7_215_001;
+
 /**
- * The owner's row, created on first use with default preferences (all
- * editable in Settings). There is no sign-up: this is the only row that can
- * ever exist, enforced by the database.
+ * The owner: whoever the password signs in. Created on first use with default
+ * preferences and the starter categories (all editable in Settings).
  */
-export async function ensureOwner(): Promise<{ id: string }> {
-  const existing = await prisma.user.findFirst({ select: { id: true } });
-  if (existing) return existing;
-  try {
-    return await prisma.user.create({ data: { singleton: true, displayName: OWNER_NAME }, select: { id: true } });
-  } catch (error) {
-    // Another request created it at the same moment.
-    if (isUniqueViolation(error)) return prisma.user.findFirstOrThrow({ select: { id: true } });
-    throw error;
-  }
+export async function ensureOwner(): Promise<{ id: UserId }> {
+  const first = (client: Pick<typeof prisma, "user">) =>
+    client.user.findFirst({ orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true } });
+  const existing = await first(prisma);
+  if (existing) return { id: asUserId(existing.id) };
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${OWNER_LOCK})`;
+    const created = await first(tx);
+    return { id: created ? asUserId(created.id) : await createUser(tx, { displayName: OWNER_NAME }) };
+  });
 }
 
-/** The owner's preferences (memoised per request). */
-export const getSettings = cache(async (): Promise<AppSettings> => {
-  const user = await prisma.user.findFirst({ select: settingsSelect });
-  if (user) return user;
-  await ensureOwner();
-  return prisma.user.findFirstOrThrow({ select: settingsSelect });
-});
+/** A user's preferences (memoised per request). */
+export const getSettings = cache(
+  (userId: UserId): Promise<AppSettings> => prisma.user.findUniqueOrThrow({ where: { id: userId }, select: settingsSelect }),
+);
 
-export async function getToday(): Promise<ISODate> {
-  const settings = await getSettings();
+export async function getToday(userId: UserId): Promise<ISODate> {
+  const settings = await getSettings(userId);
   return todayInTimeZone(settings.timezone);
 }
 
-/** The owner's local date and time of day (to the second), read together. */
-export async function getClock(): Promise<{ today: ISODate; time: string }> {
-  const settings = await getSettings();
+/** The user's local date and time of day (to the second), read together. */
+export async function getClock(userId: UserId): Promise<{ today: ISODate; time: string }> {
+  const settings = await getSettings(userId);
   const now = new Date();
   return { today: todayInTimeZone(settings.timezone, now), time: timeInTimeZone(settings.timezone, now, true) };
 }

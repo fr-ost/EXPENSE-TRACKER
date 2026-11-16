@@ -6,6 +6,7 @@ import { convertMoney, fromMinor, isRate, normalizeRate, toMinor, type Rate } fr
 import type { AccountSummary, BalanceTotals, ForeignCurrency } from "@/lib/types";
 import { prisma } from "../db";
 import { invalid } from "../errors";
+import type { UserId } from "../user-id";
 
 /**
  * How amounts become the main currency (`base`): `rates` holds main-currency
@@ -45,7 +46,7 @@ export interface Currencies {
  * The rate of the latest transfer between an account in each other currency
  * and one in the main currency — what you actually got when you converted.
  */
-async function latestConversions(base: string): Promise<Map<string, { rate: Rate; date: ISODate }>> {
+async function latestConversions(userId: UserId, base: string): Promise<Map<string, { rate: Rate; date: ISODate }>> {
   const rows = await prisma.$queryRaw<Array<{ currency: string; rate: string; date: string }>>`
     SELECT DISTINCT ON (c."currency") c."currency", ROUND(c."rate", 6)::text AS "rate", to_char(c."date", 'YYYY-MM-DD') AS "date"
     FROM (
@@ -53,13 +54,15 @@ async function latestConversions(base: string): Promise<Map<string, { rate: Rate
       FROM "Transaction" t
       JOIN "Account" src ON src."id" = t."accountId"
       JOIN "Account" dst ON dst."id" = t."toAccountId"
-      WHERE t."type" = 'TRANSFER' AND t."toAmount" IS NOT NULL AND dst."currency" = ${base} AND src."currency" <> ${base}
+      WHERE t."userId" = ${userId} AND t."type" = 'TRANSFER' AND t."toAmount" IS NOT NULL
+        AND dst."currency" = ${base} AND src."currency" <> ${base}
       UNION ALL
       SELECT dst."currency"::text, t."amount" / t."toAmount", t."date", t."createdAt"
       FROM "Transaction" t
       JOIN "Account" src ON src."id" = t."accountId"
       JOIN "Account" dst ON dst."id" = t."toAccountId"
-      WHERE t."type" = 'TRANSFER' AND t."toAmount" IS NOT NULL AND src."currency" = ${base} AND dst."currency" <> ${base}
+      WHERE t."userId" = ${userId} AND t."type" = 'TRANSFER' AND t."toAmount" IS NOT NULL
+        AND src."currency" = ${base} AND dst."currency" <> ${base}
     ) c
     ORDER BY c."currency", c."date" DESC, c."createdAt" DESC`;
   return new Map(
@@ -68,11 +71,11 @@ async function latestConversions(base: string): Promise<Map<string, { rate: Rate
 }
 
 /** The other currencies your accounts use, and the rate each converts at. */
-export async function loadCurrencies(base: string): Promise<Currencies> {
+export async function loadCurrencies(userId: UserId, base: string): Promise<Currencies> {
   const [accounts, manual, conversions] = await Promise.all([
-    prisma.account.findMany({ distinct: ["currency"], select: { currency: true }, orderBy: { currency: "asc" } }),
-    prisma.exchangeRate.findMany({ where: { base }, select: { currency: true, rate: true } }),
-    latestConversions(base),
+    prisma.account.findMany({ where: { userId }, distinct: ["currency"], select: { currency: true }, orderBy: { currency: "asc" } }),
+    prisma.exchangeRate.findMany({ where: { userId, base }, select: { currency: true, rate: true } }),
+    latestConversions(userId, base),
   ]);
   const manualRates = new Map(manual.map((m) => [m.currency, normalizeRate(m.rate.toFixed(6))]));
 
@@ -95,15 +98,15 @@ export async function loadCurrencies(base: string): Promise<Currencies> {
 export const getCurrencies = cache(loadCurrencies);
 
 /** Set your own rate for a currency (null: use the latest conversion again). */
-export async function setManualRate(base: string, currency: string, rate: Rate | null) {
+export async function setManualRate(userId: UserId, base: string, currency: string, rate: Rate | null) {
   if (currency === base) throw invalid("The main currency doesn't need a rate.", { currency: "Choose another currency." });
   if (rate === null) {
-    await prisma.exchangeRate.deleteMany({ where: { base, currency } });
+    await prisma.exchangeRate.deleteMany({ where: { userId, base, currency } });
     return;
   }
   await prisma.exchangeRate.upsert({
-    where: { base_currency: { base, currency } },
-    create: { base, currency, rate },
+    where: { userId_base_currency: { userId, base, currency } },
+    create: { userId, base, currency, rate },
     update: { rate },
   });
 }

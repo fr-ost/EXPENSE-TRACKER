@@ -22,11 +22,11 @@ function timezones(current: string): string[] {
 }
 
 export default async function SettingsPage() {
-  const { settings, session } = await loadPageContext();
+  const { userId, settings, session } = await loadPageContext();
   const [categories, sessions, currencies] = await Promise.all([
-    listCategories(),
-    listSessions(session.id),
-    getCurrencies(settings.baseCurrency),
+    listCategories(userId),
+    listSessions(userId, session.id),
+    getCurrencies(userId, settings.baseCurrency),
   ]);
 
   return (

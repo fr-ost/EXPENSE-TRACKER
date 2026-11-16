@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "../db";
 import { AppError, tooManyRequests } from "../errors";
 import { ensureOwner } from "../settings";
+import type { UserId } from "../user-id";
 import { passwordMatches, requireAdminPassword } from "./password";
 import {
   beginPasswordAttempt,
@@ -15,7 +16,7 @@ import {
  * success; throws a 401/429/503 AppError otherwise. The error never reveals
  * anything beyond "incorrect".
  */
-export async function checkLoginPassword(ip: string, password: string): Promise<string> {
+export async function checkLoginPassword(ip: string, password: string): Promise<UserId> {
   const expected = requireAdminPassword();
   const limit = await checkPasswordAttempt(ip);
   if (!limit.allowed) {

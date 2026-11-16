@@ -6,8 +6,8 @@ import { smsImportInput } from "@/lib/validation";
 /** Up to 50 messages with their original text; well above the usual body cap. */
 const MAX_IMPORT_BYTES = 512 * 1024;
 
-export const POST = authed(async ({ request }) => {
+export const POST = authed(async ({ request, userId }) => {
   const input = await readJson(request, smsImportInput, MAX_IMPORT_BYTES);
-  const { today, time } = await getClock();
-  return json({ results: await importSms(input, today, time) });
+  const { today, time } = await getClock(userId);
+  return json({ results: await importSms(userId, input, today, time) });
 });

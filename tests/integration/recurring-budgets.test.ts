@@ -14,7 +14,7 @@ import {
 } from "@/lib/server/services/recurring";
 import { createTransaction } from "@/lib/server/services/transactions";
 import type { RecurringInput } from "@/lib/validation";
-import { categoryId, makeAccount, resetData } from "../support/fixtures";
+import { categoryId, makeAccount, me, resetData } from "../support/fixtures";
 
 describe("recurring schedule maths", () => {
   it("clamps month ends without drifting", () => {
@@ -59,75 +59,75 @@ describe("recurring posting", () => {
   });
 
   it("does not post the past unless asked to back-fill", async () => {
-    await createRecurring(rent, { today: "2026-09-28", backfill: false });
+    await createRecurring(me, rent, { today: "2026-09-28", backfill: false });
     expect(await prisma.transaction.count()).toBe(0);
-    const [rule] = await listRecurring();
+    const [rule] = await listRecurring(me);
     expect(rule.nextOccurrence).toBe("2026-10-03");
   });
 
   it("back-fills from a past start date", async () => {
-    await createRecurring(rent, { today: "2026-09-28", backfill: true });
+    await createRecurring(me, rent, { today: "2026-09-28", backfill: true });
     const dates = (await prisma.transaction.findMany({ orderBy: { date: "asc" } })).map((t) => t.date.toISOString().slice(0, 10));
     expect(dates).toEqual(["2026-06-03", "2026-07-03", "2026-08-03", "2026-09-03"]);
-    expect((await getAccount(bank, "2026-09-28")).balance).toBe(String(100000 - 4 * 22000) + ".00");
+    expect((await getAccount(me, bank, "2026-09-28")).balance).toBe(String(100000 - 4 * 22000) + ".00");
   });
 
   it("posts due occurrences exactly once, even when runs overlap", async () => {
-    await createRecurring({ ...rent, startDate: "2026-10-03" }, { today: "2026-09-28", backfill: false });
+    await createRecurring(me, { ...rent, startDate: "2026-10-03" }, { today: "2026-09-28", backfill: false });
     expect(await prisma.transaction.count()).toBe(0);
 
-    await Promise.all([postAllDue("2026-12-05"), postAllDue("2026-12-05"), postAllDue("2026-12-05")]);
-    await postAllDue("2026-12-05");
+    await Promise.all([postAllDue(me, "2026-12-05"), postAllDue(me, "2026-12-05"), postAllDue(me, "2026-12-05")]);
+    await postAllDue(me, "2026-12-05");
     expect(await prisma.transaction.count()).toBe(3); // Oct, Nov, Dec
-    const [rule] = await listRecurring();
+    const [rule] = await listRecurring(me);
     expect(rule.nextOccurrence).toBe("2027-01-03");
     expect(rule.postedCount).toBe(3);
   });
 
   it("stops at the end date", async () => {
-    await createRecurring({ ...rent, endDate: "2026-08-15" }, { today: "2026-09-28", backfill: true });
+    await createRecurring(me, { ...rent, endDate: "2026-08-15" }, { today: "2026-09-28", backfill: true });
     expect(await prisma.transaction.count()).toBe(3);
-    const [rule] = await listRecurring();
+    const [rule] = await listRecurring(me);
     expect(rule.nextOccurrence).toBeNull();
   });
 
   it("can skip the next occurrence", async () => {
-    await createRecurring({ ...rent, startDate: "2026-10-03" }, { today: "2026-09-28", backfill: false });
-    const [rule] = await listRecurring();
-    await skipNextOccurrence(rule.id);
-    await postAllDue("2026-11-10");
+    await createRecurring(me, { ...rent, startDate: "2026-10-03" }, { today: "2026-09-28", backfill: false });
+    const [rule] = await listRecurring(me);
+    await skipNextOccurrence(me, rule.id);
+    await postAllDue(me, "2026-11-10");
     const dates = (await prisma.transaction.findMany()).map((t) => t.date.toISOString().slice(0, 10));
     expect(dates).toEqual(["2026-11-03"]);
   });
 
   it("does not re-post the past when the schedule is edited", async () => {
-    await createRecurring(rent, { today: "2026-09-28", backfill: true });
-    const [rule] = await listRecurring();
-    await updateRecurring(rule.id, { ...rent, startDate: "2026-06-10" }, "2026-09-28");
-    await postAllDue("2026-09-28");
+    await createRecurring(me, rent, { today: "2026-09-28", backfill: true });
+    const [rule] = await listRecurring(me);
+    await updateRecurring(me, rule.id, { ...rent, startDate: "2026-06-10" }, "2026-09-28");
+    await postAllDue(me, "2026-09-28");
     expect(await prisma.transaction.count()).toBe(4);
-    const [updated] = await listRecurring();
+    const [updated] = await listRecurring(me);
     expect(updated.nextOccurrence).toBe("2026-10-10");
   });
 
   it("skips occurrences missed while paused", async () => {
-    await createRecurring({ ...rent, startDate: "2026-10-03" }, { today: "2026-09-28", backfill: false });
-    const [rule] = await listRecurring();
-    await setRecurringActive(rule.id, false, "2026-09-28");
-    await postAllDue("2026-12-31");
+    await createRecurring(me, { ...rent, startDate: "2026-10-03" }, { today: "2026-09-28", backfill: false });
+    const [rule] = await listRecurring(me);
+    await setRecurringActive(me, rule.id, false, "2026-09-28");
+    await postAllDue(me, "2026-12-31");
     expect(await prisma.transaction.count()).toBe(0);
-    await setRecurringActive(rule.id, true, "2026-12-31");
+    await setRecurringActive(me, rule.id, true, "2026-12-31");
     expect(await prisma.transaction.count()).toBe(0);
-    const [resumed] = await listRecurring();
+    const [resumed] = await listRecurring(me);
     expect(resumed.nextOccurrence).toBe("2027-01-03");
   });
 
   it("pauses a rule whose account was deactivated instead of posting", async () => {
-    await createRecurring({ ...rent, startDate: "2026-10-03" }, { today: "2026-09-28", backfill: false });
-    await setAccountActive(bank, false);
-    await postAllDue("2026-10-05");
+    await createRecurring(me, { ...rent, startDate: "2026-10-03" }, { today: "2026-09-28", backfill: false });
+    await setAccountActive(me, bank, false);
+    await postAllDue(me, "2026-10-05");
     expect(await prisma.transaction.count()).toBe(0);
-    const [rule] = await listRecurring();
+    const [rule] = await listRecurring(me);
     expect(rule.isActive).toBe(false);
   });
 });
@@ -149,26 +149,26 @@ describe("budgets", () => {
   });
 
   const spend = (category: string, amount: string, date: string, scope: "PERSONAL" | "FAMILY" = "PERSONAL", accountId = cash) =>
-    createTransaction(
+    createTransaction(me, 
       { type: "EXPENSE", accountId, categoryId: category, amount, date, scope, description: "", notes: null },
       { today: "2026-12-31" },
     );
-  const line = async (month: string, scope: "PERSONAL" | "FAMILY", fx: Parameters<typeof budgetsForMonth>[1] = "BDT") =>
-    (await budgetsForMonth(month, fx)).lines.find((l) => l.scope === scope)!;
+  const line = async (month: string, scope: "PERSONAL" | "FAMILY", fx: Parameters<typeof budgetsForMonth>[2] = "BDT") =>
+    (await budgetsForMonth(me, month, fx)).lines.find((l) => l.scope === scope)!;
 
   it("has a Personal and a Family budget, applied from their month onward without rewriting history", async () => {
-    expect((await budgetsForMonth("2026-09", "BDT")).lines.map((l) => [l.scope, l.budget, l.status])).toEqual([
+    expect((await budgetsForMonth(me, "2026-09", "BDT")).lines.map((l) => [l.scope, l.budget, l.status])).toEqual([
       ["PERSONAL", null, "none"],
       ["FAMILY", null, "none"],
     ]);
-    await setBudget("FAMILY", "2026-01", "9000");
-    await setBudget("FAMILY", "2026-06", "12000");
+    await setBudget(me, "FAMILY", "2026-01", "9000");
+    await setBudget(me, "FAMILY", "2026-06", "12000");
     expect((await line("2025-12", "FAMILY")).budget).toBeNull();
     expect((await line("2026-03", "FAMILY")).budget).toBe("9000.00");
     expect(await line("2026-09", "FAMILY")).toMatchObject({ budget: "12000.00", effectiveFrom: "2026-06" });
     expect((await line("2026-09", "PERSONAL")).budget).toBeNull();
 
-    await setBudget("FAMILY", "2026-10", "0");
+    await setBudget(me, "FAMILY", "2026-10", "0");
     expect((await line("2026-11", "FAMILY")).budget).toBeNull();
     expect((await line("2026-09", "FAMILY")).budget).toBe("12000.00");
   });
@@ -176,7 +176,7 @@ describe("budgets", () => {
   it("warns at 80%, flags 100%, and reports overspending", async () => {
     expect([budgetStatus(79.99), budgetStatus(80), budgetStatus(100), budgetStatus(100.01)]).toEqual(["ok", "warning", "reached", "over"]);
 
-    await setBudget("PERSONAL", "2026-09", "10000");
+    await setBudget(me, "PERSONAL", "2026-09", "10000");
     await spend(food, "8000", "2026-09-05");
     expect(await line("2026-09", "PERSONAL")).toMatchObject({ spent: "8000.00", remaining: "2000.00", percent: 80, status: "warning" });
 
@@ -185,14 +185,14 @@ describe("budgets", () => {
   });
 
   it("counts everything marked Family against the Family budget, whatever the category", async () => {
-    await setBudget("FAMILY", "2026-09", "20000");
-    await setBudget("PERSONAL", "2026-09", "20000");
+    await setBudget(me, "FAMILY", "2026-09", "20000");
+    await setBudget(me, "PERSONAL", "2026-09", "20000");
     // A bill paid for the family is family spending, even though it's "Bills".
     await spend(bills, "3000", "2026-09-02", "FAMILY");
     await spend(food, "2000", "2026-09-03", "FAMILY");
     await spend(food, "1000", "2026-09-04", "PERSONAL");
     const familyWallet = await makeAccount({ name: "Family wallet", openingDate: "2025-01-01" });
-    await createTransaction(
+    await createTransaction(me, 
       {
         type: "TRANSFER",
         accountId: bank,
@@ -217,13 +217,13 @@ describe("budgets", () => {
       ["Food", "2000.00"],
     ]);
     expect(await line("2026-09", "PERSONAL")).toMatchObject({ spent: "1000.00" });
-    const month = await budgetsForMonth("2026-09", "BDT");
+    const month = await budgetsForMonth(me, "2026-09", "BDT");
     expect([month.totalBudget, month.totalSpent]).toEqual(["40000.00", "10000.00"]);
   });
 
   it("counts spending in other currencies at their rate", async () => {
     const usd = await makeAccount({ name: "Card USD", currency: "USD", openingBalance: "500", openingDate: "2025-01-01" });
-    await setBudget("PERSONAL", "2026-09", "5000");
+    await setBudget(me, "PERSONAL", "2026-09", "5000");
     await spend(food, "1000", "2026-09-02");
     await spend(food, "12.50", "2026-09-03", "PERSONAL", usd);
     // Without a rate, the dollars can't be counted…

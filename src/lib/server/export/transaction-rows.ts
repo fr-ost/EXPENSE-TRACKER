@@ -4,6 +4,7 @@ import { SCOPE_META, TRANSACTION_TYPE_LABELS, isRecognizedExpense } from "@/lib/
 import type { Money } from "@/lib/money";
 import type { TransactionFilters } from "@/lib/validation";
 import { prisma } from "../db";
+import type { UserId } from "../user-id";
 import { buildTransactionWhere, transactionOrderBy } from "../services/transactions";
 import { money, moneyOrNull, transactionInclude } from "../services/mappers";
 
@@ -51,9 +52,9 @@ export const EXPORT_COLUMNS: Array<{ key: keyof ExportRow; header: string; numer
 ];
 
 /** Every transaction matching the filters (all pages), in the requested order. */
-export async function exportTransactionRows(filters: TransactionFilters): Promise<ExportRow[]> {
+export async function exportTransactionRows(userId: UserId, filters: TransactionFilters): Promise<ExportRow[]> {
   const rows = await prisma.transaction.findMany({
-    where: buildTransactionWhere(filters),
+    where: buildTransactionWhere(userId, filters),
     include: transactionInclude,
     orderBy: transactionOrderBy(filters.sort ?? "oldest"),
     take: EXPORT_ROW_LIMIT,

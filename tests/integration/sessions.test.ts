@@ -5,11 +5,13 @@ import { beginPasswordAttempt, checkPasswordAttempt, markPasswordAttemptSuccessf
 import { createSession, lockSession, readSession, touchSession, unlockSession } from "@/lib/server/auth/session";
 import { prisma } from "@/lib/server/db";
 import { ensureOwner } from "@/lib/server/settings";
+import { DEFAULT_CATEGORIES } from "@/lib/server/services/categories";
+import { resetData, wipeDatabase } from "../support/fixtures";
 
 async function makeUser(autoLockMinutes = 15) {
-  await prisma.user.deleteMany();
-  const user = await prisma.user.create({ data: { autoLockMinutes } });
-  return user.id;
+  const userId = await resetData();
+  await prisma.user.update({ where: { id: userId }, data: { autoLockMinutes } });
+  return userId;
 }
 
 const ago = (ms: number) => new Date(Date.now() - ms);
@@ -32,19 +34,20 @@ describe("password", () => {
   });
 
   it("accepts the right password and creates the owner on first sign-in", async () => {
-    await prisma.session.deleteMany();
-    await prisma.loginAttempt.deleteMany();
-    await prisma.user.deleteMany();
+    await wipeDatabase();
     await expect(checkLoginPassword("192.0.2.1", "nope")).rejects.toMatchObject({ status: 401 });
     expect(await prisma.user.count()).toBe(0);
     const id = await checkLoginPassword("192.0.2.1", TEST_PASSWORD);
     const owner = await prisma.user.findUniqueOrThrow({ where: { id } });
     expect(owner.displayName).toBe("Shahriar Ahmed");
+    // The owner starts with the usual categories.
+    expect(await prisma.category.count({ where: { userId: id } })).toBe(DEFAULT_CATEGORIES.length);
     // Concurrent first sign-ins still end with exactly one owner.
-    await prisma.user.deleteMany();
+    await wipeDatabase();
     const ids = await Promise.all([ensureOwner(), ensureOwner(), ensureOwner()]);
     expect(new Set(ids.map((o) => o.id)).size).toBe(1);
     expect(await prisma.user.count()).toBe(1);
+    expect(await prisma.category.count()).toBe(DEFAULT_CATEGORIES.length);
   });
 
   it("refuses to sign anyone in when ADMIN_PASSWORD is missing", async () => {

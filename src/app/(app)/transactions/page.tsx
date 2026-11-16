@@ -17,10 +17,10 @@ import { parseTransactionFilters } from "@/lib/validation";
 export const metadata: Metadata = { title: "Transactions" };
 
 export default async function TransactionsPage({ searchParams }: PageProps<"/transactions">) {
-  const { settings, today } = await loadPageContext();
+  const { userId, settings, today } = await loadPageContext();
   const params = await searchParams;
   const filters = parseTransactionFilters(params);
-  const result = await listTransactions(filters, settings.baseCurrency);
+  const result = await listTransactions(userId, filters, settings.baseCurrency);
 
   const hasFilters = Object.entries(filters).some(([key, value]) => key !== "page" && key !== "sort" && value !== undefined);
   const groupByDate = !filters.sort || filters.sort === "newest" || filters.sort === "oldest";

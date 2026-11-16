@@ -6,6 +6,7 @@ import { fieldErrorsOf } from "@/lib/validation";
 import { requireApiSession } from "./auth/guard";
 import type { SessionState } from "./auth/session";
 import { AppError, invalid } from "./errors";
+import type { UserId } from "./user-id";
 
 export const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
 
@@ -69,11 +70,14 @@ interface HandlerArgs<P> {
   request: NextRequest;
   params: P;
   session: SessionState;
+  /** Whose data this request may touch: pass it to every service call. */
+  userId: UserId;
 }
 
 /**
  * Wrap a Route Handler: enforces an unlocked session (401/423), awaits params
- * and converts thrown errors into consistent JSON responses.
+ * and converts thrown errors into consistent JSON responses. The handler gets
+ * the signed-in user's id; ids in the URL or body never say whose data it is.
  */
 export function authed<P extends Record<string, string> = Record<string, never>>(
   handler: (args: HandlerArgs<P>) => Promise<Response>,
@@ -83,7 +87,7 @@ export function authed<P extends Record<string, string> = Record<string, never>>
     try {
       const session = await requireApiSession(options);
       const params = await context.params;
-      return await handler({ request, params, session });
+      return await handler({ request, params, session, userId: session.userId });
     } catch (error) {
       return errorResponse(error);
     }

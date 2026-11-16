@@ -4,6 +4,7 @@ import { EXPENSE_SCOPES, type ExpenseScope } from "@/lib/domain";
 import { addMoney, percentOf, subtractMoney, toMinor, type Money } from "@/lib/money";
 import type { BudgetLine } from "@/lib/types";
 import { prisma } from "../db";
+import type { UserId } from "../user-id";
 import { categoryTotals, scopeTotals } from "./analytics";
 import type { CurrencyBasis } from "./currency";
 import { money } from "./mappers";
@@ -32,17 +33,17 @@ export interface MonthBudgets {
  * or before it), against everything marked as spent for each — whatever the
  * category or currency, transfers counted as expense included.
  */
-export async function budgetsForMonth(month: MonthKey, fx: CurrencyBasis): Promise<MonthBudgets> {
+export async function budgetsForMonth(userId: UserId, month: MonthKey, fx: CurrencyBasis): Promise<MonthBudgets> {
   const start = monthStart(month);
   const end = monthEnd(month);
   const [rows, spending, ...categoryLists] = await Promise.all([
     prisma.$queryRaw<Array<{ scope: ExpenseScope; amount: string; effectiveFrom: string }>>`
       SELECT DISTINCT ON (b."scope") b."scope"::text AS "scope", b."amount"::text AS "amount", to_char(b."effectiveFrom", 'YYYY-MM') AS "effectiveFrom"
       FROM "ScopeBudget" b
-      WHERE b."effectiveFrom" <= ${start}::date
+      WHERE b."userId" = ${userId} AND b."effectiveFrom" <= ${start}::date
       ORDER BY b."scope", b."effectiveFrom" DESC`,
-    scopeTotals(start, end, fx),
-    ...EXPENSE_SCOPES.map((scope) => categoryTotals(start, end, fx, "EXPENSE", scope)),
+    scopeTotals(userId, start, end, fx),
+    ...EXPENSE_SCOPES.map((scope) => categoryTotals(userId, start, end, fx, "EXPENSE", scope)),
   ]);
 
   const lines = EXPENSE_SCOPES.map((scope, i): BudgetLine => {
@@ -77,23 +78,24 @@ export async function budgetsForMonth(month: MonthKey, fx: CurrencyBasis): Promi
  * Set the Personal or Family monthly budget from `month` onward (until the
  * next change). An amount of 0 removes the budget from that month on.
  */
-export async function setBudget(scope: ExpenseScope, month: MonthKey, amount: Money) {
+export async function setBudget(userId: UserId, scope: ExpenseScope, month: MonthKey, amount: Money) {
   await prisma.$transaction(async (tx) => {
     const effectiveFrom = toDbDate(monthStart(month));
+    const key = { userId_scope_effectiveFrom: { userId, scope, effectiveFrom } };
     await tx.scopeBudget.upsert({
-      where: { scope_effectiveFrom: { scope, effectiveFrom } },
-      create: { scope, effectiveFrom, amount },
+      where: key,
+      create: { userId, scope, effectiveFrom, amount },
       update: { amount },
     });
     // Tidy: a zero row with nothing in effect before it is redundant.
     if (toMinor(amount) === 0n) {
       const earlier = await tx.scopeBudget.findFirst({
-        where: { scope, effectiveFrom: { lt: effectiveFrom } },
+        where: { userId, scope, effectiveFrom: { lt: effectiveFrom } },
         orderBy: { effectiveFrom: "desc" },
         select: { amount: true },
       });
       if (!earlier || toMinor(money(earlier.amount)) === 0n) {
-        await tx.scopeBudget.delete({ where: { scope_effectiveFrom: { scope, effectiveFrom } } });
+        await tx.scopeBudget.delete({ where: key });
       }
     }
   });

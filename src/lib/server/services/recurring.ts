@@ -5,6 +5,7 @@ import type { RecurringView } from "@/lib/types";
 import type { RecurringInput, TransactionInput } from "@/lib/validation";
 import { prisma, type Tx } from "../db";
 import { AppError, notFound } from "../errors";
+import type { UserId } from "../user-id";
 import { accountRefSelect, categoryRefSelect, isUniqueViolation, money, moneyOrNull, toAccountRef, toCategoryRef } from "./mappers";
 import { resolveEntry } from "./transactions";
 
@@ -74,16 +75,17 @@ function ruleToInput(rule: RecurringInput | RuleRow, date: ISODate): Transaction
 
 type RuleRow = NonNullable<Awaited<ReturnType<typeof loadRule>>>;
 
-function loadRule(tx: Tx, id: string) {
-  return tx.recurringTransaction.findUnique({ where: { id } });
+function loadRule(tx: Tx, userId: UserId, id: string) {
+  return tx.recurringTransaction.findUnique({ where: { id, userId } });
 }
 
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
 
-export async function listRecurring(): Promise<RecurringView[]> {
+export async function listRecurring(userId: UserId): Promise<RecurringView[]> {
   const rows = await prisma.recurringTransaction.findMany({
+    where: { userId },
     include: {
       account: { select: accountRefSelect },
       toAccount: { select: accountRefSelect },
@@ -153,76 +155,85 @@ function ruleData(input: RecurringInput) {
   };
 }
 
-export async function createRecurring(input: RecurringInput, options: { today: ISODate; backfill: boolean }) {
+export async function createRecurring(userId: UserId, input: RecurringInput, options: { today: ISODate; backfill: boolean }) {
   const { today, backfill } = options;
   const rule = await prisma.$transaction(async (tx) => {
     // Validate exactly like a transaction dated on the start date.
-    await resolveEntry(tx, ruleToInput(input, input.startDate), { today });
+    await resolveEntry(tx, userId, ruleToInput(input, input.startDate), { today });
     const index = backfill ? 0 : firstIndexOnOrAfter(input.startDate, input.frequency, today);
     return tx.recurringTransaction.create({
-      data: { ...ruleData(input), ...scheduleState(input.startDate, input.frequency, input.endDate, index) },
+      data: { ...ruleData(input), userId, ...scheduleState(input.startDate, input.frequency, input.endDate, index) },
       select: { id: true },
     });
   });
-  await postDueForRule(rule.id, today);
+  await postDueForRule(userId, rule.id, today);
   return rule;
 }
 
-export async function updateRecurring(id: string, input: RecurringInput, today: ISODate) {
+export async function updateRecurring(userId: UserId, id: string, input: RecurringInput, today: ISODate) {
   await prisma.$transaction(async (tx) => {
     const existing = await tx.recurringTransaction.findUnique({
-      where: { id },
+      where: { id, userId },
       select: { frequency: true, startDate: true, occurrenceIndex: true, accountId: true, toAccountId: true, categoryId: true },
     });
     if (!existing) throw notFound("Recurring transaction");
-    await resolveEntry(tx, ruleToInput(input, input.startDate), { today }, existing);
+    await resolveEntry(tx, userId, ruleToInput(input, input.startDate), { today }, existing);
 
     const scheduleChanged = existing.frequency !== input.frequency || fromDbDate(existing.startDate) !== input.startDate;
     let index = existing.occurrenceIndex;
     if (scheduleChanged) {
       // Continue after the last posted occurrence; never re-post the past.
-      const last = await tx.transaction.aggregate({ where: { recurringId: id }, _max: { occurrenceDate: true } });
+      const last = await tx.transaction.aggregate({ where: { userId, recurringId: id }, _max: { occurrenceDate: true } });
       const lastPosted = last._max.occurrenceDate ? fromDbDate(last._max.occurrenceDate) : null;
       index = firstIndexOnOrAfter(input.startDate, input.frequency, today, lastPosted);
     }
     await tx.recurringTransaction.update({
-      where: { id },
+      where: { id, userId },
       data: { ...ruleData(input), ...scheduleState(input.startDate, input.frequency, input.endDate, index) },
     });
   });
-  await postDueForRule(id, today);
+  await postDueForRule(userId, id, today);
 }
 
 /** Pause or resume. Resuming skips occurrences missed while paused. */
-export async function setRecurringActive(id: string, isActive: boolean, today: ISODate) {
+export async function setRecurringActive(userId: UserId, id: string, isActive: boolean, today: ISODate) {
   await prisma.$transaction(async (tx) => {
-    const rule = await loadRule(tx, id);
+    const rule = await loadRule(tx, userId, id);
     if (!rule) throw notFound("Recurring transaction");
     const start = fromDbDate(rule.startDate);
     const end = rule.endDate ? fromDbDate(rule.endDate) : null;
     const index = isActive ? Math.max(rule.occurrenceIndex, firstIndexOnOrAfter(start, rule.frequency, today)) : rule.occurrenceIndex;
-    await tx.recurringTransaction.update({ where: { id }, data: { isActive, ...scheduleState(start, rule.frequency, end, index) } });
+    await tx.recurringTransaction.update({
+      where: { id, userId },
+      data: { isActive, ...scheduleState(start, rule.frequency, end, index) },
+    });
   });
-  if (isActive) await postDueForRule(id, today);
+  if (isActive) await postDueForRule(userId, id, today);
 }
 
-export async function skipNextOccurrence(id: string) {
+export async function skipNextOccurrence(userId: UserId, id: string) {
   await prisma.$transaction(async (tx) => {
-    const rule = await loadRule(tx, id);
+    const rule = await loadRule(tx, userId, id);
     if (!rule) throw notFound("Recurring transaction");
     if (!rule.nextOccurrence) return;
     const start = fromDbDate(rule.startDate);
     await tx.recurringTransaction.update({
-      where: { id },
+      where: { id, userId },
       data: scheduleState(start, rule.frequency, rule.endDate ? fromDbDate(rule.endDate) : null, rule.occurrenceIndex + 1),
     });
   });
 }
 
 /** Deleting a rule keeps the transactions it already posted. */
-export async function deleteRecurring(id: string) {
-  const result = await prisma.recurringTransaction.deleteMany({ where: { id } });
-  if (result.count === 0) throw notFound("Recurring transaction");
+export async function deleteRecurring(userId: UserId, id: string) {
+  await prisma.$transaction(async (tx) => {
+    // Waits for a posting run on this rule to finish, so nothing is posted in between.
+    const locked = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "RecurringTransaction" WHERE "userId" = ${userId} AND "id" = ${id} FOR UPDATE`;
+    if (!locked.length) throw notFound("Recurring transaction");
+    await tx.transaction.updateMany({ where: { userId, recurringId: id }, data: { recurringId: null } });
+    await tx.recurringTransaction.delete({ where: { id, userId } });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -234,12 +245,12 @@ export async function deleteRecurring(id: string) {
  * is locked (SKIP LOCKED — a parallel run simply skips it) and each
  * occurrence is unique per (rule, date) in the database.
  */
-export async function postDueForRule(id: string, today: ISODate): Promise<number> {
+export async function postDueForRule(userId: UserId, id: string, today: ISODate): Promise<number> {
   return prisma.$transaction(async (tx) => {
     const locked = await tx.$queryRaw<Array<{ id: string }>>`
-      SELECT "id" FROM "RecurringTransaction" WHERE "id" = ${id} FOR UPDATE SKIP LOCKED`;
+      SELECT "id" FROM "RecurringTransaction" WHERE "userId" = ${userId} AND "id" = ${id} FOR UPDATE SKIP LOCKED`;
     if (!locked.length) return 0;
-    const rule = await loadRule(tx, id);
+    const rule = await loadRule(tx, userId, id);
     if (!rule || !rule.isActive || !rule.nextOccurrence || fromDbDate(rule.nextOccurrence) > today) return 0;
 
     const start = fromDbDate(rule.startDate);
@@ -255,7 +266,7 @@ export async function postDueForRule(id: string, today: ISODate): Promise<number
         // Validated as a brand-new entry: an inactive account or archived
         // category stops the rule rather than slipping through. No clock
         // time: a scheduled entry counts at the end of its day.
-        const data = await resolveEntry(tx, ruleToInput(rule, date), { today });
+        const data = await resolveEntry(tx, userId, ruleToInput(rule, date), { today });
         await tx.$executeRaw`SAVEPOINT occurrence`;
         try {
           await tx.transaction.create({ data: { ...data, recurringId: id, occurrenceDate: toDbDate(date) } });
@@ -278,39 +289,60 @@ export async function postDueForRule(id: string, today: ISODate): Promise<number
     }
 
     await tx.recurringTransaction.update({
-      where: { id },
+      where: { id, userId },
       data: { ...scheduleState(start, rule.frequency, end, index), ...(pause ? { isActive: false } : {}) },
     });
     return posted;
   });
 }
 
-export async function postAllDue(today: ISODate): Promise<number> {
+/** Post everything that has come due for one user (`today` is in their timezone). */
+export async function postAllDue(userId: UserId, today: ISODate): Promise<number> {
   const due = await prisma.recurringTransaction.findMany({
-    where: { isActive: true, nextOccurrence: { lte: toDbDate(today) } },
+    where: { userId, isActive: true, nextOccurrence: { lte: toDbDate(today) } },
     select: { id: true },
   });
   let total = 0;
-  for (const rule of due) total += await postDueForRule(rule.id, today);
+  for (const rule of due) total += await postDueForRule(userId, rule.id, today);
   return total;
 }
 
-// Page loads trigger posting at most once a minute per server process; any
-// concurrent callers await the same run.
-let inflight: Promise<void> | null = null;
-let lastRunAt = 0;
-let lastRunDay: ISODate | null = null;
+// A user's page loads trigger posting at most once a minute per server
+// process; concurrent callers for the same user await the same run.
+const POSTING_INTERVAL_MS = 60_000;
+interface PostingRun {
+  inflight: Promise<void> | null;
+  lastRunAt: number;
+  lastRunDay: ISODate | null;
+}
+const postingRuns = new Map<UserId, PostingRun>();
 
-export function ensureRecurringPosted(today: ISODate): Promise<void> {
-  if (inflight) return inflight;
-  if (lastRunDay === today && Date.now() - lastRunAt < 60_000) return Promise.resolve();
-  inflight = postAllDue(today)
+/** Forget users who haven't loaded a page lately, so the map stays small. */
+function prunePostingRuns(now: number) {
+  if (postingRuns.size < 500) return;
+  for (const [userId, run] of postingRuns) {
+    if (!run.inflight && now - run.lastRunAt >= POSTING_INTERVAL_MS) postingRuns.delete(userId);
+  }
+}
+
+export function ensureRecurringPosted(userId: UserId, today: ISODate): Promise<void> {
+  const now = Date.now();
+  let run = postingRuns.get(userId);
+  if (run?.inflight) return run.inflight;
+  if (run && run.lastRunDay === today && now - run.lastRunAt < POSTING_INTERVAL_MS) return Promise.resolve();
+  if (!run) {
+    prunePostingRuns(now);
+    run = { inflight: null, lastRunAt: 0, lastRunDay: null };
+    postingRuns.set(userId, run);
+  }
+  const current = run;
+  current.inflight = postAllDue(userId, today)
     .then(() => undefined)
     .catch((error) => console.error("[recurring] posting failed", error))
     .finally(() => {
-      lastRunAt = Date.now();
-      lastRunDay = today;
-      inflight = null;
+      current.lastRunAt = Date.now();
+      current.lastRunDay = today;
+      current.inflight = null;
     });
-  return inflight;
+  return current.inflight;
 }

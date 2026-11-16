@@ -8,14 +8,14 @@ import { getToday } from "@/lib/server/settings";
 import { parseTransactionFilters } from "@/lib/validation";
 
 /** Exports every transaction matching the same filters as the Transactions page. */
-export const GET = authed(async ({ request }) => {
+export const GET = authed(async ({ request, userId }) => {
   const params = request.nextUrl.searchParams;
   const format = params.get("format") ?? "csv";
   if (format !== "csv" && format !== "xlsx") throw invalid("Choose csv or xlsx.");
   const filters = parseTransactionFilters(params);
-  const rows = await exportTransactionRows(filters);
+  const rows = await exportTransactionRows(userId, filters);
   const scope = filters.month ?? (filters.year ? String(filters.year) : "all");
-  const filename = `hisab-transactions-${scope}-${await getToday()}.${format}`;
+  const filename = `hisab-transactions-${scope}-${await getToday(userId)}.${format}`;
   return format === "csv"
     ? download(transactionsCsv(rows), filename, CONTENT_TYPES.csv)
     : download(await transactionsWorkbook(rows), filename, CONTENT_TYPES.xlsx);

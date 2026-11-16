@@ -7,6 +7,7 @@ import type { TransactionPage, TransactionView } from "@/lib/types";
 import { PAGE_SIZE, type TransactionFilters, type TransactionInput } from "@/lib/validation";
 import { prisma, type Tx } from "../db";
 import { invalid, notFound } from "../errors";
+import type { UserId } from "../user-id";
 import { requireCategory } from "./categories";
 import { isUniqueViolation, money, toTransactionView, transactionInclude } from "./mappers";
 
@@ -22,12 +23,12 @@ interface LockedAccount {
   type: AccountType;
 }
 
-async function lockAccount(tx: Tx, id: string, field: string): Promise<LockedAccount> {
+async function lockAccount(tx: Tx, userId: UserId, id: string, field: string): Promise<LockedAccount> {
   // FOR SHARE: blocks a concurrent account edit or balance update until this
   // write commits, without serialising other transaction inserts.
   const [account] = await tx.$queryRaw<LockedAccount[]>`
     SELECT "id", "name", "currency", "isActive", "type"::text AS "type"
-    FROM "Account" WHERE "id" = ${id} FOR SHARE`;
+    FROM "Account" WHERE "userId" = ${userId} AND "id" = ${id} FOR SHARE`;
   if (!account) throw invalid("Choose an account.", { [field]: "This account no longer exists." });
   return account;
 }
@@ -67,11 +68,13 @@ export function loggedTimeFor(date: ISODate, time: string | null, clock: Clock):
 
 /**
  * Turn validated input into a row, enforcing every rule that needs the
- * database: accounts exist and are usable, categories match the transaction
- * kind, and cross-currency transfers state the amount received.
+ * database: accounts and categories exist, are the user's own and are
+ * usable, categories match the transaction kind, and cross-currency transfers
+ * state the amount received.
  */
 export async function resolveEntry(
   tx: Tx,
+  userId: UserId,
   input: TransactionInput,
   clock: Clock,
   existing?: ExistingEntry,
@@ -82,13 +85,14 @@ export async function resolveEntry(
     });
   }
 
-  const account = await lockAccount(tx, input.accountId, "accountId");
+  const account = await lockAccount(tx, userId, input.accountId, "accountId");
   assertUsable(account, "accountId", existing?.accountId);
 
   const time = input.time === undefined ? (existing?.time ?? null) : input.time;
   // An edit that leaves the date and time alone keeps the entry where it was.
   const unmoved = !!existing?.date && fromDbDate(existing.date) === input.date && (existing.time ?? null) === time;
   const base = {
+    userId,
     amount: input.amount,
     date: toDbDate(input.date),
     time,
@@ -106,18 +110,18 @@ export async function resolveEntry(
 
   switch (input.type) {
     case "EXPENSE": {
-      const category = await requireCategory(tx, input.categoryId, "EXPENSE", existing?.categoryId);
+      const category = await requireCategory(tx, userId, input.categoryId, "EXPENSE", existing?.categoryId);
       return { ...base, type: "EXPENSE", categoryId: category.id, scope: input.scope };
     }
     case "INCOME": {
-      const category = await requireCategory(tx, input.categoryId, "INCOME", existing?.categoryId);
+      const category = await requireCategory(tx, userId, input.categoryId, "INCOME", existing?.categoryId);
       return { ...base, type: "INCOME", categoryId: category.id, scope: null };
     }
     case "TRANSFER": {
       if (input.toAccountId === input.accountId) {
         throw invalid("Choose two different accounts.", { toAccountId: "Choose a different destination account." });
       }
-      const destination = await lockAccount(tx, input.toAccountId, "toAccountId");
+      const destination = await lockAccount(tx, userId, input.toAccountId, "toAccountId");
       assertUsable(destination, "toAccountId", existing?.toAccountId);
 
       let toAmount: string | null = null;
@@ -134,7 +138,7 @@ export async function resolveEntry(
         if (!input.categoryId || !input.scope) {
           throw invalid("Choose how to classify this expense.", { categoryId: "Choose the expense category." });
         }
-        const category = await requireCategory(tx, input.categoryId, "EXPENSE", existing?.categoryId);
+        const category = await requireCategory(tx, userId, input.categoryId, "EXPENSE", existing?.categoryId);
         return {
           ...base,
           type: "TRANSFER",
@@ -159,33 +163,43 @@ export async function resolveEntry(
  * return the original row instead of creating a duplicate.
  */
 export async function createTransaction(
+  userId: UserId,
   input: TransactionInput,
   options: Clock & { idempotencyKey?: string },
 ): Promise<{ id: string; created: boolean }> {
   const { idempotencyKey } = options;
+  // The key is the user's own: another user's identical key is a different one.
+  const findByKey = (key: string) =>
+    prisma.transaction.findUnique({ where: { userId_idempotencyKey: { userId, idempotencyKey: key } }, select: { id: true } });
   if (idempotencyKey) {
-    const existing = await prisma.transaction.findUnique({ where: { idempotencyKey }, select: { id: true } });
+    const existing = await findByKey(idempotencyKey);
     if (existing) return { id: existing.id, created: false };
   }
   try {
     const row = await prisma.$transaction(async (tx) => {
-      const data = await resolveEntry(tx, input, options);
+      const data = await resolveEntry(tx, userId, input, options);
       return tx.transaction.create({ data: { ...data, idempotencyKey: idempotencyKey ?? null }, select: { id: true } });
     });
     return { id: row.id, created: true };
   } catch (error) {
     if (idempotencyKey && isUniqueViolation(error, "idempotencyKey")) {
-      const existing = await prisma.transaction.findUnique({ where: { idempotencyKey }, select: { id: true } });
+      const existing = await findByKey(idempotencyKey);
       if (existing) return { id: existing.id, created: false };
     }
     throw error;
   }
 }
 
-export async function updateTransaction(id: string, input: TransactionInput, today: ISODate, time?: string | null) {
+export async function updateTransaction(
+  userId: UserId,
+  id: string,
+  input: TransactionInput,
+  today: ISODate,
+  time?: string | null,
+) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.transaction.findUnique({
-      where: { id },
+      where: { id, userId },
       select: {
         type: true,
         accountId: true,
@@ -201,22 +215,22 @@ export async function updateTransaction(id: string, input: TransactionInput, tod
     if (existing.type === "ADJUSTMENT") {
       throw invalid("Adjustments can't be edited. Delete it and update the account balance instead.");
     }
-    const data = await resolveEntry(tx, input, { today, time }, existing);
-    return tx.transaction.update({ where: { id }, data, select: { id: true } });
+    const data = await resolveEntry(tx, userId, input, { today, time }, existing);
+    return tx.transaction.update({ where: { id, userId }, data, select: { id: true } });
   });
 }
 
 /** A message's own transaction ("sms:<fingerprint>:0"), not its fee. */
 const SMS_MAIN_KEY = /^sms:([0-9a-f]+):0$/;
 
-export async function deleteTransaction(id: string) {
+export async function deleteTransaction(userId: UserId, id: string) {
   await prisma.$transaction(async (tx) => {
-    const row = await tx.transaction.findUnique({ where: { id }, select: { idempotencyKey: true } });
-    const result = await tx.transaction.deleteMany({ where: { id } });
+    const row = await tx.transaction.findUnique({ where: { id, userId }, select: { idempotencyKey: true } });
+    const result = await tx.transaction.deleteMany({ where: { id, userId } });
     if (!row || result.count === 0) throw notFound("Transaction");
     // A balance read from an SMS goes with the message's transaction (e.g. Undo after an import).
     const sms = row.idempotencyKey ? SMS_MAIN_KEY.exec(row.idempotencyKey) : null;
-    if (sms) await tx.balanceCheckpoint.deleteMany({ where: { smsKey: `sms:${sms[1]}:b` } });
+    if (sms) await tx.balanceCheckpoint.deleteMany({ where: { userId, smsKey: `sms:${sms[1]}:b` } });
   });
 }
 
@@ -224,15 +238,18 @@ export async function deleteTransaction(id: string) {
 // Queries
 // ---------------------------------------------------------------------------
 
-export async function getTransaction(id: string): Promise<TransactionView> {
-  const row = await prisma.transaction.findUnique({ where: { id }, include: transactionInclude });
+export async function getTransaction(userId: UserId, id: string): Promise<TransactionView> {
+  const row = await prisma.transaction.findUnique({ where: { id, userId }, include: transactionInclude });
   if (!row) throw notFound("Transaction");
   return toTransactionView(row);
 }
 
-/** Translate URL filters into a Prisma where clause (also used by exports). */
-export function buildTransactionWhere(filters: TransactionFilters): Prisma.TransactionWhereInput {
-  const and: Prisma.TransactionWhereInput[] = [];
+/**
+ * Translate URL filters into a Prisma where clause (also used by exports).
+ * Always limited to the user's own transactions, whatever the filters say.
+ */
+export function buildTransactionWhere(userId: UserId, filters: TransactionFilters): Prisma.TransactionWhereInput {
+  const and: Prisma.TransactionWhereInput[] = [{ userId }];
 
   if (filters.q) {
     const q = filters.q;
@@ -263,7 +280,7 @@ export function buildTransactionWhere(filters: TransactionFilters): Prisma.Trans
   if (filters.min) and.push({ amount: { gte: filters.min } });
   if (filters.max) and.push({ amount: { lte: filters.max } });
 
-  return and.length ? { AND: and } : {};
+  return { AND: and };
 }
 
 /** Newest first by default; within a day, entries with a time of day come in time order. */
@@ -286,8 +303,8 @@ export function transactionOrderBy(sort: TransactionFilters["sort"]): Prisma.Tra
   }
 }
 
-export async function listTransactions(filters: TransactionFilters, baseCurrency: string): Promise<TransactionPage> {
-  const where = buildTransactionWhere(filters);
+export async function listTransactions(userId: UserId, filters: TransactionFilters, baseCurrency: string): Promise<TransactionPage> {
+  const where = buildTransactionWhere(userId, filters);
   const findPage = (page: number) =>
     prisma.transaction.findMany({
       where,
@@ -336,9 +353,9 @@ export async function listTransactions(filters: TransactionFilters, baseCurrency
   };
 }
 
-export async function recentTransactions(limit: number, today: ISODate): Promise<TransactionView[]> {
+export async function recentTransactions(userId: UserId, limit: number, today: ISODate): Promise<TransactionView[]> {
   const rows = await prisma.transaction.findMany({
-    where: { date: { lte: toDbDate(today) } },
+    where: { userId, date: { lte: toDbDate(today) } },
     include: transactionInclude,
     orderBy: NEWEST_FIRST,
     take: limit,

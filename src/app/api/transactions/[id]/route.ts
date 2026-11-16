@@ -5,16 +5,16 @@ import { transactionInput } from "@/lib/validation";
 
 type Params = { id: string };
 
-export const GET = authed<Params>(async ({ params }) => json({ transaction: await getTransaction(params.id) }));
+export const GET = authed<Params>(async ({ params, userId }) => json({ transaction: await getTransaction(userId, params.id) }));
 
-export const PUT = authed<Params>(async ({ request, params }) => {
+export const PUT = authed<Params>(async ({ request, params, userId }) => {
   const input = await readJson(request, transactionInput);
-  const { today, time } = await getClock();
-  await updateTransaction(params.id, input, today, time);
+  const { today, time } = await getClock(userId);
+  await updateTransaction(userId, params.id, input, today, time);
   return json({ id: params.id });
 });
 
-export const DELETE = authed<Params>(async ({ params }) => {
-  await deleteTransaction(params.id);
+export const DELETE = authed<Params>(async ({ params, userId }) => {
+  await deleteTransaction(userId, params.id);
   return json({ ok: true });
 });

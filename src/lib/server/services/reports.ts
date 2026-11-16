@@ -3,6 +3,7 @@ import { formatMonth, isValidMonthKey, monthEnd, monthKeyOf, monthStart, type IS
 import { EXPENSE_SCOPES, type ExpenseScope } from "@/lib/domain";
 import type { Rate } from "@/lib/money";
 import type { AccountActivity, CategoryTotal, DayPoint, MonthPoint, PeriodSummary, ScopeTotal } from "@/lib/types";
+import type { UserId } from "../user-id";
 import {
   accountActivity,
   categoryTotals,
@@ -61,7 +62,7 @@ export function periodRange(period: ReportPeriod): { from: ISODate; to: ISODate;
     : { from: `${period.year}-01-01`, to: `${period.year}-12-31`, label: String(period.year) };
 }
 
-export async function buildReport(period: ReportPeriod, fx: CurrencyBasis, today: ISODate): Promise<ReportData> {
+export async function buildReport(userId: UserId, period: ReportPeriod, fx: CurrencyBasis, today: ISODate): Promise<ReportData> {
   const { from, to, label } = periodRange(period);
   const currentMonth = monthKeyOf(today);
   const conversion = asConversion(fx);
@@ -71,9 +72,9 @@ export async function buildReport(period: ReportPeriod, fx: CurrencyBasis, today
     .map(([code, rate]) => ({ currency: code, rate }));
 
   const [scopeCategoryLists, accounts, incomeCategories] = await Promise.all([
-    Promise.all(EXPENSE_SCOPES.map((scope) => categoryTotals(from, to, fx, "EXPENSE", scope))),
-    accountActivity(from, to),
-    categoryTotals(from, to, fx, "INCOME"),
+    Promise.all(EXPENSE_SCOPES.map((scope) => categoryTotals(userId, from, to, fx, "EXPENSE", scope))),
+    accountActivity(userId, from, to),
+    categoryTotals(userId, from, to, fx, "INCOME"),
   ]);
   const scopeCategories = Object.fromEntries(EXPENSE_SCOPES.map((scope, i) => [scope, scopeCategoryLists[i]])) as Record<
     ExpenseScope,
@@ -81,7 +82,7 @@ export async function buildReport(period: ReportPeriod, fx: CurrencyBasis, today
   >;
 
   if (period.kind === "year") {
-    const year = await yearReport(period.year, fx);
+    const year = await yearReport(userId, period.year, fx);
     // The current year is reported "to date": future months are omitted.
     const isCurrentYear = String(period.year) === today.slice(0, 4);
     return {
@@ -105,10 +106,10 @@ export async function buildReport(period: ReportPeriod, fx: CurrencyBasis, today
   }
 
   const [summary, daily, categories, scopes] = await Promise.all([
-    periodSummary(from, to, fx),
-    dailySpending(from, to, fx),
-    categoryTotals(from, to, fx, "EXPENSE"),
-    scopeTotals(from, to, fx),
+    periodSummary(userId, from, to, fx),
+    dailySpending(userId, from, to, fx),
+    categoryTotals(userId, from, to, fx, "EXPENSE"),
+    scopeTotals(userId, from, to, fx),
   ]);
   return {
     period,

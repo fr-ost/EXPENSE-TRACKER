@@ -5,7 +5,7 @@ import { listBalanceUpdates } from "@/lib/server/services/balances";
 import { checkSms, importSms, saveSmsBalances, smsFingerprint } from "@/lib/server/services/sms";
 import { createTransaction, deleteTransaction, getTransaction, updateTransaction } from "@/lib/server/services/transactions";
 import { smsImportInput, type TransactionInput } from "@/lib/validation";
-import { categoryId, makeAccount, resetData } from "../support/fixtures";
+import { categoryId, makeAccount, me, resetData } from "../support/fixtures";
 
 const TODAY = "2026-09-28";
 const CASH_OUT = "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 28/09/2026 10:05";
@@ -38,46 +38,46 @@ describe("SMS import", () => {
     });
 
   it("adds a transfer and its fee together, matching the balance in the SMS", async () => {
-    const [result] = await importSms(cashOut(), TODAY);
+    const [result] = await importSms(me, cashOut(), TODAY);
     expect(result.status).toBe("added");
     expect(result.status === "added" && result.ids).toHaveLength(2);
     // bKash 2,537 − 2,000 − 37 = 500, exactly what the SMS reports.
-    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
-    expect((await getAccount(cash, TODAY)).balance).toBe("3000.00");
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("500.00");
+    expect((await getAccount(me, cash, TODAY)).balance).toBe("3000.00");
 
-    const main = await getTransaction(result.status === "added" ? result.ids[0] : "");
+    const main = await getTransaction(me, result.status === "added" ? result.ids[0] : "");
     expect(main).toMatchObject({ type: "TRANSFER", time: "10:05", fromSms: true, notes: CASH_OUT });
   });
 
   it("never adds the same message twice, even with different spacing", async () => {
-    const [first] = await importSms(cashOut(), TODAY);
+    const [first] = await importSms(me, cashOut(), TODAY);
     const respaced = cashOut();
     respaced.items[0].text = `  ${CASH_OUT.replace(/ /g, "  ")}\n`;
-    const [second] = await importSms(respaced, TODAY);
+    const [second] = await importSms(me, respaced, TODAY);
     expect(second).toEqual({ status: "exists", ids: first.status === "added" ? first.ids : [], balanceSaved: false });
     expect(await prisma.transaction.count()).toBe(2);
     expect(smsFingerprint(CASH_OUT)).toBe(smsFingerprint(CASH_OUT.toUpperCase()));
   });
 
   it("is safe when the same message is imported concurrently", async () => {
-    const results = await Promise.all([importSms(cashOut(), TODAY), importSms(cashOut(), TODAY), importSms(cashOut(), TODAY)]);
+    const results = await Promise.all([importSms(me, cashOut(), TODAY), importSms(me, cashOut(), TODAY), importSms(me, cashOut(), TODAY)]);
     expect(results.flat().filter((r) => r.status === "added")).toHaveLength(1);
     expect(await prisma.transaction.count()).toBe(2);
   });
 
   it("flags a transaction that is probably already recorded, unless told to add anyway", async () => {
     const typedByHand: TransactionInput = { type: "EXPENSE", amount: "350", date: "2026-09-27", accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Daraz order", notes: null };
-    await createTransaction(typedByHand, { today: TODAY });
+    await createTransaction(me, typedByHand, { today: TODAY });
 
     const input = smsImportInput.parse({
       items: [{ text: PAYMENT, transaction: { ...typedByHand, date: "2026-09-28", time: "12:00", description: "Daraz" } }],
     });
-    const [flagged] = await importSms(input, TODAY);
+    const [flagged] = await importSms(me, input, TODAY);
     expect(flagged).toMatchObject({ status: "possible_duplicate", similar: { description: "Daraz order", amount: "350.00", account: "bKash", date: "2026-09-27" } });
     expect(await prisma.transaction.count()).toBe(1);
 
     input.items[0].allowDuplicate = true;
-    const [added] = await importSms(input, TODAY);
+    const [added] = await importSms(me, input, TODAY);
     expect(added.status).toBe("added");
   });
 
@@ -85,12 +85,12 @@ describe("SMS import", () => {
     const bank = await makeAccount({ name: "City Bank", type: "BANK", openingBalance: "50000", openingDate: "2025-01-01" });
     const transfer = { type: "TRANSFER", amount: "2500", date: "2026-09-28", accountId: bank, toAccountId: bkash, description: "Add money" } as const;
     const bankSide = smsImportInput.parse({ items: [{ text: "Tk 2,500.00 transferred from your A/C **4567 to bKash", transaction: transfer }] });
-    expect((await importSms(bankSide, TODAY))[0].status).toBe("added");
+    expect((await importSms(me, bankSide, TODAY))[0].status).toBe("added");
 
     const walletSide = smsImportInput.parse({
       items: [{ text: "You have received deposit from iBanking of Tk 2,500.00 from City Bank. TrxID X1 at 28/09/2026 12:11", transaction: transfer }],
     });
-    expect((await importSms(walletSide, TODAY))[0].status).toBe("possible_duplicate");
+    expect((await importSms(me, walletSide, TODAY))[0].status).toBe("possible_duplicate");
   });
 
   it("reports entry-rule errors per message without blocking the others", async () => {
@@ -100,21 +100,21 @@ describe("SMS import", () => {
         { text: PAYMENT, transaction: { type: "EXPENSE", amount: "350", date: "2026-09-28", accountId: bkash, categoryId: shopping, scope: "PERSONAL" } },
       ],
     });
-    const [bad, good] = await importSms(input, TODAY);
+    const [bad, good] = await importSms(me, input, TODAY);
     expect(bad.status).toBe("error");
     expect(bad.status === "error" && bad.fieldErrors?.date).toMatch(/too far ahead|a year ahead/i);
     expect(good.status).toBe("added");
   });
 
   it("reports what was already added and how similar messages were recorded before", async () => {
-    await importSms(cashOut(), TODAY);
-    const earlier = await createTransaction(
+    await importSms(me, cashOut(), TODAY);
+    const earlier = await createTransaction(me, 
       { type: "EXPENSE", amount: "120", date: "2026-09-20", accountId: bkash, categoryId: shopping, scope: "FAMILY", description: "Sent to 01812345678", notes: null },
       { today: TODAY },
     );
-    await updateTransaction(earlier.id, { type: "EXPENSE", amount: "120", date: "2026-09-20", accountId: bkash, categoryId: shopping, scope: "FAMILY", description: "Sent to 01812345678", notes: null }, TODAY);
+    await updateTransaction(me, earlier.id, { type: "EXPENSE", amount: "120", date: "2026-09-20", accountId: bkash, categoryId: shopping, scope: "FAMILY", description: "Sent to 01812345678", notes: null }, TODAY);
 
-    const [known, fresh] = await checkSms([
+    const [known, fresh] = await checkSms(me, [
       { text: CASH_OUT, description: "Cash out" },
       { text: "Send Money Tk 500.00 to 01812345678 successful.", description: "sent to 01812345678" },
     ]);
@@ -124,12 +124,12 @@ describe("SMS import", () => {
   });
 
   it("keeps a transaction's time when an edit doesn't mention it", async () => {
-    const [result] = await importSms(cashOut(), TODAY);
+    const [result] = await importSms(me, cashOut(), TODAY);
     const id = result.status === "added" ? result.ids[1] : "";
-    await updateTransaction(id, { type: "EXPENSE", amount: "40", date: "2026-09-28", accountId: bkash, categoryId: fees, scope: "PERSONAL", description: "Fee", notes: null }, TODAY);
-    expect((await getTransaction(id)).time).toBe("10:05");
-    await updateTransaction(id, { type: "EXPENSE", amount: "40", date: "2026-09-28", time: null, accountId: bkash, categoryId: fees, scope: "PERSONAL", description: "Fee", notes: null }, TODAY);
-    expect((await getTransaction(id)).time).toBeNull();
+    await updateTransaction(me, id, { type: "EXPENSE", amount: "40", date: "2026-09-28", accountId: bkash, categoryId: fees, scope: "PERSONAL", description: "Fee", notes: null }, TODAY);
+    expect((await getTransaction(me, id)).time).toBe("10:05");
+    await updateTransaction(me, id, { type: "EXPENSE", amount: "40", date: "2026-09-28", time: null, accountId: bkash, categoryId: fees, scope: "PERSONAL", description: "Fee", notes: null }, TODAY);
+    expect((await getTransaction(me, id)).time).toBeNull();
   });
 
   it("sets the account balance from the balance in the message, once", async () => {
@@ -137,25 +137,25 @@ describe("SMS import", () => {
     await prisma.account.update({ where: { id: bkash }, data: { openingBalance: "3000" } });
     const input = cashOut();
     input.items[0].balance = { accountId: bkash, amount: "500.00" };
-    const [result] = await importSms(input, TODAY);
+    const [result] = await importSms(me, input, TODAY);
     expect(result.status).toBe("added");
-    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
-    const [update] = await listBalanceUpdates(bkash);
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("500.00");
+    const [update] = await listBalanceUpdates(me, bkash);
     expect(update).toMatchObject({ date: "2026-09-28", time: "10:05", balance: "500.00", source: "SMS", correction: "-463.00" });
 
     // Importing it again adds nothing, and older entries added later don't move today's balance.
-    await importSms(input, TODAY);
+    await importSms(me, input, TODAY);
     expect(await prisma.balanceCheckpoint.count()).toBe(1);
-    await createTransaction(
+    await createTransaction(me, 
       { type: "EXPENSE", amount: "100", date: "2026-09-20", accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Older", notes: null },
       { today: TODAY },
     );
-    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("500.00");
   });
 
   it("records the reported balance only with its transaction", async () => {
     // A different ৳350 payment that morning, typed by hand.
-    await createTransaction(
+    await createTransaction(me, 
       { type: "EXPENSE", amount: "350", date: "2026-09-28", time: "09:00", accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Daraz", notes: null },
       { today: TODAY },
     );
@@ -168,45 +168,45 @@ describe("SMS import", () => {
         },
       ],
     });
-    expect((await importSms(input, TODAY))[0].status).toBe("possible_duplicate");
+    expect((await importSms(me, input, TODAY))[0].status).toBe("possible_duplicate");
     expect(await prisma.balanceCheckpoint.count()).toBe(0);
-    expect((await getAccount(bkash, TODAY)).balance).toBe("2187.00");
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("2187.00");
 
     input.items[0].allowDuplicate = true;
-    expect((await importSms(input, TODAY))[0].status).toBe("added");
-    expect((await getAccount(bkash, TODAY)).balance).toBe("150.00");
+    expect((await importSms(me, input, TODAY))[0].status).toBe("added");
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("150.00");
   });
 
   it("undoing the import removes the balance it set, but deleting the fee doesn't", async () => {
     await prisma.account.update({ where: { id: bkash }, data: { openingBalance: "3000" } });
     const input = cashOut();
     input.items[0].balance = { accountId: bkash, amount: "500.00" };
-    const [result] = await importSms(input, TODAY);
+    const [result] = await importSms(me, input, TODAY);
     const [main, fee] = result.status === "added" ? result.ids : [];
 
-    await deleteTransaction(fee);
+    await deleteTransaction(me, fee);
     expect(await prisma.balanceCheckpoint.count()).toBe(1);
-    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("500.00");
 
-    await deleteTransaction(main);
+    await deleteTransaction(me, main);
     expect(await prisma.balanceCheckpoint.count()).toBe(0);
-    expect((await getAccount(bkash, TODAY)).balance).toBe("3000.00");
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("3000.00");
   });
 
   it("records the balance of a message added before, when it comes again", async () => {
     await prisma.account.update({ where: { id: bkash }, data: { openingBalance: "3000" } });
     // Added without its balance (as before balances were read from SMS).
-    await importSms(cashOut(), TODAY);
-    expect((await getAccount(bkash, TODAY)).balance).toBe("963.00");
-    expect((await checkSms([{ text: CASH_OUT, description: "" }]))[0]).toMatchObject({ balanceSaved: false });
+    await importSms(me, cashOut(), TODAY);
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("963.00");
+    expect((await checkSms(me, [{ text: CASH_OUT, description: "" }]))[0]).toMatchObject({ balanceSaved: false });
 
     const again = cashOut();
     again.items[0].balance = { accountId: bkash, amount: "500.00" };
-    expect((await importSms(again, TODAY))[0]).toMatchObject({ status: "exists", balanceSaved: true });
-    expect((await getAccount(bkash, TODAY)).balance).toBe("500.00");
-    expect((await checkSms([{ text: CASH_OUT, description: "" }]))[0]).toMatchObject({ balanceSaved: true });
+    expect((await importSms(me, again, TODAY))[0]).toMatchObject({ status: "exists", balanceSaved: true });
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("500.00");
+    expect((await checkSms(me, [{ text: CASH_OUT, description: "" }]))[0]).toMatchObject({ balanceSaved: true });
     // Saving it again, or for a message never added, changes nothing.
-    expect(await saveSmsBalances([{ text: CASH_OUT, balance: { accountId: bkash, amount: "500.00" }, reportedAt: null }, { text: PAYMENT, balance: { accountId: bkash, amount: "1.00" }, reportedAt: null }], { today: TODAY })).toEqual([
+    expect(await saveSmsBalances(me, [{ text: CASH_OUT, balance: { accountId: bkash, amount: "500.00" }, reportedAt: null }, { text: PAYMENT, balance: { accountId: bkash, amount: "1.00" }, reportedAt: null }], { today: TODAY })).toEqual([
       { saved: true },
       { saved: false },
     ]);
@@ -215,7 +215,7 @@ describe("SMS import", () => {
 
   it("a flagged message confirmed as the same transaction takes over its time and sets the balance", async () => {
     // Paid at 12:00, typed in by hand at 12:05 without a time.
-    const typed = await createTransaction(
+    const typed = await createTransaction(me, 
       { type: "EXPENSE", amount: "350", date: TODAY, accountId: bkash, categoryId: shopping, scope: "PERSONAL", description: "Daraz", notes: null },
       { today: TODAY, time: "12:05:00" },
     );
@@ -228,25 +228,25 @@ describe("SMS import", () => {
         },
       ],
     });
-    const [flagged] = await importSms(input, TODAY, "18:00:00");
+    const [flagged] = await importSms(me, input, TODAY, "18:00:00");
     expect(flagged).toMatchObject({ status: "possible_duplicate", similar: { id: typed.id } });
 
     input.items[0].sameAs = typed.id;
-    expect((await importSms(input, TODAY, "18:00:00"))[0]).toEqual({ status: "exists", ids: [typed.id], balanceSaved: true });
+    expect((await importSms(me, input, TODAY, "18:00:00"))[0]).toEqual({ status: "exists", ids: [typed.id], balanceSaved: true });
     // Counted once: the balance is what the SMS says, not 150 − 350.
-    expect((await getAccount(bkash, TODAY)).balance).toBe("150.00");
-    expect(await getTransaction(typed.id)).toMatchObject({ time: "12:00", fromSms: true });
+    expect((await getAccount(me, bkash, TODAY)).balance).toBe("150.00");
+    expect(await getTransaction(me, typed.id)).toMatchObject({ time: "12:00", fromSms: true });
     expect(await prisma.transaction.count()).toBe(1);
 
     // The message is now linked to it.
     input.items[0].sameAs = null;
-    expect((await importSms(input, TODAY))[0]).toMatchObject({ status: "exists", ids: [typed.id] });
+    expect((await importSms(me, input, TODAY))[0]).toMatchObject({ status: "exists", ids: [typed.id] });
   });
 
   it("ignores a reported balance for an account the transaction doesn't touch", async () => {
     const input = cashOut();
     input.items[0].balance = { accountId: await makeAccount({ name: "Elsewhere" }), amount: "1.00" };
-    await importSms(input, TODAY);
+    await importSms(me, input, TODAY);
     expect(await prisma.balanceCheckpoint.count()).toBe(0);
   });
 });
@@ -279,23 +279,23 @@ describe("an SMS balance replaces the balance", () => {
     });
   };
   const spend = (amount: string, clockTime: string, date = DAY) =>
-    createTransaction(
+    createTransaction(me, 
       { type: "EXPENSE", amount, date, time: null, accountId: bkash, categoryId: food, scope: "PERSONAL", description: "", notes: null },
       { today: DAY, time: clockTime },
     );
-  const balance = async () => (await getAccount(bkash, DAY)).balance;
+  const balance = async () => (await getAccount(me, bkash, DAY)).balance;
 
   it("sets the balance to what the newest SMS says — nothing added on top", async () => {
-    await importSms(received("500", "8000", "10:05"), DAY, "15:00:00");
+    await importSms(me, received("500", "8000", "10:05"), DAY, "15:00:00");
     expect(await balance()).toBe("8000.00");
-    const [update] = await listBalanceUpdates(bkash);
+    const [update] = await listBalanceUpdates(me, bkash);
     // Shown as the message: sent at 10:05, replacing ৳5,500.
     expect(update).toMatchObject({ date: DAY, time: "10:05", balance: "8000.00", source: "SMS", previous: "5500.00" });
   });
 
   it("takes what was recorded before it was read as included, and counts what comes after", async () => {
     await spend("700", "12:00:00"); // typed in at noon, after the 10:05 message
-    await importSms(received("500", "8000", "10:05"), DAY, "15:00:00");
+    await importSms(me, received("500", "8000", "10:05"), DAY, "15:00:00");
     expect(await balance()).toBe("8000.00");
     await spend("100", "16:00:00"); // after the SMS was read
     expect(await balance()).toBe("7900.00");
@@ -303,36 +303,36 @@ describe("an SMS balance replaces the balance", () => {
 
   it("a message from an earlier day still sets today's balance when it's the newest", async () => {
     await spend("700", "09:00:00", "2026-10-02");
-    await importSms(received("500", "8000", "10:05", "2026-10-01"), DAY, "15:00:00");
+    await importSms(me, received("500", "8000", "10:05", "2026-10-01"), DAY, "15:00:00");
     expect(await balance()).toBe("8000.00");
   });
 
   it("an older message is kept as history and never overrides a newer one", async () => {
-    await importSms(received("100", "7000", "12:00"), DAY, "15:00:00");
-    await importSms(received("200", "6500", "10:00"), DAY, "15:05:00");
+    await importSms(me, received("100", "7000", "12:00"), DAY, "15:00:00");
+    await importSms(me, received("200", "6500", "10:00"), DAY, "15:05:00");
     expect(await balance()).toBe("7000.00");
   });
 
   it("a balance you entered for a later moment wins over an older message", async () => {
-    await prisma.balanceCheckpoint.create({ data: { accountId: bkash, date: new Date(`${DAY}T00:00:00Z`), time: "18:00", balance: "4000", source: "MANUAL" } });
-    await importSms(received("500", "8000", "10:05"), DAY, "20:00:00");
+    await prisma.balanceCheckpoint.create({ data: { userId: me, accountId: bkash, date: new Date(`${DAY}T00:00:00Z`), time: "18:00", balance: "4000", source: "MANUAL" } });
+    await importSms(me, received("500", "8000", "10:05"), DAY, "20:00:00");
     expect(await balance()).toBe("4000.00");
   });
 
   it("a message that only reports a balance sets it, once", async () => {
     const text = "Your bKash account balance is Tk 8,000.00.";
     const item = { text, balance: { accountId: bkash, amount: "8000.00" }, reportedAt: { date: DAY, time: null } };
-    expect(await saveSmsBalances([item], { today: DAY, time: "15:00:00" })).toEqual([{ saved: true }]);
+    expect(await saveSmsBalances(me, [item], { today: DAY, time: "15:00:00" })).toEqual([{ saved: true }]);
     expect(await balance()).toBe("8000.00");
-    expect(await saveSmsBalances([item], { today: DAY, time: "16:00:00" })).toEqual([{ saved: true }]);
+    expect(await saveSmsBalances(me, [item], { today: DAY, time: "16:00:00" })).toEqual([{ saved: true }]);
     expect(await prisma.balanceCheckpoint.count()).toBe(1);
     expect(await prisma.transaction.count()).toBe(0);
-    const [check] = await checkSms([{ text, description: "" }]);
+    const [check] = await checkSms(me, [{ text, description: "" }]);
     expect(check.balanceSaved).toBe(true);
     // Never for a card, never from the future.
     const card = await makeAccount({ name: "Card", type: "CARD", openingDate: "2026-09-01" });
-    await expect(saveSmsBalances([{ ...item, text: "Card balance BDT 1.00", balance: { accountId: card, amount: "1.00" } }], { today: DAY })).rejects.toThrow();
-    await expect(saveSmsBalances([{ ...item, text: "Balance Tk 2.00", reportedAt: { date: "2026-10-04", time: null } }], { today: DAY })).rejects.toThrow();
+    await expect(saveSmsBalances(me, [{ ...item, text: "Card balance BDT 1.00", balance: { accountId: card, amount: "1.00" } }], { today: DAY })).rejects.toThrow();
+    await expect(saveSmsBalances(me, [{ ...item, text: "Balance Tk 2.00", reportedAt: { date: "2026-10-04", time: null } }], { today: DAY })).rejects.toThrow();
   });
 });
 
@@ -342,7 +342,7 @@ describe("an SMS stamped a minute ahead of the clock", () => {
     const bkash = await makeAccount({ name: "bKash", type: "MOBILE_WALLET", openingBalance: "650", openingDate: "2026-09-01" });
     const shopping = await categoryId("EXPENSE", "Shopping");
     const text = "Payment Tk 50.00 to Daraz (01712345678) successful. Balance Tk 600.00. TrxID AHEAD0001 at 03/10/2026 15:01";
-    await importSms(
+    await importSms(me, 
       smsImportInput.parse({
         items: [
           {
@@ -355,6 +355,6 @@ describe("an SMS stamped a minute ahead of the clock", () => {
       "2026-10-03",
       "15:00:20",
     );
-    expect((await getAccount(bkash, "2026-10-03")).balance).toBe("600.00");
+    expect((await getAccount(me, bkash, "2026-10-03")).balance).toBe("600.00");
   });
 });

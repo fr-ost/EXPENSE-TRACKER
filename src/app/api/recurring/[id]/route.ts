@@ -6,19 +6,19 @@ import { recurringInput } from "@/lib/validation";
 
 type Params = { id: string };
 
-export const PUT = authed<Params>(async ({ request, params }) => {
+export const PUT = authed<Params>(async ({ request, params, userId }) => {
   const input = await readJson(request, recurringInput);
-  await updateRecurring(params.id, input, await getToday());
+  await updateRecurring(userId, params.id, input, await getToday(userId));
   return json({ id: params.id });
 });
 
-export const PATCH = authed<Params>(async ({ request, params }) => {
+export const PATCH = authed<Params>(async ({ request, params, userId }) => {
   const { isActive } = await readJson(request, z.object({ isActive: z.boolean() }));
-  await setRecurringActive(params.id, isActive, await getToday());
+  await setRecurringActive(userId, params.id, isActive, await getToday(userId));
   return json({ id: params.id });
 });
 
-export const DELETE = authed<Params>(async ({ params }) => {
-  await deleteRecurring(params.id);
+export const DELETE = authed<Params>(async ({ params, userId }) => {
+  await deleteRecurring(userId, params.id);
   return json({ ok: true });
 });

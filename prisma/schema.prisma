@@ -2,8 +2,12 @@
 //
 // Money columns are NUMERIC(14,2); never floats. Account balances are NOT
 // stored: they are derived from the transaction ledger through the
-// "LedgerEntry" view (see the init migration). Invariants that Prisma cannot
+// "LedgerEntry" view (see the migrations). Invariants that Prisma cannot
 // express (CHECK constraints, views) live in the migration SQL.
+//
+// Every row belongs to one user (`userId`). References between a user's rows
+// are composite foreign keys on (userId, id), so the database itself refuses
+// a transaction on someone else's account or category.
 
 generator client {
   provider = "prisma-client"
@@ -58,13 +62,11 @@ enum CheckpointSource {
   SMS
 }
 
-/// The owner. Exactly one row may exist (enforced by the unique `singleton`
-/// column plus a CHECK constraint); it is created on first sign-in. There is
-/// no sign-up path anywhere in the application, and the password is not stored
-/// here: it is the ADMIN_PASSWORD environment variable.
+/// One person and their preferences. Everything else hangs off a user and is
+/// removed only by `deleteUserData` (nothing cascades from here except
+/// sessions), so no data disappears by accident.
 model User {
   id              String       @id @default(cuid())
-  singleton       Boolean      @unique @default(true)
   displayName     String       @default("") @db.VarChar(60)
   baseCurrency    String       @default("BDT") @db.Char(3)
   timezone        String       @default("Asia/Dhaka") @db.VarChar(64)
@@ -77,6 +79,13 @@ model User {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   sessions        Session[]
+  accounts        Account[]
+  categories      Category[]
+  transactions    Transaction[]
+  checkpoints     BalanceCheckpoint[]
+  budgets         ScopeBudget[]
+  rates           ExchangeRate[]
+  recurring       RecurringTransaction[]
 }
 
 /// Server-side session. `id` is the SHA-256 of the cookie token, so a database
@@ -115,7 +124,9 @@ model LoginAttempt {
 /// Where money physically lives.
 model Account {
   id                String                 @id @default(cuid())
-  name              String                 @unique @db.VarChar(60)
+  userId            String
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  name              String                 @db.VarChar(60)
   type              AccountType
   currency          String                 @default("BDT") @db.Char(3)
   openingBalance    Decimal                @default(0) @db.Decimal(14, 2)
@@ -131,10 +142,16 @@ model Account {
   checkpoints       BalanceCheckpoint[]
   recurring         RecurringTransaction[] @relation("RecurringAccount")
   recurringIncoming RecurringTransaction[] @relation("RecurringDestination")
+
+  @@unique([userId, name])
+  /// What the composite foreign keys point at.
+  @@unique([userId, id])
 }
 
 model Category {
   id           String                 @id @default(cuid())
+  userId       String
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
   name         String                 @db.VarChar(40)
   kind         CategoryKind
   /// Default classification for new expenses in this category.
@@ -148,7 +165,8 @@ model Category {
   transactions Transaction[]
   recurring    RecurringTransaction[]
 
-  @@unique([kind, name])
+  @@unique([userId, kind, name])
+  @@unique([userId, id])
 }
 
 /// One row per financial event.
@@ -161,6 +179,8 @@ model Category {
 /// - ADJUSTMENT: reconciliation correction; `amount` is signed and non-zero.
 model Transaction {
   id             String                @id @default(cuid())
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
   type           TransactionType
   amount         Decimal               @db.Decimal(14, 2)
   date           DateTime              @db.Date
@@ -172,33 +192,37 @@ model Transaction {
   /// at the end of its day).
   loggedTime     String?               @db.Char(8)
   accountId      String
-  account        Account               @relation("TransactionAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  account        Account               @relation("TransactionAccount", fields: [userId, accountId], references: [userId, id], onDelete: Restrict)
   toAccountId    String?
-  toAccount      Account?              @relation("TransferDestination", fields: [toAccountId], references: [id], onDelete: Restrict)
+  toAccount      Account?              @relation("TransferDestination", fields: [userId, toAccountId], references: [userId, id], onDelete: Restrict)
   toAmount       Decimal?              @db.Decimal(14, 2)
   categoryId     String?
-  category       Category?             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  category       Category?             @relation(fields: [userId, categoryId], references: [userId, id], onDelete: Restrict)
   countAsExpense Boolean               @default(false)
   scope          ExpenseScope?
   description    String                @default("") @db.VarChar(140)
   notes          String?               @db.VarChar(2000)
+  /// The rule that posted it. Deleting a rule keeps what it posted
+  /// (`deleteRecurring` clears this first).
   recurringId    String?
-  recurring      RecurringTransaction? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+  recurring      RecurringTransaction? @relation(fields: [userId, recurringId], references: [userId, id], onDelete: Restrict)
   occurrenceDate DateTime?             @db.Date
   /// False for entries kept for the record (reports) that must not move the
   /// account balance, e.g. old spending already included in a balance.
   affectsBalance Boolean               @default(true)
-  /// Client-generated key that makes "create" idempotent (double-submit safe).
-  idempotencyKey String?               @unique @db.VarChar(64)
+  /// Client-generated key that makes "create" idempotent (double-submit
+  /// safe); "sms:…" for an imported message. Unique per user.
+  idempotencyKey String?               @db.VarChar(64)
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
 
+  @@unique([userId, idempotencyKey])
   @@unique([recurringId, occurrenceDate])
-  @@index([date])
+  @@index([userId, date])
   @@index([accountId, date])
   @@index([toAccountId, date])
   @@index([categoryId, date])
-  @@index([type, date])
+  @@index([userId, type, date])
 }
 
 /// "At this moment the account held exactly this much" — from the bank or
@@ -208,8 +232,10 @@ model Transaction {
 /// never change the balance after it.
 model BalanceCheckpoint {
   id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Restrict)
   accountId   String
-  account     Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account     Account          @relation(fields: [userId, accountId], references: [userId, id], onDelete: Cascade)
   date        DateTime         @db.Date
   /// "HH:MM" (local time); null means the end of the day…
   time        String?          @db.Char(5)
@@ -219,14 +245,16 @@ model BalanceCheckpoint {
   balance     Decimal          @db.Decimal(14, 2)
   source      CheckpointSource @default(MANUAL)
   note        String?          @db.VarChar(500)
-  /// For balances read from an SMS, so importing the message again adds nothing.
-  smsKey      String?          @unique @db.VarChar(64)
+  /// For balances read from an SMS, so importing the message again adds
+  /// nothing. Unique per user.
+  smsKey      String?          @db.VarChar(64)
   /// For an SMS: when the message was sent ("HH:MM" when it says). The newest
   /// message sets the balance as of when it was read (`date` / `loggedTime`).
   messageDate DateTime?        @db.Date
   messageTime String?          @db.Char(5)
   createdAt   DateTime         @default(now())
 
+  @@unique([userId, smsKey])
   @@index([accountId, date])
 }
 
@@ -236,25 +264,29 @@ model BalanceCheckpoint {
 /// amount of 0 means "no budget from this month on".
 model ScopeBudget {
   id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Restrict)
   scope         ExpenseScope
   effectiveFrom DateTime     @db.Date
   amount        Decimal      @db.Decimal(14, 2)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  @@unique([scope, effectiveFrom])
+  @@unique([userId, scope, effectiveFrom])
 }
 
 /// What one unit of `currency` is worth in `base` (the main currency), set by
-/// the owner. Without one, the rate of the latest conversion between the two
+/// the user. Without one, the rate of the latest conversion between the two
 /// is used (services/currency.ts).
 model ExchangeRate {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   base      String   @db.Char(3)
   currency  String   @db.Char(3)
   rate      Decimal  @db.Decimal(18, 6)
   updatedAt DateTime @updatedAt
 
-  @@id([base, currency])
+  @@id([userId, base, currency])
 }
 
 /// A rule that materialises transactions on schedule. Occurrence k falls on
@@ -262,15 +294,17 @@ model ExchangeRate {
 /// posts on Feb 28/29 and returns to the 31st in March.
 model RecurringTransaction {
   id              String              @id @default(cuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id], onDelete: Restrict)
   type            TransactionType
   amount          Decimal             @db.Decimal(14, 2)
   accountId       String
-  account         Account             @relation("RecurringAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  account         Account             @relation("RecurringAccount", fields: [userId, accountId], references: [userId, id], onDelete: Restrict)
   toAccountId     String?
-  toAccount       Account?            @relation("RecurringDestination", fields: [toAccountId], references: [id], onDelete: Restrict)
+  toAccount       Account?            @relation("RecurringDestination", fields: [userId, toAccountId], references: [userId, id], onDelete: Restrict)
   toAmount        Decimal?            @db.Decimal(14, 2)
   categoryId      String?
-  category        Category?           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  category        Category?           @relation(fields: [userId, categoryId], references: [userId, id], onDelete: Restrict)
   countAsExpense  Boolean             @default(false)
   scope           ExpenseScope?
   description     String              @default("") @db.VarChar(140)
@@ -287,5 +321,6 @@ model RecurringTransaction {
   updatedAt       DateTime            @updatedAt
   transactions    Transaction[]
 
-  @@index([isActive, nextOccurrence])
+  @@unique([userId, id])
+  @@index([userId, isActive, nextOccurrence])
 }

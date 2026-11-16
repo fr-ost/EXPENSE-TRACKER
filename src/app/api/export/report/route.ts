@@ -9,20 +9,20 @@ import { buildReport, parseReportPeriod } from "@/lib/server/services/reports";
 import { getSettings, getToday } from "@/lib/server/settings";
 
 /** The report for a month or year, as an Excel workbook or a PDF. */
-export const GET = authed(async ({ request }) => {
+export const GET = authed(async ({ request, userId }) => {
   const params = request.nextUrl.searchParams;
   const format = params.get("format") ?? "pdf";
   if (format !== "pdf" && format !== "xlsx") throw invalid("Choose pdf or xlsx.");
-  const [settings, today] = await Promise.all([getSettings(), getToday()]);
+  const [settings, today] = await Promise.all([getSettings(userId), getToday(userId)]);
   const period = parseReportPeriod(params, today);
-  const { conversion } = await getCurrencies(settings.baseCurrency);
-  const report = await buildReport(period, conversion, today);
+  const { conversion } = await getCurrencies(userId, settings.baseCurrency);
+  const report = await buildReport(userId, period, conversion, today);
   const name = period.kind === "month" ? period.month : String(period.year);
 
   if (format === "pdf") {
     const pdf = await reportPdf(report, { grouping: settings.numberFormat, generatedOn: today });
     return download(pdf, `hisab-report-${name}.pdf`, CONTENT_TYPES.pdf);
   }
-  const rows = await exportTransactionRows({ from: report.from, to: report.to });
+  const rows = await exportTransactionRows(userId, { from: report.from, to: report.to });
   return download(await reportWorkbook(report, rows), `hisab-report-${name}.xlsx`, CONTENT_TYPES.xlsx);
 });

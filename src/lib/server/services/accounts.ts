@@ -7,6 +7,7 @@ import type { AccountSummary } from "@/lib/types";
 import type { AccountInput } from "@/lib/validation";
 import { prisma, type Tx } from "../db";
 import { conflict, invalid, notFound } from "../errors";
+import type { UserId } from "../user-id";
 import { money } from "./mappers";
 
 interface AccountRow {
@@ -43,7 +44,7 @@ interface AccountRow {
  * whatever else changed the balance (balance updates) is `corrections`, so
  * opening + in − out + corrections = balance.
  */
-async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): Promise<AccountSummary[]> {
+async function queryAccounts(userId: UserId, asOf: ISODate, only: Prisma.Sql = Prisma.empty): Promise<AccountSummary[]> {
   const rows = await prisma.$queryRaw<AccountRow[]>`
     SELECT
       a."id", a."name", a."type"::text AS "type", a."currency",
@@ -71,13 +72,13 @@ async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): P
              SUM(e."amount") FILTER (WHERE e."transactionId" IS NOT NULL AND e."amount" > 0 AND e."date" BETWEEN a."openingDate" AND ${asOf}::date) AS "inflow",
              -SUM(e."amount") FILTER (WHERE e."transactionId" IS NOT NULL AND e."amount" < 0 AND e."date" BETWEEN a."openingDate" AND ${asOf}::date) AS "outflow"
       FROM "LedgerEntry" e
-      WHERE e."accountId" = a."id"
+      WHERE e."userId" = ${userId} AND e."accountId" = a."id"
     ) l ON true
     -- A transaction has at most one leg per account (transfers can't loop back).
     LEFT JOIN (
       SELECT "accountId", COUNT(*) AS "count", MAX("date") AS "last"
       FROM "TransactionLeg"
-      WHERE "date" <= ${asOf}::date
+      WHERE "userId" = ${userId} AND "date" <= ${asOf}::date
       GROUP BY "accountId"
     ) t ON t."accountId" = a."id"
     LEFT JOIN LATERAL (
@@ -88,11 +89,11 @@ async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): P
              COALESCE(cp."messageDate", cp."date") AS "reportedDate",
              CASE WHEN cp."source" = 'SMS' THEN cp."messageTime" ELSE COALESCE(cp."time", left(cp."loggedTime", 5)) END AS "reportedTime"
       FROM "BalanceCheckpoint" cp
-      WHERE cp."accountId" = a."id" AND cp."date" <= ${asOf}::date
+      WHERE cp."userId" = ${userId} AND cp."accountId" = a."id" AND cp."date" <= ${asOf}::date
       ORDER BY cp."date" DESC, COALESCE(cp."time", cp."loggedTime", '24:00')::text COLLATE "C" DESC, cp."createdAt" DESC
       LIMIT 1
     ) c ON true
-    ${where}
+    WHERE a."userId" = ${userId} ${only}
     ORDER BY a."isActive" DESC, a."sortOrder" ASC, a."createdAt" ASC`;
 
   return rows.map(({ checkpointDate, checkpointTime, checkpointBalance, checkpointSource, reportedDate, reportedTime, ...row }) => {
@@ -123,24 +124,29 @@ async function queryAccounts(asOf: ISODate, where: Prisma.Sql = Prisma.empty): P
   });
 }
 
-export function listAccounts(today: ISODate): Promise<AccountSummary[]> {
-  return queryAccounts(today);
+export function listAccounts(userId: UserId, today: ISODate): Promise<AccountSummary[]> {
+  return queryAccounts(userId, today);
 }
 
-export async function getAccount(id: string, today: ISODate): Promise<AccountSummary> {
-  const [account] = await queryAccounts(today, Prisma.sql`WHERE a."id" = ${id}`);
+export async function getAccount(userId: UserId, id: string, today: ISODate): Promise<AccountSummary> {
+  const [account] = await queryAccounts(userId, today, Prisma.sql`AND a."id" = ${id}`);
   if (!account) throw notFound("Account");
   return account;
 }
 
 /** Ledger balance of one account at the end of `date`. */
-export async function balanceAsOf(accountId: string, date: ISODate, client: Tx | typeof prisma = prisma): Promise<Money> {
+export async function balanceAsOf(
+  userId: UserId,
+  accountId: string,
+  date: ISODate,
+  client: Tx | typeof prisma = prisma,
+): Promise<Money> {
   const rows = await client.$queryRaw<Array<{ balance: string }>>`
     SELECT (a."openingBalance" + COALESCE((
       SELECT SUM(l."amount") FROM "LedgerEntry" l
-      WHERE l."accountId" = a."id" AND l."date" <= ${date}::date
+      WHERE l."userId" = ${userId} AND l."accountId" = a."id" AND l."date" <= ${date}::date
     ), 0))::text AS "balance"
-    FROM "Account" a WHERE a."id" = ${accountId}`;
+    FROM "Account" a WHERE a."userId" = ${userId} AND a."id" = ${accountId}`;
   if (!rows[0]) throw notFound("Account");
   return money(rows[0].balance);
 }
@@ -149,13 +155,13 @@ export async function balanceAsOf(accountId: string, date: ISODate, client: Tx |
  * Running balance at each day with activity between `from` and `to`, plus
  * the two endpoints — enough to draw an exact step chart.
  */
-export async function balanceHistory(accountId: string, from: ISODate, to: ISODate) {
+export async function balanceHistory(userId: UserId, accountId: string, from: ISODate, to: ISODate) {
   const [start, daily] = await Promise.all([
-    balanceAsOf(accountId, from),
+    balanceAsOf(userId, accountId, from),
     prisma.$queryRaw<Array<{ date: string; net: string }>>`
       SELECT to_char("date", 'YYYY-MM-DD') AS "date", SUM("amount")::text AS "net"
       FROM "LedgerEntry"
-      WHERE "accountId" = ${accountId} AND "date" > ${from}::date AND "date" <= ${to}::date
+      WHERE "userId" = ${userId} AND "accountId" = ${accountId} AND "date" > ${from}::date AND "date" <= ${to}::date
       GROUP BY "date" ORDER BY "date"`,
   ]);
   let running = toMinor(start);
@@ -168,9 +174,9 @@ export async function balanceHistory(accountId: string, from: ISODate, to: ISODa
   return points;
 }
 
-async function assertUniqueName(name: string, exceptId?: string) {
+async function assertUniqueName(userId: UserId, name: string, exceptId?: string) {
   const clash = await prisma.account.findFirst({
-    where: { name: { equals: name, mode: "insensitive" }, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
+    where: { userId, name: { equals: name, mode: "insensitive" }, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
     select: { id: true },
   });
   if (clash) throw invalid("Choose another name.", { name: "You already have an account with this name." });
@@ -182,12 +188,13 @@ function assertNotFuture(input: AccountInput, today?: ISODate) {
   }
 }
 
-export async function createAccount(input: AccountInput, today?: ISODate) {
+export async function createAccount(userId: UserId, input: AccountInput, today?: ISODate) {
   assertNotFuture(input, today);
-  await assertUniqueName(input.name);
-  const last = await prisma.account.aggregate({ _max: { sortOrder: true } });
+  await assertUniqueName(userId, input.name);
+  const last = await prisma.account.aggregate({ where: { userId }, _max: { sortOrder: true } });
   return prisma.account.create({
     data: {
+      userId,
       name: input.name,
       type: input.type,
       currency: input.currency,
@@ -202,14 +209,14 @@ export async function createAccount(input: AccountInput, today?: ISODate) {
   });
 }
 
-export async function updateAccount(id: string, input: AccountInput, today?: ISODate) {
+export async function updateAccount(userId: UserId, id: string, input: AccountInput, today?: ISODate) {
   assertNotFuture(input, today);
-  await assertUniqueName(input.name, id);
+  await assertUniqueName(userId, input.name, id);
   return prisma.$transaction(async (tx) => {
     // Lock the row so a concurrent transaction insert can't slip in between
     // the history checks below and the update.
     const [existing] = await tx.$queryRaw<Array<{ currency: string }>>`
-      SELECT "currency" FROM "Account" WHERE "id" = ${id} FOR UPDATE`;
+      SELECT "currency" FROM "Account" WHERE "userId" = ${userId} AND "id" = ${id} FOR UPDATE`;
     if (!existing) throw notFound("Account");
 
     // Amounts already recorded (transactions, balance updates, rules) are in
@@ -217,9 +224,9 @@ export async function updateAccount(id: string, input: AccountInput, today?: ISO
     // history and don't change the balance from that date on.
     if (input.currency !== existing.currency) {
       const [transactions, checkpoints, rules] = await Promise.all([
-        tx.transaction.count({ where: { OR: [{ accountId: id }, { toAccountId: id }] } }),
-        tx.balanceCheckpoint.count({ where: { accountId: id } }),
-        tx.recurringTransaction.count({ where: { OR: [{ accountId: id }, { toAccountId: id }] } }),
+        tx.transaction.count({ where: { userId, OR: [{ accountId: id }, { toAccountId: id }] } }),
+        tx.balanceCheckpoint.count({ where: { userId, accountId: id } }),
+        tx.recurringTransaction.count({ where: { userId, OR: [{ accountId: id }, { toAccountId: id }] } }),
       ]);
       if (transactions + checkpoints + rules > 0) {
         throw invalid("Currency can't change once the account has history.", {
@@ -229,7 +236,7 @@ export async function updateAccount(id: string, input: AccountInput, today?: ISO
     }
 
     return tx.account.update({
-      where: { id },
+      where: { id, userId },
       data: {
         name: input.name,
         type: input.type,
@@ -245,15 +252,15 @@ export async function updateAccount(id: string, input: AccountInput, today?: ISO
   });
 }
 
-export async function setAccountActive(id: string, isActive: boolean) {
-  await prisma.account.update({ where: { id }, data: { isActive }, select: { id: true } });
+export async function setAccountActive(userId: UserId, id: string, isActive: boolean) {
+  await prisma.account.update({ where: { id, userId }, data: { isActive }, select: { id: true } });
 }
 
 /** Accounts with history can't be deleted — deactivating keeps the ledger intact. */
-export async function deleteAccount(id: string) {
+export async function deleteAccount(userId: UserId, id: string) {
   const [transactions, recurring] = await Promise.all([
-    prisma.transaction.count({ where: { OR: [{ accountId: id }, { toAccountId: id }] } }),
-    prisma.recurringTransaction.count({ where: { OR: [{ accountId: id }, { toAccountId: id }] } }),
+    prisma.transaction.count({ where: { userId, OR: [{ accountId: id }, { toAccountId: id }] } }),
+    prisma.recurringTransaction.count({ where: { userId, OR: [{ accountId: id }, { toAccountId: id }] } }),
   ]);
   if (transactions > 0 || recurring > 0) {
     throw conflict(
@@ -262,5 +269,5 @@ export async function deleteAccount(id: string) {
         : "Recurring transactions use this account. Remove them first, or deactivate the account instead.",
     );
   }
-  await prisma.account.delete({ where: { id } });
+  await prisma.account.delete({ where: { id, userId } });
 }

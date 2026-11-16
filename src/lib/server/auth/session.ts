@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { SESSION_COOKIE } from "@/lib/auth-cookie";
 import { prisma } from "../db";
+import { asUserId, type UserId } from "../user-id";
 import { adminPassword, credentialMatches, requireAdminPassword, sessionCredential } from "./password";
 
 export { SESSION_COOKIE };
@@ -27,7 +28,7 @@ export function sessionCookieOptions(expiresAt: Date) {
 
 export interface SessionState {
   id: string;
-  userId: string;
+  userId: UserId;
   expiresAt: Date;
   locked: boolean;
   autoLockMinutes: number;
@@ -37,7 +38,7 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function createSession(userId: string, userAgent: string | null) {
+export async function createSession(userId: UserId, userAgent: string | null) {
   const token = randomBytes(32).toString("base64url");
   const id = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS);
@@ -85,7 +86,7 @@ export async function readSession(token: string | undefined | null): Promise<Ses
     locked = true;
   }
 
-  return { id, userId: session.userId, expiresAt: session.expiresAt, locked, autoLockMinutes };
+  return { id, userId: asUserId(session.userId), expiresAt: session.expiresAt, locked, autoLockMinutes };
 }
 
 /** Record activity (throttled). Only called for unlocked sessions. */
@@ -108,7 +109,7 @@ export async function deleteSession(id: string): Promise<void> {
   await prisma.session.deleteMany({ where: { id } });
 }
 
-export async function deleteOtherSessions(userId: string, keepId: string): Promise<number> {
+export async function deleteOtherSessions(userId: UserId, keepId: string): Promise<number> {
   const result = await prisma.session.deleteMany({ where: { userId, id: { not: keepId } } });
   return result.count;
 }

@@ -5,16 +5,16 @@ import { getSettings, getToday } from "@/lib/server/settings";
 import { monthKeyOf, isValidMonthKey } from "@/lib/dates";
 import { budgetInput } from "@/lib/validation";
 
-export const GET = authed(async ({ request }) => {
+export const GET = authed(async ({ request, userId }) => {
   const requested = request.nextUrl.searchParams.get("month");
-  const month = requested && isValidMonthKey(requested) ? requested : monthKeyOf(await getToday());
-  const settings = await getSettings();
-  const { conversion } = await getCurrencies(settings.baseCurrency);
-  return json(await budgetsForMonth(month, conversion));
+  const month = requested && isValidMonthKey(requested) ? requested : monthKeyOf(await getToday(userId));
+  const settings = await getSettings(userId);
+  const { conversion } = await getCurrencies(userId, settings.baseCurrency);
+  return json(await budgetsForMonth(userId, month, conversion));
 });
 
-export const PUT = authed(async ({ request }) => {
+export const PUT = authed(async ({ request, userId }) => {
   const input = await readJson(request, budgetInput);
-  await setBudget(input.scope, input.month, input.amount);
+  await setBudget(userId, input.scope, input.month, input.amount);
   return json({ ok: true });
 });

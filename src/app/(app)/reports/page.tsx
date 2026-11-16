@@ -19,10 +19,10 @@ import { buildReport, parseReportPeriod } from "@/lib/server/services/reports";
 export const metadata: Metadata = { title: "Reports" };
 
 export default async function ReportsPage({ searchParams }: PageProps<"/reports">) {
-  const { settings, today } = await loadPageContext();
+  const { userId, settings, today } = await loadPageContext();
   const period = parseReportPeriod(await searchParams, today);
-  const { conversion } = await getCurrencies(settings.baseCurrency);
-  const report = await buildReport(period, conversion, today);
+  const { conversion } = await getCurrencies(userId, settings.baseCurrency);
+  const report = await buildReport(userId, period, conversion, today);
   const s = report.summary;
   const transactionsQuery = period.kind === "month" ? `month=${period.month}` : `year=${period.year}`;
   const family = report.scopes.find((x) => x.scope === "FAMILY");

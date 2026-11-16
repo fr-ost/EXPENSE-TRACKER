@@ -6,8 +6,8 @@ import { listAccounts } from "@/lib/server/services/accounts";
 import { listCategories } from "@/lib/server/services/categories";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { settings, today } = await loadPageContext();
-  const [accounts, categories] = await Promise.all([listAccounts(today), listCategories()]);
+  const { userId, settings, today } = await loadPageContext();
+  const [accounts, categories] = await Promise.all([listAccounts(userId, today), listCategories(userId)]);
 
   return (
     <AppDataProvider value={{ settings, today, accounts, categories }}>
