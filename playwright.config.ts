@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import {
+  E2E_ANDROID_CERT,
   E2E_DATABASE_URL,
   E2E_GOOGLE_CLIENT_ID,
   E2E_GOOGLE_CLIENT_SECRET,
@@ -60,6 +61,8 @@ export default defineConfig({
         GOOGLE_CLIENT_SECRET: E2E_GOOGLE_CLIENT_SECRET,
         GOOGLE_TEST_ORIGIN: FAKE_GOOGLE_ORIGIN,
         OWNER_EMAIL: E2E_OWNER_EMAIL,
+        // Pasted the way people paste: lower case, a stray space.
+        ANDROID_CERT_SHA256: ` ${E2E_ANDROID_CERT.toLowerCase()}`,
       },
     },
   ],

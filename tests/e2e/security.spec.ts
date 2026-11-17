@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { APP_ORIGIN as ORIGIN, asUser, continueWithGoogle, person, signInApi } from "./auth";
-import { E2E_PORT } from "./env";
+import { E2E_ANDROID_CERT, E2E_PORT } from "./env";
 
 const PUBLIC_ROUTES = new Set(["/api/auth/google", "/api/auth/google/callback", "/api/auth/logout", "/api/health"]);
 
@@ -56,6 +56,22 @@ test("every protected API endpoint rejects a forged session cookie (handler-leve
     });
     expect(response.status(), `${method} ${url}`).toBe(401);
   }
+});
+
+test("the site vouches for its Android app to anyone who asks", async ({ request }) => {
+  // Android and Chrome fetch this without a session and don't follow redirects.
+  const response = await request.get("/.well-known/assetlinks.json", { maxRedirects: 0 });
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("application/json");
+  const links = await response.json();
+  expect(links).toHaveLength(1);
+  expect(links[0]).toMatchObject({
+    relation: ["delegate_permission/common.handle_all_urls"],
+    target: { namespace: "android_app", package_name: "io.github.fr_ost.hisab" },
+  });
+  expect(links[0].target.sha256_cert_fingerprints).toContain(E2E_ANDROID_CERT);
+  // Nothing else under that folder is public.
+  expect((await request.get("/.well-known/security.txt", { maxRedirects: 0 })).status()).toBe(307);
 });
 
 test("protected pages redirect to sign-in, even with a forged cookie", async ({ browser }) => {

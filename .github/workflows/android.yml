@@ -1,6 +1,12 @@
 # Builds and checks the Android app (android/) on GitHub's machines, which
-# have the Android SDK. With the ANDROID_SIGNING_KEY secret and the site's
-# address in place it also produces the app people install.
+# have the Android SDK.
+#
+# It also produces the app people install, once two things exist:
+#   - the ANDROID_SIGNING_KEY secret: the key every copy is signed with
+#     (README, "Android app");
+#   - the site's address: the HISAB_URL repository variable, or hisabUrl in
+#     android/gradle.properties.
+# On main, that app is then published as a release of this repository.
 name: Android app
 
 on:
@@ -28,8 +34,10 @@ jobs:
       run:
         working-directory: android
     env:
-      # The site the app opens: a repository variable, or hisabUrl in android/gradle.properties.
       HISAB_URL: ${{ vars.HISAB_URL }}
+    outputs:
+      ready: ${{ steps.result.outputs.ready }}
+      version: ${{ steps.result.outputs.version }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -48,6 +56,112 @@ jobs:
       - name: Check, test and build
         run: ./gradlew lintDebug testDebugUnitTest assembleDebug
 
+      - name: Signing key
+        env:
+          ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
+          ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
+        run: |
+          key="$RUNNER_TEMP/signing.p12"
+          password="${ANDROID_SIGNING_PASSWORD:-hisab-signing}"
+          if [ -n "$ANDROID_SIGNING_KEY" ]; then
+            printf '%s' "$ANDROID_SIGNING_KEY" | base64 --decode --ignore-garbage > "$key"
+            echo "HISAB_SIGNED=yes" >> "$GITHUB_ENV"
+          else
+            # No key yet. A throwaway one still exercises the whole release
+            # build; what it signs is thrown away too.
+            keytool -genkeypair -keystore "$key" -storetype PKCS12 -storepass "$password" -keypass "$password" \
+              -alias hisab -keyalg RSA -keysize 2048 -validity 2 -dname "CN=Hisab practice build"
+            echo "HISAB_SIGNED=no" >> "$GITHUB_ENV"
+          fi
+          echo "HISAB_SIGNING_KEYSTORE=$key" >> "$GITHUB_ENV"
+          echo "::add-mask::$password"
+          echo "HISAB_SIGNING_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Build the app people install
+        run: ./gradlew assembleRelease bundleRelease
+
+      - name: Check the signature
+        run: |
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          "$apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk > "$RUNNER_TEMP/signature.txt"
+          cat "$RUNNER_TEMP/signature.txt"
+          fingerprint="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/signature.txt" | tr a-f A-F | sed 's/../&:/g; s/:$//')"
+          [ ${#fingerprint} -eq 95 ] || { echo "::error::Couldn't read the certificate the app is signed with."; exit 1; }
+          echo "HISAB_FINGERPRINT=$fingerprint" >> "$GITHUB_ENV"
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tail -3
+
+      - name: Result
+        id: result
+        run: |
+          version="1.0.$HISAB_VERSION_CODE"
+          url="${HISAB_URL:-$(sed -n 's/^hisabUrl=//p' gradle.properties | tr -d '[:space:]')}"
+          ready=yes
+          {
+            echo "## Hisab for Android $version"
+            echo
+            if [ -z "$url" ]; then
+              ready=no
+              echo "- **The site's address isn't set**, so this build opens a placeholder. Set the \`HISAB_URL\` repository variable (Settings → Secrets and variables → Actions → Variables) or \`hisabUrl\` in \`android/gradle.properties\`."
+            else
+              echo "- Opens $url"
+            fi
+            if [ "$HISAB_SIGNED" != yes ]; then
+              ready=no
+              echo "- **There is no signing key yet** (the \`ANDROID_SIGNING_KEY\` secret), so nothing installable was kept. See \"Android app\" in the README."
+            elif grep -qF "$HISAB_FINGERPRINT" ../src/lib/android.ts; then
+              echo "- Signed with the key the site vouches for."
+            else
+              echo "- Signed with a key the site doesn't know yet, so the app will show an address bar. Add this to \`ANDROID_CERTIFICATES\` in \`src/lib/android.ts\`, or to \`ANDROID_CERT_SHA256\` on the server:"
+              echo
+              echo "  \`$HISAB_FINGERPRINT\`"
+            fi
+            if [ "$ready" = yes ]; then
+              echo "- **hisab.apk** (below, in \"hisab-android\") installs on a phone; **hisab.aab** is what Google Play takes."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ready" = yes ]; then
+            mkdir -p "$RUNNER_TEMP/app"
+            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/app/hisab.apk"
+            cp app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/app/hisab.aab"
+          fi
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the app
+        if: steps.result.outputs.ready == 'yes'
+        uses: actions/upload-artifact@v5
+        with:
+          name: hisab-android
+          path: ${{ runner.temp }}/app/
+          if-no-files-found: error
+
       - name: What the checks found
         if: failure()
         run: cat app/build/reports/lint-results-debug.txt 2>/dev/null || true
+
+  publish:
+    name: Publish
+    needs: build
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.ready == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: hisab-android
+
+      - name: Publish the app as a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          tag="android-$VERSION"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$tag" hisab.apk --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" hisab.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
+              --title "Hisab for Android $VERSION" \
+              --notes "Download **hisab.apk** on an Android phone and open it to install Hisab. The phone asks once whether to allow installing from the browser."
+          fi
