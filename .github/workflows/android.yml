@@ -85,7 +85,8 @@ jobs:
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
           "$apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk > "$RUNNER_TEMP/signature.txt"
           cat "$RUNNER_TEMP/signature.txt"
-          fingerprint="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/signature.txt" | tr a-f A-F | sed 's/../&:/g; s/:$//')"
+          # "Signer #1 certificate SHA-256 digest: …" or "V2 Signer: certificate SHA-256 digest: …", by apksigner version.
+          fingerprint="$(sed -n 's/.*certificate SHA-256 digest: //p' "$RUNNER_TEMP/signature.txt" | head -1 | tr a-f A-F | sed 's/../&:/g; s/:$//')"
           [ ${#fingerprint} -eq 95 ] || { echo "::error::Couldn't read the certificate the app is signed with."; exit 1; }
           echo "HISAB_FINGERPRINT=$fingerprint" >> "$GITHUB_ENV"
           jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tail -3
