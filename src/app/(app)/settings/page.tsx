@@ -4,6 +4,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { InstallAppCard } from "@/components/pwa/install-app";
 import { AppLock } from "@/components/settings/app-lock";
+import { BackupFiles } from "@/components/settings/backup-restore";
 import { CategoriesManager } from "@/components/settings/categories-manager";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { ExchangeRates } from "@/components/settings/exchange-rates";
@@ -94,8 +95,18 @@ export default async function SettingsPage() {
         </div>
       </Card>
 
+      <Card id="backup" className="scroll-mt-20">
+        <CardHeader
+          title="Backup and restore"
+          description="A backup file holds everything you have recorded — accounts, transactions, balances, budgets, categories and preferences."
+        />
+        <div className="px-5 pb-5 pt-4 sm:px-6">
+          <BackupFiles />
+        </div>
+      </Card>
+
       <Card>
-        <CardHeader title="Your data" description="Download everything you have recorded. Exports are generated on demand and never stored." />
+        <CardHeader title="Export" description="Your transactions as a spreadsheet. Exports are generated on demand and never stored." />
         <div className="flex flex-wrap gap-2 px-5 pb-5 pt-4 sm:px-6">
           <Button asChild variant="outline">
             <a href="/api/export/transactions?format=csv" download>

@@ -396,6 +396,9 @@ export const removePinInput = z.object({ currentPin: enteredPin });
 /** Deleting your account takes the word itself, so it can't happen by accident. */
 export const deleteAccountInput = z.object({ confirm: z.literal("DELETE") });
 
+/** Restoring replaces everything recorded; the backup itself is checked by `parseBackup`. */
+export const restoreInput = z.object({ confirm: z.literal("REPLACE"), backup: z.unknown() });
+
 export const settingsInput = z.object({
   displayName: z.string().trim().max(60),
   baseCurrency: z.enum(CURRENCY_CODES),

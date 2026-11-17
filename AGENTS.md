@@ -70,6 +70,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   counted per user with growing waits; a forgotten PIN is removed only from a
   session Google has just signed in and the PIN hasn't opened yet
   (`canResetPin`).
+- Backup and restore (`src/lib/backup.ts`, `services/backup.ts`): a backup is
+  one JSON file of everything a user has recorded (never the PIN, the Google
+  id or sessions). A restore replaces the user's data in one transaction and
+  treats the file as untrusted: every row is checked against the same rules
+  as the database's CHECK constraints, every reference must resolve inside
+  the file, and every row gets a new id — so a file restores into any account
+  and can never point outside itself. `createdAt` is kept (it orders entries
+  at the same moment); the balances recorded in the file are compared after
+  the restore. A new table or column that holds user data must be added to
+  the export, the restore, `deleteUserData` and `tests/integration/backup.test.ts`
+  (its round trip compares whole ledgers).
 - SMS import: the parser (`src/lib/sms/parse.ts`) is pure and client-side;
   account/category suggestions live in `src/components/sms/sms-suggest.ts`;
   the server (`src/lib/server/services/sms.ts`) re-validates through

@@ -45,6 +45,9 @@ has a ledger nobody else can see.
 - **Reports** — monthly and yearly statements, category, personal & family,
   income sources, savings trend, account activity; PDF (Bengali names
   included) and Excel exports.
+- **Backup and restore** — download everything you have recorded as one
+  file, and restore it later (into the same account or another): the restore
+  replaces what is there, all at once or not at all.
 - **Installable app** — install it from Chrome or Edge (desktop and Android)
   or add it to the iPhone home screen.
 - **Your own account** — sign in with Google (your account is created the

@@ -21,6 +21,7 @@ import {
   scopeTotals,
   yearReport,
 } from "@/lib/server/services/analytics";
+import { exportBackup } from "@/lib/server/services/backup";
 import { deleteBalanceUpdate, listBalanceUpdates, recordedBalanceAt, updateBalance } from "@/lib/server/services/balances";
 import { budgetsForMonth, setBudget } from "@/lib/server/services/budgets";
 import { createCategory, deleteCategory, listCategories, updateCategory } from "@/lib/server/services/categories";
@@ -210,6 +211,16 @@ describe("one user's data is invisible and untouchable to another", () => {
     expect(await listRecurring(bob)).toEqual([]);
     expect(await listBalanceUpdates(bob, a.cash)).toEqual([]);
     expect((await listBalanceUpdates(alice, a.cash)).length).toBe(1);
+
+    // A backup is of your own ledger: every list in it, nothing of anyone else's.
+    const backup = await exportBackup(bob, TODAY);
+    expect(backup.accounts.map((x) => x.id)).toEqual([b.cash, b.usd]);
+    expect(backup.categories.every((c) => c.id !== a.food && c.id !== a.salary)).toBe(true);
+    expect(backup.categories).toHaveLength(20);
+    expect(backup.transactions.map((t) => t.description)).toEqual(["Tea"]);
+    expect([backup.recurring, backup.balanceUpdates, backup.budgets, backup.exchangeRates]).toEqual([[], [], [], []]);
+    const hers = await exportBackup(alice, TODAY);
+    expect([hers.recurring.length, hers.balanceUpdates.length, hers.budgets.length, hers.exchangeRates.length]).toEqual([1, 2, 1, 1]);
   });
 
   it("totals and reports count only your own entries", async () => {
