@@ -537,9 +537,15 @@ function describe(parsed: {
 export interface ParseOptions {
   /** "Today" in your timezone, for dates written without a year. */
   today: ISODate;
+  /**
+   * When the phone received the message (your timezone), for messages a phone
+   * hands in: it dates a message that states no date, and times one that
+   * states no time on that day.
+   */
+  receivedAt?: { date: ISODate; time: string | null } | null;
 }
 
-export function parseSms(input: string, { today }: ParseOptions): ParsedSms {
+export function parseSms(input: string, { today, receivedAt }: ParseOptions): ParsedSms {
   const text = normalizeSmsText(input);
   const amounts = findAmounts(text);
   const channel = detectChannel(text);
@@ -581,8 +587,10 @@ export function parseSms(input: string, { today }: ParseOptions): ParsedSms {
   const { own: accountDigits, other: counterpartyDigits } = findAccountDigits(text, provider?.kind === "MOBILE_WALLET");
   const counterparty = findCounterparty(text, direction);
   const reference = REFERENCE.exec(text)?.[1] ?? null;
-  const date = findDate(text, today);
-  const time = findTime(text);
+  // "28 Sep" in a message received last year is last year's.
+  const stated = findDate(text, receivedAt && receivedAt.date < today ? receivedAt.date : today);
+  const date = stated ?? receivedAt?.date ?? null;
+  const time = findTime(text) ?? (receivedAt && date === receivedAt.date ? receivedAt.time : null);
   const isCard = /\b(?:card|visa|master\s*card|mastercard|amex|unionpay)\b/i.test(text);
   const ignored = ignoreReason(text, !!amount);
 

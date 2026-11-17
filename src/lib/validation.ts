@@ -194,6 +194,48 @@ export const smsBalanceInput = z.object({
 });
 export type SmsBalanceInput = z.infer<typeof smsBalanceInput>;
 
+/** What the Android app sends to collect its token (services/devices.ts). */
+export const deviceTokenInput = z.object({
+  code: z.string().trim().min(20).max(100),
+  /** The phone's own name for itself. */
+  name: z
+    .string()
+    .trim()
+    .max(60)
+    .default("")
+    .transform((v) => v.replace(/\s+/g, " ") || "Android phone"),
+  appVersion: z
+    .string()
+    .trim()
+    .max(20)
+    .nullish()
+    .transform((v) => v || null),
+});
+
+/** Messages a linked phone hands in (services/sms-inbox.ts). */
+export const deviceInboxInput = z.object({
+  messages: z
+    .array(
+      z.object({
+        text: smsText,
+        sender: z.string().trim().max(40).default(""),
+        /** When the phone received it: milliseconds since 1970. */
+        receivedAt: z.number().int().min(946_684_800_000).max(4_102_444_800_000),
+      }),
+    )
+    .min(1)
+    .max(25),
+  appVersion: z
+    .string()
+    .trim()
+    .max(20)
+    .nullish()
+    .transform((v) => v || null),
+});
+
+/** Waiting messages the user doesn't want. */
+export const smsInboxDismissInput = z.object({ ids: z.array(id).min(1).max(100) });
+
 export const smsCheckInput = z.object({
   items: z
     .array(z.object({ text: smsText, description: z.string().trim().max(140).default("") }))

@@ -307,3 +307,40 @@ describe("messages that only report a balance", () => {
     }
   });
 });
+
+describe("messages a phone hands in, with when it received them", () => {
+  const received = (text: string, date: string, time: string | null, on = today) => parseSms(text, { today: on, receivedAt: { date, time } });
+  const DATELESS = "Tk 500.00 spent at SHWAPNO on your A/C **4567. Avl Bal Tk 9,500.00";
+
+  it("a message that states no date is dated and timed by when it arrived", () => {
+    // Pasted, there is no telling when it was: not certain.
+    expect(parse(DATELESS)).toMatchObject({ date: null, time: null, confidence: "medium" });
+    expect(received(DATELESS, "2026-09-27", "21:40")).toMatchObject({ date: "2026-09-27", time: "21:40", confidence: "high" });
+    expect(received(DATELESS, "2026-09-27", null)).toMatchObject({ date: "2026-09-27", time: null });
+  });
+
+  it("what the message says about its own date and time wins", () => {
+    const stated = "You have received Tk 500.00 from 01712345678. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03";
+    // Delivered late: the next morning.
+    expect(received(stated, "2026-09-28", "07:15")).toMatchObject({ date: "2026-09-27", time: "20:03" });
+    // A date but no time: the arrival time counts only on that same day.
+    const dated = "Your a/c 1234 debited for Tk 1500 on 28-Sep-2026 (POS/DARAZ). Current Bal Tk 3,500";
+    expect(received(dated, "2026-09-28", "16:20")).toMatchObject({ date: "2026-09-28", time: "16:20" });
+    expect(received(dated, "2026-09-29", "00:05")).toMatchObject({ date: "2026-09-28", time: null });
+  });
+
+  it("a date without a year belongs to the year the message arrived in", () => {
+    const text = "Your a/c 1234 debited for Tk 1500 on 15 Jan (POS/DARAZ). Current Bal Tk 3,500";
+    // Read today, "15 Jan" is this year's…
+    expect(parse(text).date).toBe("2026-01-15");
+    // …but a message that arrived in January 2025 (found on the phone much later) means that one.
+    expect(received(text, "2025-01-15", "10:00").date).toBe("2025-01-15");
+    expect(received("Tk 80.00 debited from A/C **1234 on 30 Dec. Avl Bal Tk 20.00", "2025-01-02", "09:00").date).toBe("2024-12-30");
+  });
+
+  it("reading a pasted message is unchanged", () => {
+    const text = "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 28/09/2026 10:05";
+    expect(parseSms(text, { today, receivedAt: null })).toEqual(parse(text));
+    expect(parseSms(text, { today, receivedAt: { date: "2026-09-28", time: "10:06" } })).toEqual(parse(text));
+  });
+});

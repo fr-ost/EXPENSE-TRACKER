@@ -101,6 +101,8 @@ model User {
   rates           ExchangeRate[]
   recurring       RecurringTransaction[]
   drive           DriveBackup?
+  devices         Device[]
+  smsInbox        SmsInbox[]
 }
 
 /// The user's permission for Hisab to keep backups in their Google Drive, in
@@ -138,6 +140,52 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+/// A phone that hands its bank and wallet SMS to this account (the Android
+/// app). Its token lets it hand messages in and nothing else: it can read no
+/// data. Like a session, it goes with the user.
+model Device {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The phone's own name for itself ("Pixel 8").
+  name         String     @db.VarChar(60)
+  /// SHA-256 of the phone's token, so a database leak yields no usable token.
+  /// While `pendingUntil` is set it is the hash of the one-time code the
+  /// phone collects its token with.
+  tokenHash    String     @unique @db.Char(64)
+  /// Set until the phone has collected its token; until then this is no device.
+  pendingUntil DateTime?
+  createdAt    DateTime   @default(now())
+  /// When it last handed in a message.
+  lastSeenAt   DateTime?
+  appVersion   String?    @db.VarChar(20)
+  inbox        SmsInbox[]
+
+  @@index([userId])
+}
+
+/// A message a phone handed in that couldn't be added on its own: it waits on
+/// the Import SMS page until its transaction is added or the user dismisses
+/// it. Messages that aren't transactions (codes, adverts) are never kept.
+model SmsInbox {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId    String?
+  device      Device?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  /// smsFingerprint(text): the same message waits once.
+  fingerprint String   @db.Char(40)
+  text        String   @db.VarChar(2000)
+  /// Who sent it, as the phone shows it ("bKash", "16216").
+  sender      String   @db.VarChar(40)
+  /// When the phone received it.
+  receivedAt  DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, fingerprint])
+  @@index([userId, receivedAt])
 }
 
 /// Sign-ins that came back from Google, used to slow down a client that keeps

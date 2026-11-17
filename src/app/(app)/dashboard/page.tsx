@@ -1,3 +1,4 @@
+import { ChevronRightIcon, SmartphoneIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BalanceTotal } from "@/components/balance-total";
@@ -22,6 +23,7 @@ import { listAccounts } from "@/lib/server/services/accounts";
 import { categoryTotals, cumulative, dailySpending, monthlySeries, periodSummary, scopeTotals } from "@/lib/server/services/analytics";
 import { budgetsForMonth } from "@/lib/server/services/budgets";
 import { balanceTotals, getCurrencies } from "@/lib/server/services/currency";
+import { countWaitingSms } from "@/lib/server/services/sms-inbox";
 import { recentTransactions } from "@/lib/server/services/transactions";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -40,7 +42,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   // Pace lines stop at today for the current month.
   const paceTo = minDate(to, today);
 
-  const [accounts, summary, previousSummary, series, categories, scopes, pace, previousPace, budgets, recent] = await Promise.all([
+  const [accounts, summary, previousSummary, series, categories, scopes, pace, previousPace, budgets, recent, smsWaiting] = await Promise.all([
     listAccounts(userId, today),
     periodSummary(userId, from, to, fx),
     periodSummary(userId, monthStart(previousMonth), monthEnd(previousMonth), fx),
@@ -51,6 +53,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
     dailySpending(userId, monthStart(previousMonth), monthEnd(previousMonth), fx),
     budgetsForMonth(userId, month, fx),
     recentTransactions(userId, 6, today),
+    countWaitingSms(userId),
   ]);
 
   const hello = <Greeting name={settings.displayName} timeZone={settings.timezone} initial={greeting(settings.timezone)} />;
@@ -73,6 +76,22 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       </header>
 
       <InstallBanner />
+
+      {smsWaiting > 0 && (
+        <Link
+          href="/sms"
+          className="-mt-2 flex items-center gap-3 rounded-xl border border-border bg-surface-subtle px-4 py-3 text-body text-text transition-colors hover:bg-surface-muted sm:-mt-4"
+        >
+          <SmartphoneIcon className="size-4 shrink-0 text-text-secondary" />
+          <span className="min-w-0 flex-1">
+            {smsWaiting === 1 ? "1 message from your phone needs a look" : `${smsWaiting} messages from your phone need a look`}
+          </span>
+          <span className="inline-flex items-center gap-0.5 text-small font-medium text-text-secondary">
+            Review
+            <ChevronRightIcon className="size-4" />
+          </span>
+        </Link>
+      )}
 
       <BalanceTotal variant="hero" totals={balanceTotals(accounts, fx)} foreign={foreign} />
 

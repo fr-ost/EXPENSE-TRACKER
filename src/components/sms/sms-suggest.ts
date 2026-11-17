@@ -38,6 +38,8 @@ export interface SmsSuggestion {
   issues: string[];
   /** Confident enough to add without review. */
   ready: boolean;
+  /** How the message's own account was found: by what the message says ("matched"), or only by its kind ("guessed"). */
+  ownMatch: "matched" | "guessed" | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -300,7 +302,7 @@ export function suggestFromSms(parsed: ParsedSms, ctx: SuggestContext): SmsSugge
   }
 
   const ready = !parsed.ignored && issues.length === 0 && parsed.confidence === "high";
-  return { draft, fee, issues, ready };
+  return { draft, fee, issues, ready, ownMatch: ownId && ownId === own?.account.id ? own.how : null };
 }
 
 /**

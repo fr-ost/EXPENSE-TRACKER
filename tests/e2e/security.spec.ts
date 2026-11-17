@@ -4,7 +4,8 @@ import path from "node:path";
 import { APP_ORIGIN as ORIGIN, asUser, continueWithGoogle, person, signInApi } from "./auth";
 import { E2E_ANDROID_CERT, E2E_PORT } from "./env";
 
-const PUBLIC_ROUTES = new Set(["/api/auth/google", "/api/auth/google/callback", "/api/auth/logout", "/api/health"]);
+// "/api/devices/token": the Android app collects its token with a one-time code, before it has anything else.
+const PUBLIC_ROUTES = new Set(["/api/auth/google", "/api/auth/google/callback", "/api/auth/logout", "/api/health", "/api/devices/token"]);
 
 /** Every API route and the HTTP methods it exports, read from the filesystem. */
 function apiRoutes(): Array<{ path: string; method: string }> {

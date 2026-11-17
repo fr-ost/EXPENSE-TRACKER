@@ -7,6 +7,7 @@ import { requireApiSession } from "./auth/guard";
 import { takeWrite } from "./auth/rate-limit";
 import type { SessionState } from "./auth/session";
 import { AppError, invalid, tooManyRequests } from "./errors";
+import { authenticateDevice } from "./services/devices";
 import type { UserId } from "./user-id";
 
 export const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
@@ -97,6 +98,34 @@ export function authed<P extends Record<string, string> = Record<string, never>>
       }
       const params = await context.params;
       return await handler({ request, params, session, userId: session.userId });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  };
+}
+
+interface DeviceHandlerArgs {
+  request: NextRequest;
+  /** Whose phone this is: pass it to every service call. */
+  userId: UserId;
+  deviceId: string;
+}
+
+/**
+ * Wrap a Route Handler the Android app calls. A linked phone has no session:
+ * it sends the token it was given when it was linked ("Authorization: Bearer
+ * …", services/devices.ts), which says whose phone it is. Limited like any
+ * other writer (429).
+ */
+export function deviceAuthed(handler: (args: DeviceHandlerArgs) => Promise<Response>) {
+  return async (request: NextRequest): Promise<Response> => {
+    try {
+      const [scheme, token] = (request.headers.get("authorization") ?? "").trim().split(/\s+/);
+      const device = scheme?.toLowerCase() === "bearer" && token ? await authenticateDevice(token) : null;
+      if (!device) throw new AppError(401, "unauthorized", "This phone isn't linked to Hisab.");
+      const limit = takeWrite(device.userId);
+      if (!limit.allowed) throw tooManyRequests("That's a lot at once. Try again in a moment.", limit.retryAfterSeconds);
+      return await handler({ request, userId: device.userId, deviceId: device.id });
     } catch (error) {
       return errorResponse(error);
     }

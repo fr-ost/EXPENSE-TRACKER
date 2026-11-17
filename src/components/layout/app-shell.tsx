@@ -17,21 +17,38 @@ import { cn } from "@/lib/utils";
 import { InactivityMonitor } from "./inactivity-monitor";
 import { MOBILE_MORE, MOBILE_TABS, PRIMARY_NAV, SETTINGS_NAV, isActivePath, type NavItem } from "./nav-items";
 
+/** A small count beside a destination (messages waiting on Import SMS). */
+function CountBadge({ count, className }: { count: number; className?: string }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      aria-label={`${count} waiting`}
+      className={cn("inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1.5 text-[11px] font-semibold leading-none text-white", className)}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 export function AppShell({
   autoLockMinutes,
   canLock,
+  smsWaiting = 0,
   children,
 }: {
   /** Minutes without activity before locking; 0 never. */
   autoLockMinutes: number;
   /** The user has an app-lock PIN, so "Lock now" is offered. */
   canLock: boolean;
+  /** Messages a linked phone handed in that are waiting on the Import SMS page. */
+  smsWaiting?: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const { openCreate } = useTransactionSheet();
   const [locking, setLocking] = React.useState(false);
   const [moreOpen, setMoreOpen] = React.useState(false);
+  const waitingAt = (href: string) => (href === "/sms" ? smsWaiting : 0);
 
   const lockNow = React.useCallback(() => {
     // Cover the screen immediately, then lock server-side. The full page
@@ -65,8 +82,8 @@ export function AppShell({
         Skip to content
       </a>
 
-      <Sidebar pathname={pathname} onAdd={() => openCreate()} onLock={canLock ? lockNow : null} />
-      <Rail pathname={pathname} onAdd={() => openCreate()} onLock={canLock ? lockNow : null} />
+      <Sidebar pathname={pathname} onAdd={() => openCreate()} onLock={canLock ? lockNow : null} waitingAt={waitingAt} />
+      <Rail pathname={pathname} onAdd={() => openCreate()} onLock={canLock ? lockNow : null} waitingAt={waitingAt} />
       <MobileTopBar onLock={canLock ? lockNow : null} />
 
       <main id="main" className="md:pl-[76px] lg:pl-[var(--sidebar-width)]">
@@ -75,7 +92,7 @@ export function AppShell({
         </div>
       </main>
 
-      <MobileTabBar pathname={pathname} onAdd={() => openCreate()} onMore={() => setMoreOpen(true)} />
+      <MobileTabBar pathname={pathname} onAdd={() => openCreate()} onMore={() => setMoreOpen(true)} waiting={MOBILE_MORE.some((item) => waitingAt(item.href) > 0)} />
 
       <ResponsiveSheet open={moreOpen} onOpenChange={setMoreOpen} title="More">
         <nav aria-label="More" className="flex flex-col gap-1">
@@ -91,6 +108,7 @@ export function AppShell({
             >
               <item.icon className="size-5" />
               {item.label}
+              <CountBadge count={waitingAt(item.href)} className="ml-auto" />
             </Link>
           ))}
           <div className="my-2 h-px bg-border" />
@@ -119,7 +137,9 @@ export function AppShell({
   );
 }
 
-function Sidebar({ pathname, onAdd, onLock }: { pathname: string; onAdd: () => void; onLock: (() => void) | null }) {
+type WaitingAt = (href: string) => number;
+
+function Sidebar({ pathname, onAdd, onLock, waitingAt }: { pathname: string; onAdd: () => void; onLock: (() => void) | null; waitingAt: WaitingAt }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-width)] flex-col border-r border-border bg-surface-subtle lg:flex">
       <div className="flex h-16 items-center px-5">
@@ -138,7 +158,7 @@ function Sidebar({ pathname, onAdd, onLock }: { pathname: string; onAdd: () => v
       </div>
       <nav aria-label="Main" className="flex flex-1 flex-col gap-0.5 px-3 pt-2">
         {PRIMARY_NAV.map((item) => (
-          <SidebarLink key={item.href} item={item} active={isActivePath(pathname, item.href)} />
+          <SidebarLink key={item.href} item={item} active={isActivePath(pathname, item.href)} waiting={waitingAt(item.href)} />
         ))}
       </nav>
       <div className="flex flex-col gap-0.5 border-t border-border px-3 py-3">
@@ -165,7 +185,7 @@ function Sidebar({ pathname, onAdd, onLock }: { pathname: string; onAdd: () => v
   );
 }
 
-function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
+function SidebarLink({ item, active, waiting = 0 }: { item: NavItem; active: boolean; waiting?: number }) {
   return (
     <Link
       href={item.href}
@@ -184,25 +204,28 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
       )}
       <item.icon className="relative size-[18px]" />
       <span className="relative">{item.label}</span>
+      <CountBadge count={waiting} className="relative ml-auto" />
     </Link>
   );
 }
 
-function Rail({ pathname, onAdd, onLock }: { pathname: string; onAdd: () => void; onLock: (() => void) | null }) {
+function Rail({ pathname, onAdd, onLock, waitingAt }: { pathname: string; onAdd: () => void; onLock: (() => void) | null; waitingAt: WaitingAt }) {
   const railLink = (item: NavItem) => {
     const active = isActivePath(pathname, item.href);
+    const waiting = waitingAt(item.href);
     return (
-      <Tooltip key={item.href} content={item.label} side="right">
+      <Tooltip key={item.href} content={waiting ? `${item.label} · ${waiting} waiting` : item.label} side="right">
         <Link
           href={item.href}
-          aria-label={item.label}
+          aria-label={waiting ? `${item.label}, ${waiting} waiting` : item.label}
           aria-current={active ? "page" : undefined}
           className={cn(
-            "flex size-11 items-center justify-center rounded-lg transition-colors",
+            "relative flex size-11 items-center justify-center rounded-lg transition-colors",
             active ? "border border-border bg-surface text-text shadow-xs" : "text-text-secondary hover:bg-surface-muted hover:text-text",
           )}
         >
           <item.icon className="size-5" />
+          {waiting > 0 && <span className="absolute right-2 top-2 size-2 rounded-full bg-ink ring-2 ring-surface-subtle" />}
         </Link>
       </Tooltip>
     );
@@ -250,7 +273,7 @@ function MobileTopBar({ onLock }: { onLock: (() => void) | null }) {
   );
 }
 
-function MobileTabBar({ pathname, onAdd, onMore }: { pathname: string; onAdd: () => void; onMore: () => void }) {
+function MobileTabBar({ pathname, onAdd, onMore, waiting }: { pathname: string; onAdd: () => void; onMore: () => void; waiting: boolean }) {
   const moreActive = MOBILE_MORE.some((item) => isActivePath(pathname, item.href));
   const tab = (item: NavItem) => {
     const active = isActivePath(pathname, item.href);
@@ -295,8 +318,11 @@ function MobileTabBar({ pathname, onAdd, onMore }: { pathname: string; onAdd: ()
             moreActive ? "text-text" : "text-text-tertiary",
           )}
         >
-          <MoreHorizontalIcon className="size-[22px]" />
-          More
+          <span className="relative">
+            <MoreHorizontalIcon className="size-[22px]" />
+            {waiting && <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-ink ring-2 ring-canvas" />}
+          </span>
+          More{waiting && <span className="sr-only"> (messages waiting)</span>}
         </button>
       </div>
     </nav>

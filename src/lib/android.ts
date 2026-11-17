@@ -16,6 +16,16 @@ export const ANDROID_PACKAGE = "io.github.fr_ost.hisab";
  */
 export const ANDROID_CERTIFICATES: readonly string[] = [];
 
+/**
+ * The link a page hands the Android app (it opens the app's set-up screen
+ * with a one-time code, services/devices.ts). Chrome passes an "intent:" link
+ * to the app named in it and to no other; when that app isn't installed it
+ * goes to `fallback` instead.
+ */
+export function androidLinkIntent(code: string, fallback: string): string {
+  return `intent://link?code=${encodeURIComponent(code)}#Intent;scheme=hisab;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(fallback)};end`;
+}
+
 const FINGERPRINT = /^[0-9A-F]{64}$/;
 
 /** "ab:cd…" / "ABCD…" → "AB:CD:…" (32 bytes), or null when it isn't a SHA-256 fingerprint. */

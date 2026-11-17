@@ -11,11 +11,13 @@ import { DriveBackups } from "@/components/settings/drive-backups";
 import { ExchangeRates } from "@/components/settings/exchange-rates";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { SessionsList } from "@/components/settings/security-section";
+import { SmsPhones } from "@/components/settings/sms-phones";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/misc";
 import { loadPageContext } from "@/lib/server/page-context";
 import { listCategories } from "@/lib/server/services/categories";
 import { getCurrencies } from "@/lib/server/services/currency";
+import { listDevices } from "@/lib/server/services/devices";
 import { getDriveStatus } from "@/lib/server/services/drive";
 import { listSessions } from "@/lib/server/services/settings";
 import { getAccountEmail } from "@/lib/server/settings";
@@ -30,15 +32,17 @@ function timezones(current: string): string[] {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/settings">) {
   const { userId, settings, session } = await loadPageContext();
-  const [categories, sessions, currencies, email, drive, params] = await Promise.all([
+  const [categories, sessions, currencies, email, drive, phones, params] = await Promise.all([
     listCategories(userId),
     listSessions(userId, session.id),
     getCurrencies(userId, settings.baseCurrency),
     getAccountEmail(userId),
     getDriveStatus(userId),
+    listDevices(userId),
     searchParams,
   ]);
   const driveNotice = typeof params.drive === "string" ? params.drive : undefined;
+  const phoneNotice = typeof params.phone === "string" ? params.phone : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,6 +94,13 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         <CardHeader title="App lock" description="A PIN for this app, on top of signing in." />
         <div className="px-5 pb-6 pt-4 sm:px-6">
           <AppLock hasPin={session.hasPin} autoLockMinutes={settings.autoLockMinutes} />
+        </div>
+      </Card>
+
+      <Card id="sms-phones" className="scroll-mt-20">
+        <CardHeader title="Automatic SMS import" description="Bank and wallet messages, added as they arrive on your phone." />
+        <div className="px-5 pb-6 pt-4 sm:px-6">
+          <SmsPhones phones={phones.map(({ id, name, linkedAt, lastSeenAt }) => ({ id, name, linkedAt, lastSeenAt }))} notice={phoneNotice} />
         </div>
       </Card>
 

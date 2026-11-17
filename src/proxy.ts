@@ -9,7 +9,16 @@ import { SESSION_COOKIE } from "@/lib/auth-cookie";
 
 /** Pages anyone may read: signing in, and how to delete an account (they hold no data). */
 const PUBLIC_PAGES = new Set(["/login", "/delete-account"]);
-const PUBLIC_API = new Set(["/api/auth/google", "/api/auth/google/callback", "/api/auth/logout", "/api/health"]);
+const PUBLIC_API = new Set([
+  "/api/auth/google",
+  "/api/auth/google/callback",
+  "/api/auth/logout",
+  "/api/health",
+  // The Android app has no session: it proves itself with a link code, then its own token.
+  "/api/devices/token",
+  "/api/devices/inbox",
+  "/api/devices/self",
+]);
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /**

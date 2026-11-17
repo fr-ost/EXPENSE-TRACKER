@@ -42,12 +42,24 @@ export interface SmsItem {
   /** The message's balance is recorded (now, or when it was added before). */
   balanceSaved: boolean;
   issues: string[];
+  /** The message's own account was found from what it says (not guessed from its kind). */
+  ownMatched: boolean;
   status: SmsItemStatus;
   /** Transactions created from this message (main first, then the fee). */
   addedIds: string[];
+  /** Handed in by a phone and waiting on the server (see services/sms-inbox.ts). */
+  inboxId?: string;
+  /** When that phone received it. */
+  receivedAt?: ReceivedAt | null;
   similar?: SimilarTransaction;
   error?: string;
   fieldErrors: Record<string, string>;
+}
+
+/** When a phone received a message, in the user's timezone. */
+export interface ReceivedAt {
+  date: ISODate;
+  time: string | null;
 }
 
 export interface CheckResult {
@@ -70,9 +82,11 @@ export function buildItem(
     today: ISODate;
     remembered: Record<string, string>;
     check?: CheckResult;
+    receivedAt?: ReceivedAt | null;
+    inboxId?: string;
   },
 ): SmsItem {
-  const parsed = parseSms(text, { today: ctx.today });
+  const parsed = parseSms(text, { today: ctx.today, receivedAt: ctx.receivedAt });
   const suggestion = suggestFromSms(parsed, { ...ctx, learned: ctx.check?.learned ?? null });
   const existing = ctx.check?.existing ?? [];
   return {
@@ -85,9 +99,12 @@ export function buildItem(
     includeBalance: true,
     balanceSaved: ctx.check?.balanceSaved ?? false,
     issues: suggestion.issues,
+    ownMatched: suggestion.ownMatch === "matched",
     status: existing.length ? "exists" : parsed.ignored ? "ignored" : suggestion.ready ? "ready" : "review",
     addedIds: existing,
     fieldErrors: {},
+    ...(ctx.inboxId ? { inboxId: ctx.inboxId } : {}),
+    ...(ctx.receivedAt ? { receivedAt: ctx.receivedAt } : {}),
   };
 }
 
@@ -204,7 +221,7 @@ export function rematch(
   item: SmsItem,
   ctx: { accounts: AccountSummary[]; categories: CategoryRef[]; today: ISODate; remembered: Record<string, string> },
 ): SmsItem {
-  const fresh = buildItem(item.text, ctx);
+  const fresh = buildItem(item.text, { ...ctx, receivedAt: item.receivedAt, inboxId: item.inboxId });
   if (missingAccount(fresh) && fresh.status !== "ignored") return item;
   return { ...fresh, id: item.id, includeFee: item.includeFee, includeBalance: item.includeBalance };
 }

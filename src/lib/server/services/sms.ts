@@ -26,6 +26,11 @@ export function smsFingerprint(text: string): string {
 
 const smsKey = (text: string, part: 0 | 1 | "b") => `sms:${smsFingerprint(text)}:${part}`;
 
+/** A message a phone handed in is dealt with: it stops waiting for review (services/sms-inbox.ts). */
+function stopWaiting(client: Tx | typeof prisma, userId: UserId, text: string) {
+  return client.smsInbox.deleteMany({ where: { userId, fingerprint: smsFingerprint(text) } });
+}
+
 /** What was recorded last time for the same description, to repeat the user's own choices. */
 export interface LearnedEntry {
   type: EntryType;
@@ -279,13 +284,18 @@ async function importOne(userId: UserId, item: ImportItem, clock: Clock): Promis
       if (existing.length) {
         // Added before — perhaps before balances were read from SMS: record it now.
         const main = existing.find((row) => row.idempotencyKey === mainKey);
+        await stopWaiting(tx, userId, item.text);
         return {
           status: "exists",
           ids: existing.map((row) => row.id),
           balanceSaved: main ? await recordReportedBalance(tx, userId, item, main, clock) : false,
         };
       }
-      if (item.sameAs) return linkToRecorded(tx, userId, item, item.sameAs, mainKey, clock);
+      if (item.sameAs) {
+        const linked = await linkToRecorded(tx, userId, item, item.sameAs, mainKey, clock);
+        await stopWaiting(tx, userId, item.text);
+        return linked;
+      }
 
       const row = await resolveEntry(tx, userId, item.transaction, clock);
       if (!item.allowDuplicate) {
@@ -299,6 +309,7 @@ async function importOne(userId: UserId, item: ImportItem, clock: Clock): Promis
         const feeRow = await resolveEntry(tx, userId, item.fee, clock);
         created.push(await tx.transaction.create({ data: { ...feeRow, idempotencyKey: feeKey }, select: { id: true } }));
       }
+      await stopWaiting(tx, userId, item.text);
       return { status: "added", ids: created.map((c) => c.id), balanceSaved: await recordReportedBalance(tx, userId, item, row, clock) };
     });
   } catch (error) {
@@ -372,6 +383,8 @@ export async function saveSmsBalances(
         if (!isUniqueViolation(error)) throw error;
         return !!(await findSmsBalance(prisma, userId, smsKey(item.text, "b")));
       });
+    // A message that only reported a balance has nothing left to review.
+    if (saved) await stopWaiting(prisma, userId, item.text);
     results.push({ saved });
   }
   return results;

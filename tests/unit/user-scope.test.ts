@@ -26,8 +26,21 @@ const OWNED_RELATIONS = new Set([
   "ExpenseEntry",
   "IncomeEntry",
   "DriveBackup",
+  "Device",
+  "SmsInbox",
 ]);
-const OWNED_MODELS = ["account", "category", "transaction", "balanceCheckpoint", "scopeBudget", "exchangeRate", "recurringTransaction", "driveBackup"];
+const OWNED_MODELS = [
+  "account",
+  "category",
+  "transaction",
+  "balanceCheckpoint",
+  "scopeBudget",
+  "exchangeRate",
+  "recurringTransaction",
+  "driveBackup",
+  "device",
+  "smsInbox",
+];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -100,11 +113,14 @@ describe("queries on a user's data are limited to that user", () => {
     // buildTransactionWhere(userId, …), `key` holds the userId_… unique key,
     // and `data` / `row` / `feeRow` come from resolveEntry (which sets userId).
     const builtWithUser = /\bwhere(?:: key| \}|,|\])|\.\.\.(?:data|row|feeRow)\b/;
+    // A phone's link code or token is itself the proof of whose it is, as a
+    // session's token is (services/devices.ts): those two lookups are by its hash.
+    const bySecret = /\bwhere: \{ tokenHash: hash\(/;
     for (const { file, source } of files) {
       for (const match of source.matchAll(call)) {
         const text = callText(source, match.index + match[0].length);
         checked++;
-        if (!text.includes("userId") && !builtWithUser.test(text)) {
+        if (!text.includes("userId") && !builtWithUser.test(text) && !bySecret.test(text)) {
           unscoped.push(`${file}:${lineOf(source, match.index)} ${match[0]}…) has no userId`);
         }
       }

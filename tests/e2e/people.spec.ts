@@ -54,7 +54,17 @@ test("each person has their own ledger, and no API route reaches into another's"
   const rule = { type: "EXPENSE", amount: "9000", accountId: bank, categoryId: food, scope: "PERSONAL", description: "Alice's rent", notes: null, frequency: "MONTHLY", startDate: "2027-01-05" };
   const recurring = (await a("POST", "/api/recurring", { rule, backfill: false })).body.id as string;
   expect((await a("PUT", "/api/budgets", { scope: "PERSONAL", month: "2026-09", amount: "30000" })).status).toBe(200);
-  for (const id of [cash, bank, food, transaction, checkpoint, recurring]) expect(id, "Alice's setup").toBeTruthy();
+  // …and links her phone, which has a message waiting for her.
+  const { code } = (await a("POST", "/api/devices/link")).body as { code: string };
+  const collected = await request.post("/api/devices/token", { headers: { "Content-Type": "application/json", "X-Forwarded-For": "198.51.100.21" }, data: JSON.stringify({ code, name: "Alice's phone" }) });
+  const phoneToken = (await collected.json()).token as string;
+  const phone = ((await a("GET", "/api/devices")).body.devices as Array<{ id: string }>)[0].id;
+  await request.post("/api/devices/inbox", {
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${phoneToken}` },
+    data: JSON.stringify({ messages: [{ text: "Money Received.\nAmount: Tk 1,000.00\nSender: 01712345678\nTxnID: 7A1B2C3D\nBalance: Tk 1,500.00\n10/09/2026 09:15", sender: "NAGAD", receivedAt: Date.parse("2026-09-10T03:16:00Z") }] }),
+  });
+  const waitingId = ((await a("GET", "/api/sms/inbox")).body.messages as Array<{ id: string }>)[0].id;
+  for (const id of [cash, bank, food, transaction, checkpoint, recurring, phone, waitingId]) expect(id, "Alice's setup").toBeTruthy();
 
   const snapshot = async () => ({
     accounts: (await a("GET", "/api/accounts")).body,
@@ -63,6 +73,8 @@ test("each person has their own ledger, and no API route reaches into another's"
     recurring: (await a("GET", "/api/recurring")).body,
     budgets: (await a("GET", "/api/budgets?month=2026-09")).body,
     balance: (await a("GET", `/api/accounts/${cash}/balance?date=2026-09-28`)).body,
+    phones: (await a("GET", "/api/devices")).body,
+    waiting: (await a("GET", "/api/sms/inbox")).body,
   });
   const before = await snapshot();
   expect(before.transactions.total).toBe(1);
@@ -73,6 +85,10 @@ test("each person has their own ledger, and no API route reaches into another's"
   expect((await b("GET", `/api/transactions?accountId=${cash}`)).body.total).toBe(0);
   expect((await b("GET", "/api/transactions?q=groceries")).body.total).toBe(0);
   expect((await b("GET", "/api/recurring")).body.recurring).toEqual([]);
+  expect((await b("GET", "/api/devices")).body.devices).toEqual([]);
+  expect((await b("GET", "/api/sms/inbox")).body).toEqual({ messages: [], total: 0 });
+  // Her waiting message is not his to dismiss.
+  expect((await b("DELETE", "/api/sms/inbox", { ids: [waitingId] })).body).toEqual({ dismissed: 0 });
   expect((await b("GET", "/api/budgets?month=2026-09")).body.lines.every((line: { budget: string | null }) => line.budget === null)).toBe(true);
   const bobCategories = (await b("GET", "/api/categories")).body.categories as Array<{ id: string; name: string; kind: string }>;
   expect(bobCategories.length).toBe(categories.length);
@@ -89,6 +105,7 @@ test("each person has their own ledger, and no API route reaches into another's"
     "/api/accounts/[id]/balance": `/api/accounts/${cash}/balance`,
     "/api/accounts/[id]/balance/[checkpointId]": `/api/accounts/${cash}/balance/${checkpoint}`,
     "/api/categories/[id]": `/api/categories/${food}`,
+    "/api/devices/[id]": `/api/devices/${phone}`,
     "/api/recurring/[id]": `/api/recurring/${recurring}`,
     "/api/recurring/[id]/skip": `/api/recurring/${recurring}/skip`,
     "/api/transactions/[id]": `/api/transactions/${transaction}`,
@@ -105,7 +122,7 @@ test("each person has their own ledger, and no API route reaches into another's"
     "PUT /api/transactions/[id]": { ...expense, accountId: bobCash, categoryId: bobFood },
   };
   const tried = routesWithIds();
-  expect(tried.length).toBeGreaterThanOrEqual(13);
+  expect(tried.length).toBeGreaterThanOrEqual(14);
   for (const { route, method } of tried) {
     // A new route with an id must be added here, so it is tried too.
     expect(ids[route], `add ${route} to this test`).toBeTruthy();

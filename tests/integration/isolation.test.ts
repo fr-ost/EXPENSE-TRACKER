@@ -37,6 +37,7 @@ import {
   skipNextOccurrence,
   updateRecurring,
 } from "@/lib/server/services/recurring";
+import { completeDeviceLink, listDevices, startDeviceLink } from "@/lib/server/services/devices";
 import { buildReport } from "@/lib/server/services/reports";
 import { listSessions, updateSettings } from "@/lib/server/services/settings";
 import { checkSms, importSms, saveSmsBalances } from "@/lib/server/services/sms";
@@ -450,9 +451,16 @@ describe("one user's data is invisible and untouchable to another", () => {
     await createSession(bob, "Bob's phone");
     // Both had connected Google Drive: the permission goes with the account, like a sign-in.
     await prisma.driveBackup.createMany({ data: [alice, bob].map((userId) => ({ userId, refreshToken: "sealed" })) });
+    // Both had linked a phone, and each has a message waiting: those go with the account too.
+    for (const userId of [alice, bob]) {
+      const { code } = await startDeviceLink(userId);
+      await completeDeviceLink(code, { name: "Phone", appVersion: null });
+      const [phone] = await listDevices(userId);
+      await prisma.smsInbox.create({ data: { userId, deviceId: phone.id, fingerprint: "f".repeat(40), text: "waiting", sender: "NAGAD", receivedAt: new Date() } });
+    }
     await deleteUser(bob);
     expect(await prisma.user.findUnique({ where: { id: bob } })).toBeNull();
-    for (const table of ["Account", "Category", "Transaction", "BalanceCheckpoint", "ScopeBudget", "ExchangeRate", "RecurringTransaction", "Session", "DriveBackup"]) {
+    for (const table of ["Account", "Category", "Transaction", "BalanceCheckpoint", "ScopeBudget", "ExchangeRate", "RecurringTransaction", "Session", "DriveBackup", "Device", "SmsInbox"]) {
       const [{ count }] = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`SELECT COUNT(*)::int AS "count" FROM "${table}" WHERE "userId" = $1`, bob);
       expect(count, table).toBe(0);
     }
@@ -460,9 +468,12 @@ describe("one user's data is invisible and untouchable to another", () => {
 
     expect(await prisma.driveBackup.count({ where: { userId: alice } })).toBe(1);
 
-    // Clearing the data alone (as a restore does) keeps the person, their preferences and their Drive connection.
+    // Clearing the data alone (as a restore does) keeps the person, their preferences, their Drive connection,
+    // their linked phone and the messages waiting for them.
     await prisma.$transaction((tx) => deleteUserData(tx, alice));
     expect(await prisma.driveBackup.count({ where: { userId: alice } })).toBe(1);
+    expect(await listDevices(alice)).toHaveLength(1);
+    expect(await prisma.smsInbox.count({ where: { userId: alice } })).toBe(1);
     const after = await everythingOf(alice);
     expect(after.user).toEqual(before.user);
     expect([after.accounts, after.categories, after.transactions, after.checkpoints, after.budgets, after.rates, after.recurring].flat()).toEqual([]);

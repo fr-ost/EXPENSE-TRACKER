@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardPasteIcon, SparklesIcon } from "lucide-react";
+import { ClipboardPasteIcon, SmartphoneIcon, SparklesIcon } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -32,6 +32,7 @@ import {
   suggestAccount,
   type AccountSuggestion,
   type CheckResult,
+  type ReceivedAt,
   type SimilarTransaction,
   type SmsItem,
 } from "./sms-model";
@@ -58,7 +59,21 @@ function subscribeToStorage(onChange: () => void) {
   return () => window.removeEventListener("storage", onChange);
 }
 
-export function SmsImporter() {
+/** A message to read: pasted or shared, or handed in by a linked phone and waiting on the server. */
+interface IncomingMessage {
+  text: string;
+  inboxId?: string;
+  receivedAt?: ReceivedAt | null;
+}
+
+/** A message a linked phone handed in that couldn't be added on its own. */
+export interface WaitingMessage {
+  id: string;
+  text: string;
+  receivedAt: ReceivedAt;
+}
+
+export function SmsImporter({ waiting = [], waitingTotal = 0 }: { waiting?: WaitingMessage[]; waitingTotal?: number }) {
   const router = useRouter();
   const { accounts, categories, settings, today } = useAppData();
   const { openEdit } = useTransactionSheet();
@@ -219,13 +234,19 @@ export function SmsImporter() {
     [accounts, patchItem, router, today],
   );
 
+  /** The user doesn't want these waiting messages (or they can't be read): the server forgets them. */
+  const stopWaiting = React.useCallback((targets: Array<{ inboxId?: string }>) => {
+    const ids = targets.flatMap((target) => (target.inboxId ? [target.inboxId] : []));
+    if (ids.length) void api("/api/sms/inbox", { method: "DELETE", body: { ids } }).catch(() => undefined);
+  }, []);
+
   /** Read messages, check them against the ledger, and (optionally) add the confident ones. */
-  const analyze = React.useCallback(
-    async (input: string, { auto }: { auto: boolean }) => {
+  const analyzeMessages = React.useCallback(
+    async (incoming: IncomingMessage[], { auto, quiet = false }: { auto: boolean; quiet?: boolean }) => {
       const known = new Set(itemsRef.current.map((i) => messageKey(i.text)));
-      const messages = splitMessages(input).filter((m) => !known.has(messageKey(m)));
+      const messages = incoming.filter((m) => !known.has(messageKey(m.text)));
       if (!messages.length) {
-        toast(input.trim() ? "Those messages are already in the list below." : "Paste a message first.");
+        if (!quiet) toast(incoming.length ? "Those messages are already in the list below." : "Paste a message first.");
         return;
       }
       setAnalyzing(true);
@@ -234,10 +255,12 @@ export function SmsImporter() {
         const remembered = loadRememberedAccounts();
         const context = { accounts, categories, today, remembered };
         // One unreadable message never blocks the rest.
-        const readable = messages.flatMap((text) => {
+        const readable = messages.flatMap(({ text, inboxId, receivedAt }) => {
+          const about = { ...context, inboxId, receivedAt };
           try {
-            return [{ text, item: buildItem(text, context) }];
+            return [{ text, about, item: buildItem(text, about) }];
           } catch {
+            stopWaiting([{ inboxId }]);
             return [];
           }
         });
@@ -250,7 +273,7 @@ export function SmsImporter() {
         } catch {
           // Offline or failed: still show what was read; adding checks for duplicates again anyway.
         }
-        built = readable.map(({ text, item }, i) => (checks ? buildItem(text, { ...context, check: checks[i] }) : item));
+        built = readable.map(({ text, about, item }, i) => (checks ? buildItem(text, { ...about, check: checks[i] }) : item));
         if (readable.length < messages.length) toast.error(`${messages.length - readable.length} message(s) couldn't be read.`);
       } finally {
         setAnalyzing(false);
@@ -264,7 +287,7 @@ export function SmsImporter() {
       if (auto && autoAdd && (ready.length || earlier.length)) {
         if (ready.length) await addItems(ready, { quiet: true });
         if (earlier.length) await saveBalances(earlier, { quiet: true });
-      } else if (built.length) {
+      } else if (built.length && !quiet) {
         const skipped = built.filter((i) => i.status === "ignored").length;
         const already = built.filter((i) => i.status === "exists").length;
         const parts = [
@@ -275,8 +298,27 @@ export function SmsImporter() {
         toast(parts.join(" · "));
       }
     },
-    [accounts, categories, today, autoAdd, addItems, saveBalances],
+    [accounts, categories, today, autoAdd, addItems, saveBalances, stopWaiting],
   );
+
+  /** Pasted or shared text: one message or several. */
+  const analyze = React.useCallback(
+    (input: string, options: { auto: boolean }) => analyzeMessages(splitMessages(input).map((text) => ({ text })), options),
+    [analyzeMessages],
+  );
+
+  // Messages a linked phone handed in that couldn't be added on their own.
+  // They are read like pasted ones; as they are dealt with, the page brings the next.
+  const seenWaiting = React.useRef(new Set<string>());
+  React.useEffect(() => {
+    const fresh = waiting.filter((message) => !seenWaiting.current.has(message.id));
+    if (!fresh.length) return;
+    for (const message of fresh) seenWaiting.current.add(message.id);
+    void analyzeMessages(
+      fresh.map(({ id, text, receivedAt }) => ({ text, inboxId: id, receivedAt })),
+      { auto: true, quiet: true },
+    );
+  }, [waiting, analyzeMessages]);
 
   // Messages shared to the installed app arrive in the URL fragment (never sent to the server).
   React.useEffect(() => {
@@ -453,6 +495,17 @@ export function SmsImporter() {
         </form>
       </Card>
 
+      {waitingTotal > 0 && (
+        <p role="status" className="flex items-start gap-2.5 rounded-xl bg-surface-muted px-4 py-3 text-small text-text-secondary">
+          <SmartphoneIcon className="mt-0.5 size-4 shrink-0" />
+          <span>
+            {waitingTotal === 1 ? "1 message from your phone needs" : `${waitingTotal} messages from your phone need`} a look: Hisab couldn&apos;t
+            add {waitingTotal === 1 ? "it" : "them"} on its own.
+            {waitingTotal > waiting.length && ` The newest ${waiting.length} are below; the rest follow as these are dealt with.`}
+          </span>
+        </p>
+      )}
+
       {items.length > 0 ? (
         <section aria-label="Messages" className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -471,7 +524,11 @@ export function SmsImporter() {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setItems((list) => list.filter((i) => i.status === "ready" || i.status === "review" || i.status === "saving" || i.status === "duplicate" || i.status === "error"))}
+                onClick={() => {
+                  // Finished ones the server still holds (not transactions, in its reading or this one's) stop waiting.
+                  stopWaiting(items.filter((i) => i.status === "ignored"));
+                  setItems((list) => list.filter((i) => i.status === "ready" || i.status === "review" || i.status === "saving" || i.status === "duplicate" || i.status === "error"));
+                }}
                 disabled={!items.some((i) => i.status === "added" || i.status === "exists" || i.status === "ignored")}
               >
                 Clear finished
@@ -495,7 +552,10 @@ export function SmsImporter() {
                     },
                     onUndo: () => void undo(item),
                     onOpen: () => void open(item),
-                    onDismiss: () => setItems((list) => list.filter((i) => i.id !== item.id)),
+                    onDismiss: () => {
+                      if (item.status !== "added" && item.status !== "exists") stopWaiting([item]);
+                      setItems((list) => list.filter((i) => i.id !== item.id));
+                    },
                   }}
                 />
               ))}
