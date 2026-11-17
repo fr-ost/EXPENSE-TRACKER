@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by scripts/generate-icons.mjs: change the logo there, not here. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <group
+        android:pivotX="256"
+        android:pivotY="256"
+        android:scaleX="1.3"
+        android:scaleY="1.3">
+        <path android:pathData="M144 118V390" android:strokeColor="#FFFFFFFF" android:strokeWidth="54" android:strokeLineCap="round" android:strokeLineJoin="round" />
+        <path android:pathData="M144 292c0-52 32-82 76-82s74 30 74 82v98" android:strokeColor="#FFFFFFFF" android:strokeWidth="54" android:strokeLineCap="round" android:strokeLineJoin="round" />
+        <path android:pathData="M342 372a32 32 0 1 0 64 0a32 32 0 1 0 -64 0z" android:fillColor="#FFFFFFFF" />
+    </group>
+</vector>

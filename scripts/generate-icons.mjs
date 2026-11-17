@@ -1,7 +1,9 @@
 /**
  * Renders every app icon from the one logo below: the favicon (SVG + ICO),
- * the Apple touch icon, the install icons (regular and maskable) and the
- * shortcut icons. Output is committed; run again only after changing the logo.
+ * the Apple touch icon, the install icons (regular and maskable), the
+ * shortcut icons, and the Android app's icon, splash and notification icon
+ * (android/app/src/main/res). Output is committed; run again only after
+ * changing the logo.
  *
  *   node scripts/generate-icons.mjs
  *
@@ -16,7 +18,11 @@ const INK = "#0e0e12";
 const EMERALD = "#2fbf71";
 
 /** The mark: a lowercase "h" with an emerald full stop, on a 512 grid. Keep in sync with components/brand.tsx. */
-const GLYPH = `<g fill="none" stroke="#fff" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"><path d="M144 118V390"/><path d="M144 292c0-52 32-82 76-82s74 30 74 82v98"/></g><circle cx="374" cy="372" r="32" fill="${EMERALD}"/>`;
+const STEM = "M144 118V390";
+const ARCH = "M144 292c0-52 32-82 76-82s74 30 74 82v98";
+const STROKE = 54;
+const DOT = { cx: 374, cy: 372, r: 32 };
+const GLYPH = `<g fill="none" stroke="#fff" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round"><path d="${STEM}"/><path d="${ARCH}"/></g><circle cx="${DOT.cx}" cy="${DOT.cy}" r="${DOT.r}" fill="${EMERALD}"/>`;
 
 /** Rounded tile (favicon, install icon). */
 const rounded = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="116" fill="${INK}"/>${GLYPH}</svg>`;
@@ -83,5 +89,74 @@ write("public/icons/icon-maskable-512.png", await png(fullBleed(0.72), 512));
 write("public/icons/shortcut-add.png", await png(shortcut(PLUS), 96));
 write("public/icons/shortcut-sms.png", await png(shortcut(MESSAGE), 96));
 write("public/icons/shortcut-reports.png", await png(shortcut(CHART), 96));
+
+// ---- Android -------------------------------------------------------------
+// The same mark as vector drawables, so it is sharp on every screen.
+
+const android = (file) => `android/app/src/main/res/${file}`;
+const GENERATED = "<!-- Written by scripts/generate-icons.mjs: change the logo there, not here. -->";
+const opaque = (hex) => `#FF${hex.slice(1).toUpperCase()}`;
+const WHITE = "#FFFFFFFF";
+const DOT_PATH = `M${DOT.cx - DOT.r} ${DOT.cy}a${DOT.r} ${DOT.r} 0 1 0 ${2 * DOT.r} 0a${DOT.r} ${DOT.r} 0 1 0 ${-2 * DOT.r} 0z`;
+const TILE_PATH = "M116 0H396A116 116 0 0 1 512 116V396A116 116 0 0 1 396 512H116A116 116 0 0 1 0 396V116A116 116 0 0 1 116 0Z";
+
+const stroked = (d, colour) =>
+  `<path android:pathData="${d}" android:strokeColor="${colour}" android:strokeWidth="${STROKE}" android:strokeLineCap="round" android:strokeLineJoin="round" />`;
+const filled = (d, colour) => `<path android:pathData="${d}" android:fillColor="${colour}" />`;
+
+/** A vector drawable of the mark, `dp` wide, the mark scaled about the centre; `tile` puts the rounded tile behind it. */
+function vector({ dp, scale, letter = WHITE, dot = opaque(EMERALD), tile = false }) {
+  const mark = [stroked(STEM, letter), stroked(ARCH, letter), filled(DOT_PATH, dot)];
+  return `<?xml version="1.0" encoding="utf-8"?>
+${GENERATED}
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="${dp}dp"
+    android:height="${dp}dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+${tile ? `    ${filled(TILE_PATH, opaque(INK))}\n` : ""}    <group
+        android:pivotX="256"
+        android:pivotY="256"
+        android:scaleX="${scale}"
+        android:scaleY="${scale}">
+${mark.map((path) => `        ${path}`).join("\n")}
+    </group>
+</vector>
+`;
+}
+
+write(
+  android("values/colors.xml"),
+  `<?xml version="1.0" encoding="utf-8"?>
+${GENERATED}
+<resources>
+    <color name="canvas">#FFFFFFFF</color>
+    <color name="ink">${opaque(INK)}</color>
+    <color name="emerald">${opaque(EMERALD)}</color>
+</resources>
+`,
+);
+// The launcher shows the middle 72dp of 108dp and may cut it to a circle of
+// 66dp: at this scale the mark fills the tile as it does on the web icon.
+write(android("drawable/ic_launcher_foreground.xml"), vector({ dp: 108, scale: 0.66 }));
+write(android("drawable/ic_launcher_monochrome.xml"), vector({ dp: 108, scale: 0.66, dot: WHITE }));
+write(
+  android("mipmap-anydpi-v26/ic_launcher.xml"),
+  `<?xml version="1.0" encoding="utf-8"?>
+${GENERATED}
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ink" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
+</adaptive-icon>
+`,
+);
+// Android 7 (before adaptive icons) takes a picture.
+for (const [density, size] of [["mdpi", 48], ["hdpi", 72], ["xhdpi", 96], ["xxhdpi", 144], ["xxxhdpi", 192]]) {
+  write(android(`mipmap-${density}/ic_launcher.png`), await png(rounded, size));
+}
+write(android("drawable/splash.xml"), vector({ dp: 112, scale: 1, tile: true }));
+// Notifications draw the icon in one colour of the phone's choosing.
+write(android("drawable/ic_notification.xml"), vector({ dp: 24, scale: 1.3, dot: WHITE }));
 
 await browser.close();

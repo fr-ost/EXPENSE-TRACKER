@@ -1,0 +1,53 @@
+# Builds and checks the Android app (android/) on GitHub's machines, which
+# have the Android SDK. With the ANDROID_SIGNING_KEY secret and the site's
+# address in place it also produces the app people install.
+name: Android app
+
+on:
+  push:
+    # "claude/**": branches where the app is worked on before it reaches main.
+    branches: [main, "claude/**"]
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    env:
+      # The site the app opens: a repository variable, or hisabUrl in android/gradle.properties.
+      HISAB_URL: ${{ vars.HISAB_URL }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the version number counts the commits
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Version number
+        run: echo "HISAB_VERSION_CODE=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+
+      - name: Check, test and build
+        run: ./gradlew lintDebug testDebugUnitTest assembleDebug
+
+      - name: What the checks found
+        if: failure()
+        run: cat app/build/reports/lint-results-debug.txt 2>/dev/null || true

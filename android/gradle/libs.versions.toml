@@ -1,0 +1,11 @@
+[versions]
+agp = "9.3.2"
+browserhelper = "2.7.4"
+junit = "4.13.2"
+
+[libraries]
+androidbrowserhelper = { module = "com.google.androidbrowserhelper:androidbrowserhelper", version.ref = "browserhelper" }
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

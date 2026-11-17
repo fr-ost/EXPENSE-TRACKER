@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Where the splash picture is written before the browser is handed it. -->
+<paths>
+    <files-path name="twa_splash" path="twa_splash/" />
+</paths>

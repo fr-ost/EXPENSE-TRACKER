@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by scripts/generate-icons.mjs: change the logo there, not here. -->
+<resources>
+    <color name="canvas">#FFFFFFFF</color>
+    <color name="ink">#FF0E0E12</color>
+    <color name="emerald">#FF2FBF71</color>
+</resources>

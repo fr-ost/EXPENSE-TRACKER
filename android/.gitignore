@@ -1,0 +1,14 @@
+# Gradle and Android Studio
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+
+# Signing keys never belong in the repository (it is public).
+*.jks
+*.keystore
+*.p12
+*.pfx
