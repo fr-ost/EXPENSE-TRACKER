@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { safeRedirectPath } from "@/lib/safe-redirect";
-import { SignInError, callbackUrl, completeSignIn, googleConfig } from "@/lib/server/auth/google";
-import { PENDING_COOKIE, decodePending, pendingCookieOptions } from "@/lib/server/auth/pending";
+import { DRIVE_SCOPE, SignInError, callbackUrl, completeAuthorization, completeSignIn, googleConfig, type GoogleConfig } from "@/lib/server/auth/google";
+import { PENDING_COOKIE, decodePending, pendingCookieOptions, type Pending } from "@/lib/server/auth/pending";
 import { beginSignInAttempt, checkSignInAttempt, markSignInAttemptSuccessful } from "@/lib/server/auth/rate-limit";
 import {
   SESSION_COOKIE,
@@ -11,8 +11,11 @@ import {
   readSession,
   sessionCookieOptions,
 } from "@/lib/server/auth/session";
+import { prisma } from "@/lib/server/db";
 import { NO_STORE_HEADERS, clientIp } from "@/lib/server/http";
+import { backupToDrive, connectDrive } from "@/lib/server/services/drive";
 import { signInWithGoogle } from "@/lib/server/services/users";
+import { getToday } from "@/lib/server/settings";
 
 /** Why a sign-in didn't complete, as the sign-in page words it (see /login). */
 type Failure = "cancelled" | "expired" | "failed" | "rate_limited";
@@ -25,6 +28,52 @@ function redirect(location: string): NextResponse {
 }
 
 const fail = (reason: Failure) => redirect(`/login?error=${reason}`);
+
+/** How connecting Google Drive went, as Settings words it. */
+type DriveOutcome = "connected" | "cancelled" | "failed" | "not-granted" | "other-account" | "problem";
+const drive = (outcome: DriveOutcome) => redirect(`/settings?drive=${outcome}#backup`);
+
+/**
+ * The signed-in person comes back from allowing (or not) backups in their
+ * Google Drive. The permission is kept only if it is for the Drive of the
+ * Google account they sign in to Hisab with, and a first backup is made at
+ * once — which also shows straight away whether Drive works.
+ */
+async function connectGoogleDrive(request: NextRequest, config: GoogleConfig, pending: Pending): Promise<NextResponse> {
+  const session = await readSession(request.cookies.get(SESSION_COOKIE)?.value);
+  if (!session) return redirect("/login");
+  if (session.locked) return redirect("/lock");
+
+  const params = request.nextUrl.searchParams;
+  if (params.get("error")) return drive(params.get("error") === "access_denied" ? "cancelled" : "failed");
+
+  const ip = clientIp(request);
+  if (!(await checkSignInAttempt(ip)).allowed) return drive("failed");
+  const attempt = await beginSignInAttempt(ip);
+  let grant;
+  try {
+    grant = await completeAuthorization(config, callbackUrl(request), pending, { code: params.get("code"), state: params.get("state") });
+  } catch (error) {
+    if (!(error instanceof SignInError)) throw error;
+    console.warn(`[drive] ${error.message}`);
+    return drive("failed");
+  }
+  await markSignInAttemptSuccessful(attempt, ip);
+
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: session.userId }, select: { googleSub: true } });
+  if (user.googleSub !== grant.profile.sub) return drive("other-account");
+  // The Drive permission can be unticked on Google's screen.
+  if (!grant.refreshToken || !grant.scopes.includes(DRIVE_SCOPE)) return drive("not-granted");
+
+  await connectDrive(session.userId, grant.refreshToken);
+  try {
+    await backupToDrive(session.userId, await getToday(session.userId));
+  } catch (error) {
+    console.warn("[drive] first backup failed", error instanceof Error ? error.message : error);
+    return drive("problem");
+  }
+  return drive("connected");
+}
 
 /**
  * Google sends the browser back here. Check that the answer belongs to the
@@ -39,6 +88,7 @@ export async function GET(request: NextRequest) {
     const pending = decodePending(request.cookies.get(PENDING_COOKIE)?.value);
     // No sign-in in progress in this browser: started elsewhere, or over ten minutes ago.
     if (!pending) return fail("expired");
+    if (pending.drive) return await connectGoogleDrive(request, config, pending);
 
     const params = request.nextUrl.searchParams;
     if (params.get("error")) return fail(params.get("error") === "access_denied" ? "cancelled" : "failed");
@@ -71,6 +121,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("[auth] sign-in failed unexpectedly", error);
-    return fail("failed");
+    return decodePending(request.cookies.get(PENDING_COOKIE)?.value)?.drive ? drive("failed") : fail("failed");
   }
 }

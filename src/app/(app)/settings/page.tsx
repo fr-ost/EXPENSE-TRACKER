@@ -7,6 +7,7 @@ import { AppLock } from "@/components/settings/app-lock";
 import { BackupFiles } from "@/components/settings/backup-restore";
 import { CategoriesManager } from "@/components/settings/categories-manager";
 import { DeleteAccount } from "@/components/settings/delete-account";
+import { DriveBackups } from "@/components/settings/drive-backups";
 import { ExchangeRates } from "@/components/settings/exchange-rates";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { SessionsList } from "@/components/settings/security-section";
@@ -15,6 +16,7 @@ import { Card, CardHeader } from "@/components/ui/misc";
 import { loadPageContext } from "@/lib/server/page-context";
 import { listCategories } from "@/lib/server/services/categories";
 import { getCurrencies } from "@/lib/server/services/currency";
+import { getDriveStatus } from "@/lib/server/services/drive";
 import { listSessions } from "@/lib/server/services/settings";
 import { getAccountEmail } from "@/lib/server/settings";
 import { appVersion } from "@/lib/server/version";
@@ -26,14 +28,17 @@ function timezones(current: string): string[] {
   return all.includes(current) ? all : [current, ...all];
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: PageProps<"/settings">) {
   const { userId, settings, session } = await loadPageContext();
-  const [categories, sessions, currencies, email] = await Promise.all([
+  const [categories, sessions, currencies, email, drive, params] = await Promise.all([
     listCategories(userId),
     listSessions(userId, session.id),
     getCurrencies(userId, settings.baseCurrency),
     getAccountEmail(userId),
+    getDriveStatus(userId),
+    searchParams,
   ]);
+  const driveNotice = typeof params.drive === "string" ? params.drive : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -100,8 +105,9 @@ export default async function SettingsPage() {
           title="Backup and restore"
           description="A backup file holds everything you have recorded — accounts, transactions, balances, budgets, categories and preferences."
         />
-        <div className="px-5 pb-5 pt-4 sm:px-6">
+        <div className="flex flex-col gap-5 px-5 pb-5 pt-4 sm:px-6">
           <BackupFiles />
+          <DriveBackups status={drive} notice={driveNotice} />
         </div>
       </Card>
 

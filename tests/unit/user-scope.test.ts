@@ -25,8 +25,9 @@ const OWNED_RELATIONS = new Set([
   "BalanceCorrection",
   "ExpenseEntry",
   "IncomeEntry",
+  "DriveBackup",
 ]);
-const OWNED_MODELS = ["account", "category", "transaction", "balanceCheckpoint", "scopeBudget", "exchangeRate", "recurringTransaction"];
+const OWNED_MODELS = ["account", "category", "transaction", "balanceCheckpoint", "scopeBudget", "exchangeRate", "recurringTransaction", "driveBackup"];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {

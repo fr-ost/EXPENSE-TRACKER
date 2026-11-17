@@ -32,7 +32,8 @@ export function DeleteAccount() {
     <div className="flex flex-col gap-4">
       <p className="text-body text-text-secondary">
         Deletes your accounts, transactions, balance updates, budgets, categories, recurring transactions and preferences from
-        Hisab, for good. Export anything you want to keep first.
+        Hisab, for good — and Hisab&apos;s backups in your Google Drive, if you connected it. Download a backup first if you want
+        to keep anything.
       </p>
       <div className="flex max-w-sm flex-col gap-3">
         <Field label="Type DELETE to continue" error={error}>

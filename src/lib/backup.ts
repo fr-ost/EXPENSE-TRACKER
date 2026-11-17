@@ -262,6 +262,35 @@ export interface BackupSummary {
 }
 
 /** The file's sections, as one entry of each is called. */
+/** A backup kept in the person's Google Drive. */
+export interface DriveBackupFile {
+  id: string;
+  /** When it reached Drive (ISO). */
+  createdAt: string;
+  /** Bytes, as stored (compressed). */
+  size: number;
+  /** What it holds, when the file says. */
+  summary: BackupSummary | null;
+}
+
+/** Where backups to Google Drive stand for one person. */
+export interface DriveStatus {
+  /** Google sign-in is set up, so Drive can be offered at all. */
+  available: boolean;
+  connected: boolean;
+  /** When a backup last reached Drive (ISO). */
+  lastBackupAt: string | null;
+  /** When Hisab last looked for something new to back up (ISO). */
+  lastCheckedAt: string | null;
+  /** Google has withdrawn the permission: Drive must be connected again. */
+  needsReconnect: boolean;
+  /** Why the last backup didn't work, in words. */
+  problem: string | null;
+}
+
+/** How many backups are kept in Drive; older ones are removed as new ones arrive. */
+export const DRIVE_BACKUPS_KEPT = 10;
+
 /** What a restore did. */
 export interface RestoreResult extends BackupSummary {
   /**
@@ -328,7 +357,9 @@ export function parseBackup(input: unknown): ParsedBackup {
   return { ok: true, backup: parsed.data };
 }
 
-export function summarizeBackup(backup: Pick<Backup, "exportedAt" | "accounts" | "categories" | "transactions" | "balanceUpdates" | "budgets" | "exchangeRates" | "recurring">): BackupSummary {
+export function summarizeBackup(
+  backup: { exportedAt: string } & Record<"accounts" | "categories" | "transactions" | "balanceUpdates" | "budgets" | "exchangeRates" | "recurring", unknown[]>,
+): BackupSummary {
   return {
     exportedAt: backup.exportedAt,
     accounts: backup.accounts.length,

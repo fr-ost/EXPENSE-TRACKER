@@ -21,6 +21,8 @@ const pendingSchema = z.object({
   timezone: z.string().max(64).nullable(),
   /** Coming back to remove a forgotten PIN. */
   resetPin: z.boolean(),
+  /** Not a sign-in: the signed-in person is connecting their Google Drive for backups. */
+  drive: z.boolean().default(false),
 });
 
 export type Pending = z.infer<typeof pendingSchema> & PendingSignIn;

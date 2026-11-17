@@ -45,9 +45,12 @@ has a ledger nobody else can see.
 - **Reports** — monthly and yearly statements, category, personal & family,
   income sources, savings trend, account activity; PDF (Bengali names
   included) and Excel exports.
-- **Backup and restore** — download everything you have recorded as one
-  file, and restore it later (into the same account or another): the restore
-  replaces what is there, all at once or not at all.
+- **Backup and restore** — connect your Google Drive and Hisab keeps a backup
+  there on its own: a new copy on any day your ledger has changed, the last
+  ten kept, in a folder of Hisab's own (it can't see anything else in your
+  Drive). Or download everything as one file. Either can be restored later,
+  into the same account or another: a restore replaces what is there, all at
+  once or not at all.
 - **Installable app** — install it from Chrome or Edge (desktop and Android)
   or add it to the iPhone home screen.
 - **Your own account** — sign in with Google (your account is created the
@@ -76,8 +79,16 @@ has a ledger nobody else can see.
       **Authorised redirect URIs** add exactly
       `https://YOUR-DOMAIN/api/auth/google/callback`.
    3. Copy the client ID and the client secret.
-   4. While the consent screen is in **Testing**, only the test users you
-      list can sign in; **publish** it when anyone should be able to.
+   4. For backups to Google Drive: enable the **Google Drive API** for the
+      project, and add the scope
+      `https://www.googleapis.com/auth/drive.appdata` to the consent screen
+      ("See, create, and delete its own configuration data in your Google
+      Drive"). It is a non-sensitive scope: Hisab only gets a hidden folder
+      of its own, never the rest of anyone's Drive.
+   5. While the consent screen is in **Testing**, only the test users you
+      list can sign in — and Google ends every Drive permission after seven
+      days, so backups stop until Drive is connected again. **Publish** the
+      consent screen when anyone should be able to sign in.
 5. **Set the variables** on the service (Variables tab):
 
    | Variable               | Value |
@@ -226,6 +237,7 @@ A single Next.js 16 (App Router) application with PostgreSQL via Prisma 7.
 | -------------- | -------- |
 | Money          | `NUMERIC(14,2)` in Postgres; decimal strings over the wire; `bigint` minor units for any arithmetic in TypeScript (`src/lib/money.ts`). Floats are used only to draw charts. |
 | Users          | Every row carries its owner (`userId`). Every service takes the signed-in user's id first and puts it in every query; references between rows are composite foreign keys on `(userId, id)`, so the database itself refuses one user's entry on another's account or category. |
+| Backups        | A backup is one JSON file of everything a person recorded. A restore replaces their data in one transaction and never trusts the file: every row is checked, references must resolve inside the file, and rows get new ids. Drive backups are that file, compressed, in the app's hidden folder of the person's Drive; the server keeps only the permission (encrypted) and when a backup last got there. |
 | Ledger         | No stored balances. Views expand transactions into signed per-account movements and derive the correction that makes each known balance (opening balance, balance updates) hold; Postgres sums them in milliseconds for a personal data set (~80 ms for every account at 30,000 transactions). |
 | Invariants     | CHECK constraints make invalid rows impossible (transfer to the same account, expense without category, zero/negative amounts, malformed times, an adjustment kept out of the balance…). Entry rules that need other rows (active accounts, category kinds, currencies) live in one function, `resolveEntry`, run under row locks. |
 | Reads / writes | Server Components read through a service layer (`src/lib/server/services`). Writes go through REST route handlers under `/api`, then the client refreshes server data in place — no full reloads. |
@@ -282,9 +294,21 @@ tests/                   unit + integration (Vitest, real Postgres), e2e (Playwr
   person (a burst of 120, then two a second). The client address is the first
   `X-Forwarded-For` entry, which Railway's edge sets and clients can't
   override.
+- **Google Drive** — connecting it gives Hisab one permission
+  (`drive.appdata`): a hidden folder of its own in your Drive. It cannot
+  list, read or change any other file. The permission (a Google refresh
+  token) is stored encrypted with a key derived from the OAuth client secret,
+  is only ever used to save, list, fetch and prune Hisab's own backups, and
+  is handed back to Google when you disconnect. It must be for the Google
+  account you sign in with. The backups themselves are never kept on the
+  server.
+- **Restoring a backup** treats the file as untrusted, whether it comes from
+  your computer or your Drive: every entry is validated, nothing in it can
+  refer outside the file or choose where it is stored, it can't change your
+  PIN or who you are, and it is applied in one transaction or not at all.
 - **Deleting your account** (Settings, after typing DELETE) removes every row
-  you own and every session, at once. `/delete-account` explains this
-  publicly.
+  you own and every session, at once — and Hisab's backups in your Google
+  Drive. `/delete-account` explains this publicly.
 - **CSRF** — state-changing API requests must be same-origin (checked with
   `Sec-Fetch-Site`, falling back to `Origin`) and JSON.
 - **Shared SMS** arrive through the URL fragment, which browsers never send to
@@ -358,7 +382,13 @@ through Google (cancelled, forged and replayed answers included), the PIN
 lock, deleting an account, every API route as someone else, SMS import,
 balance updates, 401s on every API route (with and without a forged cookie),
 CSRF, cookie flags, security headers, open redirects, rate limiting, invalid
-input, public install files, the share target, and the phone layout.
+input, public install files, the share target, and the phone layout. Backups:
+a ledger with one of everything restored into the same and another account
+and compared row for row; some sixty altered files refused without changing
+anything; and Google Drive against a stand-in that is strict where Google is
+— the daily backup and its schedule, keeping the last ten, restoring (with a
+copy of the present saved first), a withdrawn permission, Drive being down,
+disabled or full, disconnecting, and deleting the account.
 
 ## Known limitations
 
@@ -371,6 +401,13 @@ input, public install files, the share target, and the phone layout.
 - The per-client sign-in limit relies on the platform proxy's
   `X-Forwarded-For` (Railway sets it). Without such a proxy it can be
   sidestepped.
+- Automatic backups to Google Drive are made when you use the app (after a
+  page has loaded, at most once a day, an hour after a failed try) — which is
+  also the only time your ledger changes. The folder they go to is hidden in
+  Drive's own screens; Hisab lists what is in it.
+- A restore replaces everything in the account; it doesn't merge. Restored
+  entries get new ids, so links to a particular account or transaction from
+  before the restore no longer open.
 - The write limit is kept in the server's memory: it starts afresh on a
   deploy and is per server process.
 - The app lock keeps other people out of an unlocked device. Anyone who can

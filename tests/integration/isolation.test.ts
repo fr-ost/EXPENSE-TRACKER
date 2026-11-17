@@ -448,16 +448,21 @@ describe("one user's data is invisible and untouchable to another", () => {
   it("deleting an account removes that person's data and nobody else's", async () => {
     const before = await everythingOf(alice);
     await createSession(bob, "Bob's phone");
+    // Both had connected Google Drive: the permission goes with the account, like a sign-in.
+    await prisma.driveBackup.createMany({ data: [alice, bob].map((userId) => ({ userId, refreshToken: "sealed" })) });
     await deleteUser(bob);
     expect(await prisma.user.findUnique({ where: { id: bob } })).toBeNull();
-    for (const table of ["Account", "Category", "Transaction", "BalanceCheckpoint", "ScopeBudget", "ExchangeRate", "RecurringTransaction", "Session"]) {
+    for (const table of ["Account", "Category", "Transaction", "BalanceCheckpoint", "ScopeBudget", "ExchangeRate", "RecurringTransaction", "Session", "DriveBackup"]) {
       const [{ count }] = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`SELECT COUNT(*)::int AS "count" FROM "${table}" WHERE "userId" = $1`, bob);
       expect(count, table).toBe(0);
     }
     expect(await everythingOf(alice)).toEqual(before);
 
-    // Clearing the data alone keeps the person and their preferences.
+    expect(await prisma.driveBackup.count({ where: { userId: alice } })).toBe(1);
+
+    // Clearing the data alone (as a restore does) keeps the person, their preferences and their Drive connection.
     await prisma.$transaction((tx) => deleteUserData(tx, alice));
+    expect(await prisma.driveBackup.count({ where: { userId: alice } })).toBe(1);
     const after = await everythingOf(alice);
     expect(after.user).toEqual(before.user);
     expect([after.accounts, after.categories, after.transactions, after.checkpoints, after.budgets, after.rates, after.recurring].flat()).toEqual([]);

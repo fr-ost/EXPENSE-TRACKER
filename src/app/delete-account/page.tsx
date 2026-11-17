@@ -27,6 +27,10 @@ export default function DeleteAccountPage() {
           This removes your accounts, transactions, balance updates, budgets, categories, recurring transactions, exchange rates,
           preferences and sign-ins from our servers straight away. It can&apos;t be undone, and nothing is kept.
         </p>
+        <p>
+          If you connected Google Drive, Hisab&apos;s backups there are removed too. Should any remain (Drive couldn&apos;t be
+          reached), you can delete them in Google Drive: Settings → Manage apps → Hisab → Delete hidden app data.
+        </p>
         <GoogleButton next="/settings#delete-account" size="md" label="Sign in to delete your account" />
       </div>
     </AuthScreen>

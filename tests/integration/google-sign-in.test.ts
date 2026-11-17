@@ -150,7 +150,7 @@ describe("starting and finishing a sign-in", () => {
 
   it("keeps the pending sign-in in a cookie only it can read back", () => {
     const { pending } = beginSignIn(config, "https://hisab.example/cb");
-    const full = { ...pending, next: "/transactions?month=2026-09", timezone: "Asia/Dhaka", resetPin: false };
+    const full = { ...pending, next: "/transactions?month=2026-09", timezone: "Asia/Dhaka", resetPin: false, drive: false };
     expect(decodePending(encodePending(full))).toEqual(full);
     expect(decodePending(undefined)).toBeNull();
     expect(decodePending("garbage")).toBeNull();

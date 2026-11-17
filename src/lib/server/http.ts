@@ -85,12 +85,13 @@ const READS = new Set(["GET", "HEAD", "OPTIONS"]);
  */
 export function authed<P extends Record<string, string> = Record<string, never>>(
   handler: (args: HandlerArgs<P>) => Promise<Response>,
-  options: { allowLocked?: boolean } = {},
+  /** `metered`: a read that costs as much as a write (a whole backup, a call to Google), and is limited like one. */
+  options: { allowLocked?: boolean; metered?: boolean } = {},
 ) {
   return async (request: NextRequest, context: { params: Promise<P> }): Promise<Response> => {
     try {
       const session = await requireApiSession(options);
-      if (!READS.has(request.method)) {
+      if (options.metered || !READS.has(request.method)) {
         const limit = takeWrite(session.userId);
         if (!limit.allowed) throw tooManyRequests("That's a lot at once. Try again in a moment.", limit.retryAfterSeconds);
       }

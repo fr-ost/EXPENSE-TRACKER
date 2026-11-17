@@ -68,30 +68,30 @@ enum CheckpointSource {
 ///
 /// People sign in with Google; nothing secret about that is stored here.
 model User {
-  id              String       @id @default(cuid())
+  id              String                 @id @default(cuid())
   /// Google's permanent id for the account (the ID token's "sub"). Null only
   /// for the owner from before Google sign-in, until they sign in with the
   /// Google account named by OWNER_EMAIL and take the row over.
-  googleSub       String?      @unique @db.VarChar(255)
+  googleSub       String?                @unique @db.VarChar(255)
   /// The Google account's address at the last sign-in. Shown in Settings;
   /// never used to tell users apart (addresses can change hands).
-  email           String?      @db.VarChar(320)
-  displayName     String       @default("") @db.VarChar(60)
-  baseCurrency    String       @default("BDT") @db.Char(3)
-  timezone        String       @default("Asia/Dhaka") @db.VarChar(64)
-  numberFormat    NumberFormat @default(SOUTH_ASIAN)
+  email           String?                @db.VarChar(320)
+  displayName     String                 @default("") @db.VarChar(60)
+  baseCurrency    String                 @default("BDT") @db.Char(3)
+  timezone        String                 @default("Asia/Dhaka") @db.VarChar(64)
+  numberFormat    NumberFormat           @default(SOUTH_ASIAN)
   /// App lock: the PIN's scrypt hash (auth/pin.ts), or null when the lock is off.
-  pinHash         String?      @db.VarChar(255)
+  pinHash         String?                @db.VarChar(255)
   /// Wrong PINs in a row. Every fifth makes the next try wait (pinLockedUntil).
-  pinFailures     Int          @default(0)
+  pinFailures     Int                    @default(0)
   pinLockedUntil  DateTime?
   /// With a PIN: minutes of inactivity before the app locks. 0: only "Lock now".
-  autoLockMinutes Int          @default(15)
+  autoLockMinutes Int                    @default(15)
   /// The currency a new income / expense starts in (null: baseCurrency).
-  incomeCurrency  String?      @db.Char(3)
-  expenseCurrency String?      @db.Char(3)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  incomeCurrency  String?                @db.Char(3)
+  expenseCurrency String?                @db.Char(3)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
   sessions        Session[]
   accounts        Account[]
   categories      Category[]
@@ -100,6 +100,27 @@ model User {
   budgets         ScopeBudget[]
   rates           ExchangeRate[]
   recurring       RecurringTransaction[]
+  drive           DriveBackup?
+}
+
+/// The user's permission for Hisab to keep backups in their Google Drive, in
+/// the app's own hidden folder (scope "drive.appdata": Hisab can neither see
+/// nor touch any other file there). Like a session, it goes with the user.
+model DriveBackup {
+  userId         String    @id
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Google's refresh token for that one scope, encrypted (drive/tokens.ts).
+  refreshToken   String    @db.Text
+  connectedAt    DateTime  @default(now())
+  /// When a backup last reached Drive.
+  lastBackupAt   DateTime?
+  /// SHA-256 of what that backup held, so an unchanged ledger isn't uploaded again.
+  lastBackupHash String?   @db.Char(64)
+  /// When a backup was last tried (automatic ones wait a while after a failure).
+  lastAttemptAt  DateTime?
+  /// Why the last try failed, if it did: "reconnect" when Google has withdrawn
+  /// the permission, otherwise a short description.
+  lastError      String?   @db.VarChar(200)
 }
 
 /// Server-side session. `id` is the SHA-256 of the cookie token, so a database

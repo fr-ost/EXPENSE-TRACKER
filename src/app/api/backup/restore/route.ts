@@ -15,7 +15,7 @@ export const POST = authed(async ({ request, userId }) => {
   if (Number(request.headers.get("content-length") ?? 0) > BACKUP_MAX_BYTES) {
     throw new AppError(413, "payload_too_large", "That file is too large to be a Hisab backup.");
   }
-  return runHeavy(async () => {
+  return runHeavy(userId, async () => {
     const { backup } = await readJson(request, restoreInput, BACKUP_MAX_BYTES);
     return json(await restoreBackup(userId, backup));
   });

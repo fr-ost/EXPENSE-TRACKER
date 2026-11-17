@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
-import { asUser, person, signIn, signInApi } from "./auth";
+import { Client } from "pg";
+import { asUser, connectDriveApi, driveOf, person, signIn, signInApi, steerGoogle } from "./auth";
+import { E2E_DATABASE_URL } from "./env";
 
 const account = (name: string, openingBalance: string) => ({ name, type: "CASH", currency: "BDT", openingBalance, openingDate: "2025-01-01", icon: null, color: null, isActive: true });
 
@@ -106,4 +108,147 @@ test("restore over the API: only with the word, only your own account, all or no
   expect((await call(bob, "GET", `/api/accounts/${hers}`)).status).toBe(404);
   expect((await call(alice, "GET", `/api/accounts/${hers}`)).status).toBe(200);
   expect((await call(alice, "GET", `/api/accounts/${his[0].id}`)).status).toBe(404);
+});
+
+test("Google Drive: connect, back up, restore from a backup there, and disconnect", async ({ page, request }) => {
+  const who = person("drive-user", "Drive User");
+  await signIn(page, who);
+  const origin = new URL(page.url()).origin;
+  const post = (url: string, data: unknown) => page.request.post(url, { headers: { Origin: origin }, data });
+  const wallet = (await (await post("/api/accounts", account("Wallet", "5000"))).json()).id as string;
+  const food = ((await (await page.request.get("/api/categories")).json()).categories as Array<{ id: string; name: string; kind: string }>).find(
+    (c) => c.kind === "EXPENSE" && c.name === "Food",
+  )!.id;
+  const spend = (amount: string, description: string) =>
+    post("/api/transactions", { transaction: { type: "EXPENSE", amount, date: "2026-09-10", accountId: wallet, categoryId: food, scope: "PERSONAL", description, notes: null } });
+  await spend("1000", "Groceries");
+
+  // Connect: off to Google and back, with a first backup made at once.
+  await page.goto("/settings");
+  const section = page.locator("#backup");
+  await expect(section).toContainText("Connect your Google Drive and Hisab keeps a backup there on its own");
+  await section.getByRole("link", { name: "Connect Google Drive" }).click();
+  await expect(page).toHaveURL(/\/settings\?drive=connected#backup$/);
+  await expect(section.getByRole("status")).toHaveText("Google Drive is connected. Hisab will keep a backup there from now on.");
+  await expect(section).toContainText(/Last backup \d+ \w+ \d{4}/);
+  expect((await driveOf(request, who)).files.map((f) => f.appProperties.transactions)).toEqual(["1"]);
+
+  // Back up now, after recording more.
+  await spend("200", "Tea");
+  await section.getByRole("button", { name: "Back up now" }).click();
+  await expect(page.getByText("Backed up to Google Drive")).toBeVisible();
+  expect((await driveOf(request, who)).files).toHaveLength(2);
+
+  // A mistake, then back to the backup from before it.
+  await spend("4000", "A mistake");
+  await section.getByRole("button", { name: "Restore from Google Drive" }).click();
+  const list = page.getByRole("dialog", { name: "Backups in your Google Drive" });
+  await expect(list.getByRole("listitem")).toHaveCount(2);
+  await expect(list.getByRole("listitem").first()).toContainText("1 account, 2 transactions");
+  await list.getByRole("listitem").first().getByRole("button", { name: "Restore" }).click();
+  const confirm = page.getByRole("dialog", { name: "Restore this backup?" });
+  await expect(confirm).toContainText("1 account, 2 transactions");
+  await confirm.getByRole("button", { name: "Replace my data" }).click();
+  const done = page.getByRole("dialog", { name: "Backup restored" });
+  await expect(done).toContainText("Every account balance matches the backup.");
+  await done.getByRole("button", { name: "Open Hisab" }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  const descriptions = async () => ((await (await page.request.get("/api/transactions")).json()).items as Array<{ description: string }>).map((t) => t.description).sort();
+  expect(await descriptions()).toEqual(["Groceries", "Tea"]);
+  // What was there before the restore — the mistake included — was saved first.
+  expect((await driveOf(request, who)).files.map((f) => f.appProperties.transactions).sort()).toEqual(["1", "2", "3"]);
+
+  // Google withdraws the permission: Hisab says so and offers to connect again.
+  await steerGoogle(request, `revoke?sub=${who.sub}`);
+  await page.goto("/settings");
+  await section.getByRole("button", { name: "Back up now" }).click();
+  await expect(page.getByText("Google Drive needs to be connected again.").first()).toBeVisible();
+  await expect(section.getByRole("alert")).toContainText("Connect it again to carry on backing up");
+  await section.getByRole("link", { name: "Connect Google Drive again" }).click();
+  await expect(page).toHaveURL(/drive=connected/);
+  await expect(section.getByRole("button", { name: "Back up now" })).toBeVisible();
+
+  // Disconnect: the permission goes back to Google, the backups stay in Drive.
+  await section.getByRole("button", { name: "Disconnect" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Disconnect" }).click();
+  await expect(page.getByText("Google Drive disconnected")).toBeVisible();
+  await expect(section.getByRole("link", { name: "Connect Google Drive" })).toBeVisible();
+  // (Four: reconnecting saved the ledger as it stood after the restore.)
+  const after = await driveOf(request, who);
+  expect([after.grants, after.files.length]).toEqual([0, 4]);
+});
+
+test("Google Drive: the day's backup is made on its own, after a page has loaded", async ({ page, request }) => {
+  const who = person("drive-daily", "Daily");
+  await signIn(page, who);
+  const origin = new URL(page.url()).origin;
+  const post = (url: string, data: unknown) => page.request.post(url, { headers: { Origin: origin }, data });
+  expect((await post("/api/accounts", account("Wallet", "100"))).status()).toBe(201);
+  await page.goto("/settings");
+  await page.locator("#backup").getByRole("link", { name: "Connect Google Drive" }).click();
+  await expect(page).toHaveURL(/drive=connected/);
+  expect((await driveOf(request, who)).files).toHaveLength(1);
+
+  // More is recorded; opening pages the same day uploads nothing more.
+  expect((await post("/api/accounts", account("Second wallet", "5"))).status()).toBe(201);
+  await page.goto("/accounts");
+  await page.goto("/dashboard");
+  expect((await driveOf(request, who)).files).toHaveLength(1);
+
+  // A day later, simply opening the app saves the new state.
+  const database = new Client({ connectionString: E2E_DATABASE_URL });
+  await database.connect();
+  await database.query(`UPDATE "DriveBackup" SET "lastAttemptAt" = now() - interval '25 hours' WHERE "userId" = (SELECT "id" FROM "User" WHERE "googleSub" = $1)`, [who.sub]);
+  await database.end();
+  await page.goto("/accounts");
+  await expect.poll(async () => (await driveOf(request, who)).files.map((f) => f.appProperties.accounts).sort(), { timeout: 15_000 }).toEqual(["1", "2"]);
+});
+
+test("Google Drive: only your own Drive, only with the permission, and gone with the account", async ({ request }) => {
+  const who = person("drive-api", "Drive Api");
+  const cookie = (await signInApi(request, who)).cookie!;
+  const call = async (method: string, url: string, data?: unknown) => {
+    const response = await request.fetch(url, { method, headers: asUser(cookie), data: data === undefined ? undefined : JSON.stringify(data) });
+    return { status: response.status(), body: await response.json().catch(() => ({})) };
+  };
+  expect((await call("POST", "/api/accounts", account("Savings", "70000"))).status).toBe(201);
+
+  // Nothing works before Drive is connected.
+  expect((await call("GET", "/api/drive")).body).toMatchObject({ available: true, connected: false });
+  expect((await call("POST", "/api/drive/backups")).status).toBe(409);
+  expect((await call("GET", "/api/drive/backups")).status).toBe(409);
+
+  // Cancelled at Google, the permission left unticked, or another Google account: not connected.
+  expect(await connectDriveApi(request, cookie, { ...who, deny: true })).toBe("/settings?drive=cancelled#backup");
+  expect(await connectDriveApi(request, cookie, { ...who, withoutDrive: true })).toBe("/settings?drive=not-granted#backup");
+  expect(await connectDriveApi(request, cookie, person("someone-else", "Someone Else"))).toBe("/settings?drive=other-account#backup");
+  expect((await call("GET", "/api/drive")).body.connected).toBe(false);
+  expect((await driveOf(request, person("someone-else", "Someone Else"))).files).toEqual([]);
+
+  // Drive not switched on for the app: connected, and the problem is named.
+  await steerGoogle(request, "trouble?kind=disabled");
+  expect(await connectDriveApi(request, cookie, who)).toBe("/settings?drive=problem#backup");
+  expect((await call("GET", "/api/drive")).body).toMatchObject({ connected: true, problem: expect.stringMatching(/Google Drive API must be enabled/) });
+  await steerGoogle(request, "trouble");
+
+  expect(await connectDriveApi(request, cookie, who)).toBe("/settings?drive=connected#backup");
+  const status = (await call("GET", "/api/drive")).body;
+  expect(status).toMatchObject({ connected: true, needsReconnect: false, problem: null });
+  expect(JSON.stringify(status)).not.toMatch(/refresh|token/i);
+  const { backups } = (await call("GET", "/api/drive/backups")).body as { backups: Array<{ id: string; summary: { accounts: number } }> };
+  expect(backups.map((b) => b.summary.accounts)).toEqual([1]);
+
+  // A restore needs the word, and a backup that is in this person's Drive.
+  expect((await call("POST", "/api/drive/restore", { fileId: backups[0].id })).status).toBe(400);
+  const other = person("drive-other", "Other");
+  const otherCookie = (await signInApi(request, other)).cookie!;
+  const asOther = async (method: string, url: string, data?: unknown) => (await request.fetch(url, { method, headers: asUser(otherCookie), data: data === undefined ? undefined : JSON.stringify(data) })).status();
+  expect(await connectDriveApi(request, otherCookie, other)).toBe("/settings?drive=connected#backup");
+  expect(await asOther("POST", "/api/drive/restore", { confirm: "REPLACE", fileId: backups[0].id })).toBe(502);
+  expect((await call("POST", "/api/drive/restore", { confirm: "REPLACE", fileId: backups[0].id })).body).toMatchObject({ accounts: 1, balanceDifferences: [] });
+
+  // Deleting the account removes Hisab's backups from the person's Drive and hands the permission back.
+  expect((await driveOf(request, who)).files.length).toBeGreaterThan(0);
+  expect((await call("DELETE", "/api/account", { confirm: "DELETE" })).status).toBe(200);
+  expect(await driveOf(request, who)).toMatchObject({ files: [], grants: 0 });
 });

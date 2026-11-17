@@ -9,6 +9,8 @@ export interface Identity {
   email: string;
   name: string;
   emailVerified?: boolean;
+  /** The person unticks the Drive permission on Google's screen. */
+  withoutDrive?: boolean;
   /** The person presses Cancel at Google. */
   deny?: boolean;
   /** Make the stand-in issue an ID token the app must refuse. */
@@ -96,6 +98,32 @@ export async function signInApi(
   const setCookie = back.headersArray().find((h) => h.name.toLowerCase() === "set-cookie" && h.value.includes("hisab_session="))?.value ?? null;
   return { location: back.headers().location, cookie: session ?? null, setCookie: session ? setCookie : null };
 }
+
+/**
+ * Connect Google Drive without a browser: start at the app as the signed-in
+ * person, allow it at the stand-in for Google as `who`, and bring the answer
+ * back. Returns where the app sent the browser at the end.
+ */
+export async function connectDriveApi(request: APIRequestContext, cookie: string, who: Identity & { withoutDrive?: boolean }): Promise<string> {
+  const start = await request.get("/api/drive/connect", { maxRedirects: 0, headers: { Cookie: cookie } });
+  expect(start.status(), "Drive connect start").toBe(303);
+  const pending = cookiesSet(start).find((c) => c.includes("hisab_signin="));
+  const atGoogle = await request.get(start.headers().location, { maxRedirects: 0, headers: { Cookie: `fake_google_user=${identityCookie(who)}` } });
+  expect(atGoogle.status(), `stand-in for Google: ${await atGoogle.text()}`).toBe(302);
+  const callback = new URL(atGoogle.headers().location);
+  const back = await request.get(`${callback.pathname}${callback.search}`, { maxRedirects: 0, headers: { Cookie: `${cookie}; ${pending}` } });
+  expect(back.status(), "Drive connect callback").toBe(303);
+  return back.headers().location;
+}
+
+/** What the stand-in for Google holds for a person: the files in Hisab's Drive folder and the permissions granted. */
+export async function driveOf(request: APIRequestContext, who: Identity) {
+  const response = await request.post(`${FAKE_GOOGLE_ORIGIN}/__test/files?sub=${encodeURIComponent(who.sub)}`);
+  return (await response.json()) as { files: Array<{ id: string; name: string; appProperties: Record<string, string> }>; grants: number };
+}
+
+/** Steer the stand-in: withdraw a person's permission, or make Drive fail ("down" | "disabled" | "full" | ""). */
+export const steerGoogle = (request: APIRequestContext, path: string) => request.post(`${FAKE_GOOGLE_ORIGIN}/__test/${path}`);
 
 /** Headers for an API call as a signed-in browser on the app's own pages. */
 export const asUser = (cookie: string) => ({ Origin: APP_ORIGIN, "Content-Type": "application/json", Cookie: cookie });

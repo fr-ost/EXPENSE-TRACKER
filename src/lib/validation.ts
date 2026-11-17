@@ -398,6 +398,8 @@ export const deleteAccountInput = z.object({ confirm: z.literal("DELETE") });
 
 /** Restoring replaces everything recorded; the backup itself is checked by `parseBackup`. */
 export const restoreInput = z.object({ confirm: z.literal("REPLACE"), backup: z.unknown() });
+/** The same, from one of the backups in the person's Google Drive. */
+export const driveRestoreInput = z.object({ confirm: z.literal("REPLACE"), fileId: z.string().min(1).max(200) });
 
 export const settingsInput = z.object({
   displayName: z.string().trim().max(60),

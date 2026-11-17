@@ -24,6 +24,7 @@ export function GET(request: NextRequest) {
       next: safeRedirectPath(params.get("next")).slice(0, 600),
       timezone: params.get("tz")?.slice(0, 64) ?? null,
       resetPin: params.get("reset") === "pin",
+      drive: false,
     }),
     pendingCookieOptions(),
   );

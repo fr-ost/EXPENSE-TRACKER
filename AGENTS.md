@@ -81,6 +81,19 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   the restore. A new table or column that holds user data must be added to
   the export, the restore, `deleteUserData` and `tests/integration/backup.test.ts`
   (its round trip compares whole ledgers).
+- Google Drive backups (`services/drive.ts`, `drive/client.ts`): opt-in, one
+  permission only (`DRIVE_SCOPE`, the app's hidden folder), asked for through
+  the same OAuth callback as sign-in (`pending.drive`) and kept only when it
+  is for the Google account the user signs in with. The refresh token is
+  stored sealed (`drive/tokens.ts`, key derived from the client secret) in
+  `DriveBackup`. `ensureDailyBackup` runs after a page is sent (`after()` in
+  `loadPageContext`), claims its turn in the database, skips an unchanged or
+  empty ledger, and keeps the newest ten files. A restore from Drive first
+  saves the present to Drive. Never revoke an earlier token when a new one
+  arrives: Google withdraws the whole grant, the new token included — only
+  `disconnectDrive` / `removeDriveBackups` revoke. The server never stores a
+  backup. Tests run against `tests/e2e/fake-google.mjs`, which also stands in
+  for Drive; keep it as strict as Google.
 - SMS import: the parser (`src/lib/sms/parse.ts`) is pure and client-side;
   account/category suggestions live in `src/components/sms/sms-suggest.ts`;
   the server (`src/lib/server/services/sms.ts`) re-validates through
