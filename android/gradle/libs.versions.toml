@@ -1,11 +1,18 @@
 [versions]
 agp = "9.3.2"
 browserhelper = "2.7.4"
+androidxCore = "1.17.0"
+androidxWork = "2.10.0"
 junit = "4.13.2"
+json = "20260814"
 
 [libraries]
 androidbrowserhelper = { module = "com.google.androidbrowserhelper:androidbrowserhelper", version.ref = "browserhelper" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "androidxWork" }
 junit = { module = "junit:junit", version.ref = "junit" }
+# The JVM's own org.json for unit tests: Android's copy only exists on a phone.
+json = { module = "org.json:json", version.ref = "json" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

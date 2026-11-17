@@ -219,8 +219,10 @@ describe("linking a phone", () => {
     expect(await listDevices(me)).toEqual([]);
     expect(await authenticateDevice(code)).toBeNull();
 
-    const { token } = await completeDeviceLink(code, { name: "Pixel 8", appVersion: "1.0.5" });
+    const { token, account } = await completeDeviceLink(code, { name: "Pixel 8", appVersion: "1.0.5" });
     expect(token).toMatch(/^[\w-]{43}$/);
+    // The phone is told whose account it is joining, to ask before reading anything.
+    expect(account).toEqual({ email: null, name: "Test user" });
     expect(token).not.toBe(code);
     const device = await authenticateDevice(token);
     expect(device?.userId).toBe(me);

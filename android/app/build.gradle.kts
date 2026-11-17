@@ -100,6 +100,9 @@ android {
 
 dependencies {
     implementation(libs.androidbrowserhelper)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.work.runtime)
 
     testImplementation(libs.junit)
+    testImplementation(libs.json)
 }

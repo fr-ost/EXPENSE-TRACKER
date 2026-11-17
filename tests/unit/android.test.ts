@@ -17,6 +17,10 @@ describe("the site vouching for the Android app", () => {
     expect(intent).toBe(
       `intent://link?code=c0de_-#Intent;scheme=hisab;package=${ANDROID_PACKAGE};S.browser_fallback_url=https%3A%2F%2Fhisab.example%2Fsettings%3Fphone%3Dmissing%23sms-phones;end`,
     );
+    // The scheme and host are the ones the app's set-up screen answers to.
+    const manifest = readFileSync(path.join(process.cwd(), "android/app/src/main/AndroidManifest.xml"), "utf8");
+    expect(manifest).toMatch(/<data\s+android:scheme="hisab"\s+android:host="link"\s*\/>/);
+    expect(manifest).toMatch(/android:name="\.SmsSetupActivity"/);
   });
 
   it("reads fingerprints however they were pasted", () => {

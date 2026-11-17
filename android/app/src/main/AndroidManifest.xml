@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+        Automatic SMS import: new messages (RECEIVE_SMS) and, only when the
+        person asks to bring in the last 30 days, the inbox (READ_SMS). Only
+        messages from banks and wallets about money leave the phone
+        (SmsFilter.kt). Asked for on the set-up screen, after it explains this.
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Tablets and Chromebooks without a SIM still install Hisab; they just can't import SMS. -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
     <!--
         Nothing recorded in Hisab is kept in this app: the site keeps it, and the
         browser keeps the sign-in. What the app does keep belongs to this phone
@@ -14,7 +29,8 @@
         android:label="@string/app_name"
         android:manageSpaceActivity="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Translucent.NoTitleBar">
+        android:theme="@android:style/Theme.Translucent.NoTitleBar"
+        android:usesCleartextTraffic="false">
 
         <!-- This app's half of the handshake with the site; see app/build.gradle.kts. -->
         <meta-data
@@ -81,6 +97,40 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
+        <!--
+            Automatic SMS import: set up from the site (Settings, "Set up on
+            this phone" opens hisab://link?code=…), and seen or turned off
+            from the phone's settings for the app.
+        -->
+        <activity
+            android:name=".SmsSetupActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:exported="true"
+            android:label="@string/sms_screen_label"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Hisab.Screen">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="hisab" android:host="link" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Every SMS the phone receives; only bank and wallet messages about money go further. -->
+        <receiver
+            android:name=".SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Hands the splash picture to the browser, so it stays up while the site loads. -->
         <provider

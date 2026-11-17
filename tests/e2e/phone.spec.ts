@@ -29,7 +29,9 @@ async function linkPhone(request: APIRequestContext, cookie: string, name = "Pix
     data: JSON.stringify({ code, name, appVersion: "1.0.5" }),
   });
   expect(collected.status(), await collected.text()).toBe(200);
-  const { token } = await collected.json();
+  const { token, account } = await collected.json();
+  // Whose account it is, for the phone to ask about before it reads anything.
+  expect(account).toMatchObject({ email: expect.stringMatching(/@example\.com$/), name: expect.any(String) });
   return { code, token: token as string };
 }
 
@@ -78,7 +80,7 @@ test("a linked phone hands in messages; clear ones are added, unclear ones wait"
 
   // The phone can ask whether it is still linked…
   const self = await request.get("/api/devices/self", { headers: asPhone(token) });
-  expect(await self.json()).toEqual({ linked: true, waiting: 1 });
+  expect(await self.json()).toEqual({ linked: true, account: { email: "phone-owner@example.com", name: "Phone Owner" }, waiting: 1 });
   // …and unlink itself; then its token is nobody's.
   expect((await request.delete("/api/devices/self", { headers: asPhone(token) })).status()).toBe(200);
   expect((await request.get("/api/devices/self", { headers: asPhone(token) })).status()).toBe(401);

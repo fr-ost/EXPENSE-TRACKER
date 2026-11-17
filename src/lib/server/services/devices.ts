@@ -27,6 +27,21 @@ const MAX_PENDING = 5;
 const hash = (secret: string) => createHash("sha256").update(secret, "utf8").digest("hex");
 const newSecret = () => randomBytes(32).toString("base64url");
 
+/**
+ * Whose account a phone hands its messages to. The phone shows it and asks
+ * before it reads anything: a link can be opened by any website, so a code
+ * from someone else's account must never quietly send your messages there.
+ */
+export interface DeviceAccount {
+  email: string | null;
+  name: string;
+}
+
+async function accountOf(userId: UserId): Promise<DeviceAccount> {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, displayName: true } });
+  return { email: user.email, name: user.displayName };
+}
+
 export interface DeviceView {
   id: string;
   name: string;
@@ -75,7 +90,10 @@ export async function startDeviceLink(userId: UserId): Promise<{ code: string; e
  * The phone collects its token with the code it was handed. Whoever holds a
  * live code is the phone the user just linked: the code is the proof.
  */
-export async function completeDeviceLink(code: string, phone: { name: string; appVersion: string | null }): Promise<{ token: string }> {
+export async function completeDeviceLink(
+  code: string,
+  phone: { name: string; appVersion: string | null },
+): Promise<{ token: string; account: DeviceAccount }> {
   const token = newSecret();
   const now = new Date();
   // One statement, so a code works once even if it is sent twice at the same moment.
@@ -85,7 +103,14 @@ export async function completeDeviceLink(code: string, phone: { name: string; ap
     data: { tokenHash: hash(token), pendingUntil: null, name: phone.name, appVersion: phone.appVersion, createdAt: now },
   });
   if (count !== 1) throw invalid("That link has expired. Start again from Settings in Hisab.");
-  return { token };
+  const device = await authenticateDevice(token);
+  if (!device) throw invalid("That link has expired. Start again from Settings in Hisab.");
+  return { token, account: await accountOf(device.userId) };
+}
+
+/** The account a linked phone belongs to (shown on the phone). */
+export function deviceAccount(userId: UserId): Promise<DeviceAccount> {
+  return accountOf(userId);
 }
 
 /** Whose phone a token belongs to, or null. */

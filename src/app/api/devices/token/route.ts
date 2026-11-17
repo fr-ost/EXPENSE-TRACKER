@@ -19,9 +19,10 @@ export async function POST(request: NextRequest) {
     }
     const input = await readJson(request, deviceTokenInput);
     const attempt = await beginSignInAttempt(ip);
-    const { token } = await completeDeviceLink(input.code, { name: input.name, appVersion: input.appVersion });
+    const { token, account } = await completeDeviceLink(input.code, { name: input.name, appVersion: input.appVersion });
     await markSignInAttemptSuccessful(attempt, ip);
-    return json({ token });
+    // The phone shows whose account this is and asks before it reads any message.
+    return json({ token, account });
   } catch (error) {
     return errorResponse(error);
   }
