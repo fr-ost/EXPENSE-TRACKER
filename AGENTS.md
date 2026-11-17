@@ -111,6 +111,31 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   flagged duplicate is confirmed with `sameAs` (the recorded transaction takes
   the message's key, date and time). Card limits are never balances.
   Add new message formats as parser tests first (`tests/unit/sms-parse.test.ts`).
+- Automatic SMS import (Android): a linked phone (`Device`) hands bank and
+  wallet messages to `POST /api/devices/inbox` (`deviceAuthed()`: its token,
+  no session). Linking: a signed-in browser asks for a one-time code
+  (`startDeviceLink`, 10 minutes, once), the app exchanges it for a token
+  (`completeDeviceLink`, limited like failed sign-ins) and shows whose
+  account it joins before reading anything — any website can open the link.
+  Tokens and codes are stored only as SHA-256; a token can hand messages in
+  and nothing else. `receiveSms` (`services/sms-inbox.ts`) reads each message
+  with the browser importer's own code (`buildItem` / `itemPayload` from
+  `components/sms/sms-model.ts`, so keep those free of browser-only work at
+  import time) and the same `importSms` / `saveSmsBalances`: certain → added;
+  not a transaction → dropped, never stored; anything else → `SmsInbox`,
+  shown on Import SMS. Every way a message gets dealt with in `sms.ts`
+  removes it from `SmsInbox` (`stopWaiting`). Phones and waiting messages go
+  with the user (cascade), like sessions; they are not ledger data, so a
+  backup and restore leave them out. Which messages leave the phone is
+  decided on it (`android/.../SmsFilter.kt`): a business sender, about money,
+  never a code — keep the privacy policy (`/privacy`) saying exactly that.
+- The Android app (`android/`) is a Trusted Web Activity around the site,
+  built by `.github/workflows/android.yml` (the Android SDK isn't available
+  in every environment; CI is the build). The site vouches for it at
+  `/.well-known/assetlinks.json` (`ANDROID_CERTIFICATES` in
+  `src/lib/android.ts` plus `ANDROID_CERT_SHA256`); `ANDROID_PACKAGE` must
+  match `hisabApplicationId` in `android/gradle.properties`. Signing keys are
+  secrets, never in the repository. Publishing: `docs/google-play.md`.
 - Displaying money (`formatMoney`) must never throw: it runs during render,
   and amount fields hold partial input like "12.". `ResponsiveSheet` wraps its
   content in `SheetErrorBoundary`, so a crash in a form stays in its sheet;

@@ -98,6 +98,8 @@ has a ledger nobody else can see.
    | `GOOGLE_CLIENT_SECRET` | the OAuth client secret |
    | `OWNER_EMAIL`          | only when upgrading — see below |
    | `APP_URL`              | optional: the app's address (`https://YOUR-DOMAIN`), if it isn't the one requests arrive at |
+   | `CONTACT_EMAIL`        | optional: an address for questions, shown on the privacy policy (`/privacy`) |
+   | `ANDROID_CERT_SHA256`  | for the Android app on Google Play — see [Android app](#android-app) |
 
 6. **Deploy**, open the domain and choose **Continue with Google**. Your
    account is created the first time you sign in, with the usual categories,
@@ -134,6 +136,88 @@ too, next to what went wrong.
 The installed app opens full screen with its own icon, has shortcuts for a
 new transaction, SMS import and reports, and on Android appears in the share
 sheet: long-press a bank SMS, **Share → Hisab**, and it is added.
+
+## Android app
+
+`android/` is Hisab for Android. Its icon opens the site full screen in the
+phone's browser (a Trusted Web Activity): the same sign-in, the same pages,
+and every change to the site reaches the app without an update. On top of
+that it does what a website can't: **it reads bank and wallet SMS as they
+arrive** (see [Automatic SMS import](#automatic-sms-import)).
+
+GitHub builds it (`.github/workflows/android.yml`) on every push that
+touches `android/`; the result is under the repository's **Actions** tab.
+Before the build makes an app you can install, it needs two things, once:
+
+1. **The site's address.** Repository **Settings → Secrets and variables →
+   Actions → Variables → New repository variable**: name `HISAB_URL`, value
+   `https://YOUR-DOMAIN` (no slash at the end).
+2. **The signing key.** Every copy of an Android app is signed, and Google
+   Play only takes updates signed with the same key. In the same place, under
+   **Secrets → New repository secret**, add `ANDROID_SIGNING_KEY` (the text of
+   the key file, in base64) and `ANDROID_SIGNING_PASSWORD`. Keep a copy of
+   both somewhere safe, outside GitHub. To make your own key instead:
+
+   ```bash
+   keytool -genkeypair -keystore hisab-upload.p12 -storetype PKCS12 -alias hisab -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Hisab"
+   ```
+
+   then `base64 -w 0 hisab-upload.p12` gives the secret's text (use the same
+   password for the key and the keystore), and put the key's SHA-256
+   fingerprint (`keytool -list -v -keystore hisab-upload.p12`) in
+   `ANDROID_CERTIFICATES` in `src/lib/android.ts` in place of the one there.
+
+Then run the workflow again (**Actions → Android app → Run workflow**). The
+run's summary says what is still missing, if anything; when it's complete it
+keeps **hisab.apk** (installs on a phone) and **hisab.aab** (for Google Play)
+under the run's **Artifacts**. Builds of `main` are also published as a
+GitHub release, so the latest APK is always at the repository's
+**Releases**.
+
+**Without an address bar.** The phone's browser shows the site full screen
+only for an app the site vouches for, at `/.well-known/assetlinks.json`: the
+app's id and the fingerprints of the certificates a genuine copy is signed
+with. The upload key's is in `src/lib/android.ts`. Google Play re-signs apps
+with a key of its own: copy its SHA-256 fingerprint from **Play Console →
+Test and release → App integrity → App signing** into the server's
+`ANDROID_CERT_SHA256` variable (several are separated by commas). Until then,
+copies from Play show a thin address bar.
+
+Publishing on Google Play: see [docs/google-play.md](docs/google-play.md).
+
+## Automatic SMS import
+
+With the Android app, bank and wallet messages are added as they arrive:
+
+1. In the app, open **Settings → Automatic SMS import → Set up on this
+   phone**.
+2. The app shows which Hisab account the messages will go to and exactly what
+   it reads and sends. **Turn on**, then allow SMS when Android asks.
+   Optionally it also brings in the last 30 days' messages.
+
+From then on, each new message from a bank or wallet is read on the phone.
+Only messages from a bank or wallet (sent from a name like "bKash" or a short
+code, never a person's number) that are about money leave the phone;
+messages from people and verification codes never do. The server reads each
+one exactly as a pasted message:
+
+- **clear and certain** — added at once, with its fee and the balance it
+  reports, and the phone shows a notification of what was added;
+- **not a transaction** (an advert, a failed payment) — thrown away, never
+  stored;
+- **anything else** (no matching account, unclear, or something similar is
+  already recorded) — waits on **Import SMS**, where it looks like a pasted
+  message. The menu and the overview say how many wait.
+
+Messages wait on the phone while it's offline, and go when it's back. The
+same message is never added twice — from the phone again, from another
+phone, or pasted. Which account a bank's messages belong to is learned from
+how you recorded earlier ones.
+
+**Turning it off:** remove the phone in **Settings → Automatic SMS import**
+(it stops at its next message), use **Turn off on this phone** in the
+phone's settings for the app (**App info → Additional settings in the app**),
+or take away the SMS permission.
 
 ## Importing from SMS
 
@@ -311,6 +395,13 @@ tests/                   unit + integration (Vitest, real Postgres), e2e (Playwr
   Drive. `/delete-account` explains this publicly.
 - **CSRF** — state-changing API requests must be same-origin (checked with
   `Sec-Fetch-Site`, falling back to `Origin`) and JSON.
+- **Linked phones** hold a token that only hands messages in: it can read
+  nothing, opens no page, and is stored only as a SHA-256 hash; removing the
+  phone kills it. A phone is linked with a one-time code (10 minutes, once)
+  from a signed-in session, and before anything is read the phone shows whose
+  account it joins and asks — a link can be opened by any website, so a code
+  from someone else's account never quietly takes your messages there. Bad
+  codes are limited like failed sign-ins.
 - **Shared SMS** arrive through the URL fragment, which browsers never send to
   a server, so message text doesn't reach access logs. Posts from other sites
   are refused.

@@ -14,7 +14,10 @@ export const ANDROID_PACKAGE = "io.github.fr_ost.hisab";
  * from GitHub). The one Google Play signs with is added on the server, in
  * ANDROID_CERT_SHA256, because it only exists once the app is on Play.
  */
-export const ANDROID_CERTIFICATES: readonly string[] = [];
+export const ANDROID_CERTIFICATES: readonly string[] = [
+  // The upload key ("CN=Hisab", made 17 Nov 2026): copies built by GitHub Actions and published as releases.
+  "C7:8C:94:DC:2F:18:C7:B7:5B:E4:26:97:85:B8:29:4A:08:23:B0:A2:AB:8E:53:77:3D:5F:4A:5E:69:D1:53:55",
+];
 
 /**
  * The link a page hands the Android app (it opens the app's set-up screen
