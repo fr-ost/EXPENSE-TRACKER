@@ -79,7 +79,10 @@ export function SmsPhones({ phones, notice }: { phones: LinkedPhone[]; notice?: 
       <p className="text-body text-text-secondary">
         With the Hisab app on your Android phone, messages from your bank and mobile wallet are read as they arrive. A message that is
         clear is added on its own; one that isn&apos;t waits for you on Import SMS. Only messages about money from banks and wallets
-        leave the phone — verification codes and personal messages never do.
+        leave the phone — verification codes and personal messages never do.{" "}
+        <a href="/privacy#sms" className="font-medium text-text underline underline-offset-2">
+          How messages are handled
+        </a>
       </p>
 
       {said && (

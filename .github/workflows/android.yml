@@ -56,6 +56,22 @@ jobs:
       - name: Check, test and build
         run: ./gradlew lintDebug testDebugUnitTest assembleDebug
 
+      - name: Tests that ran
+        if: always()
+        run: |
+          reports=(app/build/test-results/testDebugUnitTest/*.xml)
+          [ -e "${reports[0]}" ] || { echo "::error::No unit test results."; exit 1; }
+          python3 - "${reports[@]}" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+          for path in sys.argv[1:]:
+              suite = ET.parse(path).getroot()
+              for key in totals:
+                  totals[key] += int(suite.get(key, 0))
+          print(f"**Phone-side tests:** {totals['tests']} ran, {totals['failures'] + totals['errors']} failed, {totals['skipped']} skipped\n")
+          PY
+          cat "$GITHUB_STEP_SUMMARY"
+
       - name: Signing key
         env:
           ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}

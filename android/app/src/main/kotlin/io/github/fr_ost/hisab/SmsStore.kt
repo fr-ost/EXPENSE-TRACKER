@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.Telephony
+import androidx.core.database.sqlite.transaction
 
 /** A message in the outbox. */
 data class QueuedSms(val id: Long, val sender: String, val body: String, val receivedAt: Long)
@@ -31,10 +32,8 @@ class SmsStore(context: Context) : SQLiteOpenHelper(context.applicationContext, 
 
     /** Add messages (one already waiting is kept once). Returns how many are new. */
     fun add(messages: List<OutgoingSms>): Int {
-        val db = writableDatabase
         var added = 0
-        db.beginTransaction()
-        try {
+        writableDatabase.transaction {
             for (message in messages) {
                 val values = ContentValues().apply {
                     put("fingerprint", SmsFilter.fingerprint(message.sender, message.body))
@@ -42,13 +41,10 @@ class SmsStore(context: Context) : SQLiteOpenHelper(context.applicationContext, 
                     put("body", message.body.trim())
                     put("received_at", message.receivedAt)
                 }
-                if (db.insertWithOnConflict("outbox", null, values, SQLiteDatabase.CONFLICT_IGNORE) != -1L) added++
+                if (insertWithOnConflict("outbox", null, values, SQLiteDatabase.CONFLICT_IGNORE) != -1L) added++
             }
             // Offline for a very long time: the oldest give way.
-            db.execSQL("DELETE FROM outbox WHERE id NOT IN (SELECT id FROM outbox ORDER BY received_at DESC LIMIT $MAX_KEPT)")
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
+            execSQL("DELETE FROM outbox WHERE id NOT IN (SELECT id FROM outbox ORDER BY received_at DESC LIMIT $MAX_KEPT)")
         }
         return added
     }

@@ -45,7 +45,10 @@
     <string name="channel_added_about">Each transaction Hisab adds from a bank or wallet message.</string>
     <string name="channel_attention">Needs a look</string>
     <string name="channel_attention_about">Messages Hisab couldn\'t add on its own, and changes to automatic import.</string>
-    <string name="added_many">%1$d transactions added from SMS</string>
+    <plurals name="added_many">
+        <item quantity="one">%1$d transaction added from SMS</item>
+        <item quantity="other">%1$d transactions added from SMS</item>
+    </plurals>
     <string name="added_hidden">Transaction added</string>
     <string name="attention_hidden">Something needs a look</string>
     <plurals name="waiting">

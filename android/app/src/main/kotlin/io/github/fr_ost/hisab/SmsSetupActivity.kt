@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
+import androidx.core.net.toUri
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -275,7 +276,7 @@ class SmsSetupActivity : Activity() {
         startActivity(
             Intent(this, LauncherActivity::class.java)
                 .setAction(Intent.ACTION_VIEW)
-                .setData(Uri.parse(BuildConfig.SITE_URL + path))
+                .setData((BuildConfig.SITE_URL + path).toUri())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
         finish()

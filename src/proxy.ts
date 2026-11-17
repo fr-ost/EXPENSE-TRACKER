@@ -7,8 +7,8 @@ import { SESSION_COOKIE } from "@/lib/auth-cookie";
  * against the database (see lib/server/auth/guard.ts).
  */
 
-/** Pages anyone may read: signing in, and how to delete an account (they hold no data). */
-const PUBLIC_PAGES = new Set(["/login", "/delete-account"]);
+/** Pages anyone may read: signing in, how to delete an account, the privacy policy (they hold no data). */
+const PUBLIC_PAGES = new Set(["/login", "/delete-account", "/privacy"]);
 const PUBLIC_API = new Set([
   "/api/auth/google",
   "/api/auth/google/callback",

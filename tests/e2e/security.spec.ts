@@ -75,6 +75,20 @@ test("the site vouches for its Android app to anyone who asks", async ({ request
   expect((await request.get("/.well-known/security.txt", { maxRedirects: 0 })).status()).toBe(307);
 });
 
+test("the privacy policy is public and says what happens to text messages", async ({ page }) => {
+  const response = await page.goto("/privacy");
+  expect(response?.status()).toBe(200);
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("heading", { name: "Privacy policy" })).toBeVisible();
+  const sms = page.locator("#sms");
+  await expect(sms.getByText("Messages from people and verification codes are not read any further and never leave your phone.")).toBeVisible();
+  await expect(sms.getByText(/never sold, never shared/)).toBeVisible();
+  // Linked from the sign-in page.
+  await page.goto("/login");
+  await page.getByRole("link", { name: "Privacy" }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+});
+
 test("protected pages redirect to sign-in, even with a forged cookie", async ({ browser }) => {
   // Sent as a raw header: browsers won't store a __Host- cookie for plain http.
   const context = await browser.newContext({ extraHTTPHeaders: { Cookie: "__Host-hisab_session=forged-token-value" } });

@@ -9,11 +9,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import kotlin.random.Random
 
 /**
@@ -50,7 +50,7 @@ class Notifier(context: Context) {
             }
             return
         }
-        val title = context.getString(R.string.added_many, added.size)
+        val title = context.resources.getQuantityString(R.plurals.added_many, added.size, added.size)
         val style = NotificationCompat.InboxStyle().setBigContentTitle(title)
         added.take(6).forEach { style.addLine(it.title) }
         post(Random.nextInt(FIRST_ADDED, Int.MAX_VALUE), base(ADDED, title, null, "/transactions").setStyle(style).build())
@@ -76,7 +76,7 @@ class Notifier(context: Context) {
             path.hashCode(),
             Intent(context, LauncherActivity::class.java)
                 .setAction(Intent.ACTION_VIEW)
-                .setData(Uri.parse(BuildConfig.SITE_URL + path))
+                .setData((BuildConfig.SITE_URL + path).toUri())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )

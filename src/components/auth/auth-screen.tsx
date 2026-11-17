@@ -1,3 +1,4 @@
+import Link from "next/link";
 import * as React from "react";
 import { BrandMark } from "@/components/brand";
 
@@ -28,7 +29,10 @@ export function AuthScreen({
         {footer && <div className="mt-6 text-center">{footer}</div>}
       </div>
       <p className="absolute inset-x-0 bottom-6 text-center text-caption text-text-tertiary">
-        Your ledger is private · Only you can open it
+        Your ledger is private · Only you can open it ·{" "}
+        <Link href="/privacy" className="underline underline-offset-2 hover:text-text-secondary">
+          Privacy
+        </Link>
       </p>
     </main>
   );
