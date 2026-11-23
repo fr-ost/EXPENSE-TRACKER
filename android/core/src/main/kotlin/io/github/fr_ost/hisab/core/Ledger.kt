@@ -93,6 +93,16 @@ class Ledger(data: LedgerData) {
         return account.openingBalance + entries(accountId).sumOf { if (it.date <= date) it.amount else 0L }
     }
 
+    /**
+     * The balance at a moment within a day (`at`: "14:30", "14:30:05" or
+     * "24:00"): everything up to and including that moment, as a balance
+     * update made then would see it.
+     */
+    fun balanceAt(accountId: String, date: String, at: String): Long {
+        val account = accounts[accountId] ?: return 0
+        return account.openingBalance + entries(accountId).sumOf { if (it.date < date || (it.date == date && it.at <= at)) it.amount else 0L }
+    }
+
     /** Each account with its balance as of `asOf` (normally today), active ones first. */
     fun summaries(asOf: String): List<AccountSummary> {
         val legsByAccount = legs.groupBy { it.accountId }

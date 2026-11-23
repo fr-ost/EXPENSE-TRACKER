@@ -54,7 +54,7 @@ class LedgerTest {
         val jun = f.update(wallet, tk("1300"), "2026-06-01")
 
         val corrections = Ledger(f.data).corrections.filter { it.kind == Correction.Kind.CORRECTION }.associate { it.checkpointId to it.amount }
-        assertEquals(mapOf(feb to tk("1000"), apr to 0L, jun to tk("-100")), corrections)
+        assertEquals<Map<String?, Long>>(mapOf(feb to tk("1000"), apr to 0L, jun to tk("-100")), corrections)
         assertEquals(0L, f.balance(wallet, "2026-01-31"))
         assertEquals(tk("1500"), f.balance(wallet, "2026-03-15"))
         assertEquals(tk("1400"), f.balance(wallet, "2026-05-15"))
