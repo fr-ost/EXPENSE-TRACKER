@@ -28,7 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import io.github.fr_ost.hisab.HisabApplication
 import io.github.fr_ost.hisab.R
+import io.github.fr_ost.hisab.drive.SyncWorker
 import io.github.fr_ost.hisab.core.Backup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,6 +46,24 @@ fun WelcomeScreen() {
     var name by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf("BDT") }
     var busy by remember { mutableStateOf(false) }
+
+    val app = context.applicationContext as HisabApplication
+    val fromDrive = rememberDriveAccess(onToken = { token ->
+        busy = true
+        try {
+            app.drive.sync(token)
+            if (repository.data.value?.isEmpty() != false) {
+                messages.show("There's no Hisab ledger in this Google account's Drive yet.")
+            } else {
+                app.drive.enable(true)
+                SyncWorker.every(context)
+            }
+        } catch (e: Exception) {
+            messages.show(driveProblem(e))
+        } finally {
+            busy = false
+        }
+    }, onProblem = { messages.show(it) })
 
     val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -73,6 +93,9 @@ fun WelcomeScreen() {
         OutlinedTextField(name, { name = it.take(60) }, label = { Text("Your name (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         PickerField("Main currency", currency, Format.CURRENCIES, { it }, { currency = it }, Modifier.fillMaxWidth())
         Button(onClick = { repository.startFresh(name, currency) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Start") }
+        OutlinedButton(onClick = { fromDrive() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Text("Restore from Google Drive")
+        }
         OutlinedButton(onClick = { open.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
             Text(if (busy) "Restoring…" else "Restore a backup file")
         }

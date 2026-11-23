@@ -9,12 +9,15 @@ androidxActivity = "1.10.1"
 androidxLifecycle = "2.10.0"
 composeBom = "2025.06.00"
 androidxWork = "2.10.0"
+# Google's on-phone permission prompt for Drive (AuthorizationClient).
+playServicesAuth = "21.3.0"
 junit = "4.13.2"
 json = "20260814"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "androidxWork" }
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }

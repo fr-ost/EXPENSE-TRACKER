@@ -9,6 +9,9 @@
         Import SMS, after the app says exactly this. Notifications say what
         was added.
     -->
+    <!-- Only for Google Drive sync, when the person turns it on: the phone talks to Google Drive directly. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

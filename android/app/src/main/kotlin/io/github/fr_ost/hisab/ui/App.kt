@@ -79,6 +79,7 @@ sealed interface Screen {
     data object Preferences : Screen
     data object Backup : Screen
     data object Sms : Screen
+    data object Sync : Screen
 }
 
 /** A sheet over the current screen. */
@@ -192,6 +193,7 @@ fun HisabApp() {
                     Screen.Preferences -> PreferencesScreen(book)
                     Screen.Backup -> BackupScreen(book)
                     Screen.Sms -> SmsScreen(book)
+                    Screen.Sync -> SyncScreen(book)
                 }
             }
         }

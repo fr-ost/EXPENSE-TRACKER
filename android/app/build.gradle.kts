@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime)
+    implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
