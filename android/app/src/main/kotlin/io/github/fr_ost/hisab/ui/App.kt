@@ -29,6 +29,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,11 +46,13 @@ import io.github.fr_ost.hisab.core.Ledger
 import io.github.fr_ost.hisab.core.LedgerData
 import io.github.fr_ost.hisab.data.Repository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 val LocalRepository = staticCompositionLocalOf<Repository> { error("No repository") }
 val LocalNavigator = staticCompositionLocalOf<Navigator> { error("No navigator") }
 val LocalMessages = staticCompositionLocalOf<Messages> { error("No messages") }
+val LocalOpens = staticCompositionLocalOf<MutableStateFlow<String?>> { MutableStateFlow(null) }
 
 /** The ledger as the screens read it: live records, balances and totals, worked out once per change. */
 class Book(data: LedgerData) {
@@ -75,6 +78,7 @@ sealed interface Screen {
     data object Budgets : Screen
     data object Preferences : Screen
     data object Backup : Screen
+    data object Sms : Screen
 }
 
 /** A sheet over the current screen. */
@@ -146,6 +150,19 @@ fun HisabApp() {
     }
     val book = remember(loaded) { Book(loaded) }
     val navigator = remember { Navigator() }
+    // A notification's tap: Import SMS, or the entries it added.
+    val opens = LocalOpens.current
+    val open by opens.collectAsStateWithLifecycle()
+    LaunchedEffect(open) {
+        when (open) {
+            "sms" -> {
+                navigator.tab(Screen.More)
+                navigator.open(Screen.Sms)
+            }
+            "activity" -> navigator.tab(Screen.Activity)
+        }
+        if (open != null) opens.value = null
+    }
     BackHandler(enabled = navigator.stack.size > 1 || navigator.tab != Screen.Overview) { navigator.back() }
 
     CompositionLocalProvider(LocalNavigator provides navigator, LocalMessages provides messages) {
@@ -174,6 +191,7 @@ fun HisabApp() {
                     Screen.Budgets -> BudgetsScreen(book)
                     Screen.Preferences -> PreferencesScreen(book)
                     Screen.Backup -> BackupScreen(book)
+                    Screen.Sms -> SmsScreen(book)
                 }
             }
         }

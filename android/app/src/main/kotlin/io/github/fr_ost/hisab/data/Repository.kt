@@ -11,6 +11,15 @@ import io.github.fr_ost.hisab.core.LedgerData
 import io.github.fr_ost.hisab.core.Settings
 import io.github.fr_ost.hisab.core.SyncClock
 import io.github.fr_ost.hisab.core.Synced
+import io.github.fr_ost.hisab.core.Dates
+import io.github.fr_ost.hisab.core.sms.ReceivedAt
+import io.github.fr_ost.hisab.core.sms.Received
+import io.github.fr_ost.hisab.core.sms.SmsImport
+import io.github.fr_ost.hisab.core.sms.SmsItem
+import io.github.fr_ost.hisab.core.sms.SmsResult
+import io.github.fr_ost.hisab.core.sms.SmsStatus
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,6 +28,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** A message the phone received: from whom, its text and when (milliseconds since 1970). */
+data class IncomingSms(val sender: String, val text: String, val receivedAt: Long)
 
 /** What came of an edit: done, or why not (and which field to point at). */
 sealed interface Outcome {
@@ -45,13 +57,22 @@ class Repository(context: Context) {
     /** The ledger, deleted records included; null until it has been read. */
     val data: StateFlow<LedgerData?> = state.asStateFlow()
 
+    private val inbox = MutableStateFlow<List<WaitingSms>>(emptyList())
+
+    /** Bank and wallet messages waiting for the person on Import SMS, newest first. */
+    val waiting: StateFlow<List<WaitingSms>> = inbox.asStateFlow()
+
     init {
         scope.launch {
             val loaded = store.load()
             clock.observe(loaded.latestStamp())
+            inbox.value = store.waiting()
             state.value = loaded
         }
     }
+
+    /** The ledger, once it has been read. */
+    suspend fun loaded(): LedgerData = state.filterNotNull().first()
 
     private val current: LedgerData get() = state.value ?: LedgerData()
 
@@ -106,6 +127,75 @@ class Repository(context: Context) {
 
     fun backupText(appVersion: String): String = Backup.write(current, Clock.now().today, System.currentTimeMillis(), appVersion)
 
+    // ---- SMS ---------------------------------------------------------------
+
+    /** Read bank and wallet messages as they arrive (the person turned it on, and Android allows it). */
+    var readsSmsAutomatically: Boolean
+        get() = prefs.getBoolean(SMS_AUTO, false)
+        set(value) = prefs.edit { putBoolean(SMS_AUTO, value) }
+
+    /**
+     * Messages the phone received, oldest first (a later message's balance
+     * and duplicate check build on the earlier ones): each is added when it
+     * is complete and certain, dropped when it isn't a transaction, and kept
+     * for the person otherwise. Results are in the order given.
+     */
+    @Synchronized
+    fun receive(messages: List<IncomingSms>): List<Received> {
+        if (current.isEmpty()) return messages.map { Received.Review }
+        val clock = Clock.now()
+        val remembered = SmsImport.rememberedAccounts(current, clock.today)
+        val outcomes = arrayOfNulls<Received>(messages.size)
+        val now = System.currentTimeMillis()
+        for ((index, message) in messages.withIndex().sortedBy { it.value.receivedAt }) {
+            val receivedAt = minOf(message.receivedAt, now)
+            val (date, time) = Dates.local(receivedAt)
+            val outcome = try {
+                SmsImport.receive(current, message.text, ReceivedAt(date, time), clock, remembered)
+            } catch (e: RuntimeException) {
+                // One message that can't be read must not lose the others, nor itself.
+                Received.Review
+            }
+            commit(outcome.records)
+            val fingerprint = SmsImport.fingerprint(message.text)
+            if (outcome == Received.Review) store.keep(WaitingSms(fingerprint, message.text.trim(), message.sender.take(40), receivedAt))
+            else store.forget(listOf(fingerprint))
+            outcomes[index] = outcome
+        }
+        inbox.value = store.waiting()
+        return outcomes.map { it ?: Received.Review }
+    }
+
+    /** Add a message from Import SMS (see SmsImport.add); once it is dealt with it stops waiting. */
+    @Synchronized
+    fun addSms(item: SmsItem, allowDuplicate: Boolean = false, sameAs: String? = null): SmsResult {
+        val result = SmsImport.add(current, item, Clock.now(), allowDuplicate, sameAs)
+        commit(result.records)
+        if (result.status == SmsStatus.ADDED || result.status == SmsStatus.EXISTS) dealtWith(listOf(item.text))
+        return result
+    }
+
+    /** Record the balance a message reports (one added before, or one that only reports a balance). */
+    @Synchronized
+    fun saveSmsBalance(text: String, accountId: String, amount: Long, reportedAt: ReceivedAt?): Outcome = try {
+        val (saved, records) = SmsImport.saveBalance(current, text, accountId, amount, reportedAt, Clock.now())
+        commit(records)
+        if (saved) {
+            dealtWith(listOf(text))
+            Outcome.Done
+        } else {
+            Outcome.Refused("That message's transaction isn't in your ledger.")
+        }
+    } catch (e: EditError) {
+        Outcome.Refused(e.message ?: "That balance can't be saved.", e.field)
+    }
+
+    /** These messages no longer wait (added, or the person doesn't want them). */
+    fun dealtWith(texts: List<String>) {
+        store.forget(texts.map(SmsImport::fingerprint))
+        inbox.value = store.waiting()
+    }
+
     /** Small things this phone remembers for the person (the account last used, …). */
     fun remember(key: String, value: String?) = prefs.edit { if (value == null) remove(key) else putString(key, value) }
 
@@ -113,5 +203,6 @@ class Repository(context: Context) {
 
     private companion object {
         const val DEVICE = "device"
+        const val SMS_AUTO = "sms.auto"
     }
 }

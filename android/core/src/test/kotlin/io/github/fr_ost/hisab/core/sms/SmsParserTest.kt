@@ -103,9 +103,9 @@ class SmsParserTest {
     @Test
     fun recognisesBanksAndWallets() {
         assertEquals("bkash", Providers.detect("Cash Out Tk 2,000.00 to 01912345678 successful. TrxID BIT9CD5E6F at 28/09/2026 10:05").first?.id)
-        // "…from City Bank" in a bKash alert names the other side.
+        // "…from City Bank" names the other side, not the message's own bank or wallet (as on the website).
         val (provider, other) = Providers.detect("You have received deposit from iBanking of Tk 2,500.00 from City Bank. TrxID X1 at 28/09/2026 12:11")
-        assertEquals(listOf("bkash", "city"), listOf(provider?.id, other?.id))
+        assertEquals(listOf(null, "city"), listOf(provider?.id, other?.id))
         // "Social Islami Bank" isn't also "Islami Bank".
         assertEquals("sibl", Providers.detect("Social Islami Bank: your A/C 1234 is debited").first?.id)
         assertEquals(54, Providers.ALL.size)

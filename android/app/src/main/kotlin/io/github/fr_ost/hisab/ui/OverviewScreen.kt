@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package io.github.fr_ost.hisab.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.fr_ost.hisab.core.BalanceTotals
 import io.github.fr_ost.hisab.core.Dates
 import io.github.fr_ost.hisab.core.Edits
@@ -54,6 +57,21 @@ fun OverviewScreen(book: Book) {
                 Text(Format.longDate(book.today), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val name = book.settings.displayName.trim().split(" ").firstOrNull().orEmpty()
                 Text(if (name.isEmpty()) Format.greeting() else "${Format.greeting()}, $name", style = MaterialTheme.typography.headlineMedium)
+            }
+        }
+
+        item {
+            val waiting by LocalRepository.current.waiting.collectAsStateWithLifecycle()
+            if (waiting.isNotEmpty()) {
+                OutlinedCard(onClick = {
+                    navigator.tab(Screen.More)
+                    navigator.open(Screen.Sms)
+                }, modifier = Modifier.fillMaxWidth()) {
+                    ListRow(
+                        title = "${waiting.size} SMS ${if (waiting.size == 1) "needs" else "need"} a look",
+                        subtitle = "Hisab couldn't add ${if (waiting.size == 1) "it" else "them"} by itself",
+                    )
+                }
             }
         }
 

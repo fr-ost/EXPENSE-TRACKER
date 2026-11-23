@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.Savings
+import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -38,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.fr_ost.hisab.BuildConfig
 import io.github.fr_ost.hisab.core.Backup
 import io.github.fr_ost.hisab.core.Category
@@ -60,6 +62,16 @@ fun MoreScreen(book: Book) {
     Column(Modifier.fillMaxSize()) {
         ScreenBar("More")
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            item {
+                val waiting by LocalRepository.current.waiting.collectAsStateWithLifecycle()
+                Section(null) {
+                    NavRow(
+                        "Import SMS",
+                        if (waiting.isEmpty()) "Read bank and wallet messages" else "${waiting.size} ${if (waiting.size == 1) "message needs" else "messages need"} a look",
+                        Icons.Outlined.Sms,
+                    ) { navigator.open(Screen.Sms) }
+                }
+            }
             item {
                 Section(null) {
                     NavRow("Budgets", "Monthly budgets for Personal and Family", Icons.Outlined.Savings) { navigator.open(Screen.Budgets) }
