@@ -16,6 +16,8 @@ class HisabApplication : Application() {
 
     val drive: DriveSync by lazy { DriveSync(this, repository) }
 
+    val lock: AppLock by lazy { AppLock(this) }
+
     /** Where a notification asked the app to open ("sms", "activity"), until the screens take it. */
     val opens = MutableStateFlow<String?>(null)
 }

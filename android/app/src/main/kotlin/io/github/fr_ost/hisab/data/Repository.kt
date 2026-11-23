@@ -8,6 +8,7 @@ import io.github.fr_ost.hisab.core.EditError
 import io.github.fr_ost.hisab.core.Edits
 import io.github.fr_ost.hisab.core.Ids
 import io.github.fr_ost.hisab.core.LedgerData
+import io.github.fr_ost.hisab.core.Recurrings
 import io.github.fr_ost.hisab.core.Settings
 import io.github.fr_ost.hisab.core.Sync
 import io.github.fr_ost.hisab.core.SyncClock
@@ -69,11 +70,19 @@ class Repository(context: Context) {
             clock.observe(loaded.latestStamp())
             inbox.value = store.waiting()
             state.value = loaded
+            postRecurring()
         }
     }
 
     /** The ledger, once it has been read. */
     suspend fun loaded(): LedgerData = state.filterNotNull().first()
+
+    /** Add the recurring entries that have come due (when the app opens, and each day it stays open). */
+    @Synchronized
+    fun postRecurring() {
+        val data = state.value ?: return
+        commit(Recurrings.postAllDue(data, Dates.today()))
+    }
 
     private val current: LedgerData get() = state.value ?: LedgerData()
 

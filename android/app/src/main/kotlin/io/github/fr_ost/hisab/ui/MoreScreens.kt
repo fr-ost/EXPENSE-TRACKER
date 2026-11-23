@@ -13,7 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.CurrencyExchange
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Sms
@@ -75,9 +79,15 @@ fun MoreScreen(book: Book) {
             }
             item {
                 Section(null) {
+                    NavRow("Reports", "Months and years: income, spending, categories", Icons.Outlined.BarChart) { navigator.open(Screen.Reports) }
+                    RowDivider()
+                    NavRow("Recurring", "${book.live.recurring.count { it.isActive }} active · rent, salary, bills", Icons.Outlined.Repeat) { navigator.open(Screen.Recurring) }
+                    RowDivider()
                     NavRow("Budgets", "Monthly budgets for Personal and Family", Icons.Outlined.Savings) { navigator.open(Screen.Budgets) }
                     RowDivider()
                     NavRow("Categories", "${book.live.categories.count { !it.isArchived }} in use", Icons.Outlined.Category) { navigator.open(Screen.Categories) }
+                    RowDivider()
+                    NavRow("Currencies", "Rates for accounts in other currencies", Icons.Outlined.CurrencyExchange) { navigator.open(Screen.Currencies) }
                 }
             }
             item {
@@ -90,6 +100,8 @@ fun MoreScreen(book: Book) {
                     NavRow("Backup and restore", "A file of everything you recorded", Icons.Outlined.CloudSync) { navigator.open(Screen.Backup) }
                     RowDivider()
                     NavRow("Preferences", "Your name, currency and number style", Icons.Outlined.Tune) { navigator.open(Screen.Preferences) }
+                    RowDivider()
+                    NavRow("App lock", "A PIN or your phone's screen lock", Icons.Outlined.Lock) { navigator.open(Screen.Lock) }
                 }
             }
             item {
@@ -295,6 +307,19 @@ fun BackupScreen(book: Book) {
             messages.show(if (ok) "Backup saved" else "Couldn't save the backup there")
         }
     }
+    var csvRange by remember { mutableStateOf<Pair<String?, String?>>(null to null) }
+    val csv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val (from, to) = csvRange
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(io.github.fr_ost.hisab.core.Csv.transactions(book.live, from, to).toByteArray(Charsets.UTF_8)) }
+                }.isSuccess
+            }
+            messages.show(if (ok) "Entries exported" else "Couldn't save the file there")
+        }
+    }
     val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
@@ -326,6 +351,25 @@ fun BackupScreen(book: Book) {
             }
             Text("Moving from the website? In Hisab on the web, open Settings → Backup and restore → Download a backup, then restore that file here.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Export entries", style = MaterialTheme.typography.titleMedium)
+            Text("A spreadsheet (CSV) of your entries, for Excel or Google Sheets. It can't be restored: use a backup file for that.",
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val month = Dates.monthOf(book.today)
+                val year = book.today.take(4)
+                OutlinedButton(onClick = {
+                    csvRange = Dates.monthStart(month) to Dates.monthEnd(month)
+                    csv.launch("hisab-transactions-$month-${book.today}.csv")
+                }) { Text("This month") }
+                OutlinedButton(onClick = {
+                    csvRange = "$year-01-01" to "$year-12-31"
+                    csv.launch("hisab-transactions-$year-${book.today}.csv")
+                }) { Text("This year") }
+                OutlinedButton(onClick = {
+                    csvRange = null to null
+                    csv.launch("hisab-transactions-all-${book.today}.csv")
+                }) { Text("All") }
+            }
         }
     }
 

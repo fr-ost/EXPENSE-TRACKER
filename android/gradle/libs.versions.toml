@@ -11,12 +11,17 @@ composeBom = "2025.06.00"
 androidxWork = "2.10.0"
 # Google's on-phone permission prompt for Drive (AuthorizationClient).
 playServicesAuth = "21.3.0"
+# Unlocking with the phone's own screen lock (fingerprint, face or its PIN).
+androidxBiometric = "1.1.0"
+androidxFragment = "1.8.5"
 junit = "4.13.2"
 json = "20260814"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "androidxWork" }
+androidx-fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "androidxFragment" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "androidxBiometric" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
