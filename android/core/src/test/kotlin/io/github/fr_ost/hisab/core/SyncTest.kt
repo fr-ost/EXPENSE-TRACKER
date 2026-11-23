@@ -59,3 +59,31 @@ class SyncTest {
         assertEquals(listOf("settings", "b"), Sync.changed(before, merged).map { it.id })
     }
 }
+
+class LedgerDataTest {
+    @Test
+    fun savingRecordsReplacesThoseWithTheSameIdAndAddsNewOnes() {
+        val a = Account("a", "Cash", AccountType.CASH, "BDT", 0, "2026-01-01", createdAt = 1)
+        val data = LedgerData(accounts = listOf(a))
+        assertTrue(LedgerData().isEmpty())
+        val changed = data.withRecords(listOf(a.copy(name = "Wallet"), a.copy(id = "b", name = "Bank"), Settings(displayName = "R", updatedAt = 3)))
+        assertEquals(listOf("Wallet", "Bank"), changed.accounts.map { it.name })
+        assertEquals("R", changed.settings.displayName)
+        assertEquals(false, changed.isEmpty())
+    }
+
+    @Test
+    fun totalsConvertEachCurrencyOnce() {
+        fun summary(id: String, currency: String, balance: Long) = AccountSummary(
+            Account(id, id, AccountType.CASH, currency, 0, "2026-01-01", createdAt = 1), balance, 0, 0, 0, 0, null, 0, null,
+        )
+        val totals = BalanceTotals.of(
+            listOf(summary("a", "BDT", 100000), summary("b", "USD", 333), summary("c", "USD", 333), summary("d", "EUR", 500)),
+            Conversion("BDT", mapOf("BDT" to "1", "USD" to "122.5")),
+        )
+        // $6.66 × 122.5 = 815.85, converted once (not 407.93 twice).
+        assertEquals(100000L + 81585L, totals.total)
+        assertEquals(listOf("BDT", "EUR", "USD"), totals.byCurrency.map { it.first })
+        assertEquals(null, totals.byCurrency.single { it.first == "EUR" }.third)
+    }
+}

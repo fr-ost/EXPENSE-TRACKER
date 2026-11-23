@@ -1,0 +1,117 @@
+package io.github.fr_ost.hisab.data
+
+import android.content.Context
+import androidx.core.content.edit
+import io.github.fr_ost.hisab.core.Backup
+import io.github.fr_ost.hisab.core.Clock
+import io.github.fr_ost.hisab.core.EditError
+import io.github.fr_ost.hisab.core.Edits
+import io.github.fr_ost.hisab.core.Ids
+import io.github.fr_ost.hisab.core.LedgerData
+import io.github.fr_ost.hisab.core.Settings
+import io.github.fr_ost.hisab.core.SyncClock
+import io.github.fr_ost.hisab.core.Synced
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** What came of an edit: done, or why not (and which field to point at). */
+sealed interface Outcome {
+    data object Done : Outcome
+    data class Refused(val message: String, val field: String? = null) : Outcome
+}
+
+/**
+ * The ledger for the screens: read once from the phone's storage, then kept
+ * in memory and changed only through `edit`, which stamps each changed record
+ * (when, and on which phone — for sync) and writes it before the screens see it.
+ */
+class Repository(context: Context) {
+    private val store = Store(context)
+    private val prefs = context.applicationContext.getSharedPreferences("hisab", Context.MODE_PRIVATE)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** This phone's id among the phones that share a ledger. */
+    val device: String = prefs.getString(DEVICE, null) ?: Ids.new().take(8).also { prefs.edit { putString(DEVICE, it) } }
+
+    private val clock = SyncClock()
+    private val state = MutableStateFlow<LedgerData?>(null)
+
+    /** The ledger, deleted records included; null until it has been read. */
+    val data: StateFlow<LedgerData?> = state.asStateFlow()
+
+    init {
+        scope.launch {
+            val loaded = store.load()
+            clock.observe(loaded.latestStamp())
+            state.value = loaded
+        }
+    }
+
+    private val current: LedgerData get() = state.value ?: LedgerData()
+
+    /** Save records (from an edit, a restore or another phone) as this phone's change. */
+    @Synchronized
+    fun commit(records: List<Synced>) {
+        if (records.isEmpty()) return
+        val stamped = records.map { it.stamped(clock.next(), device) }
+        store.save(stamped)
+        state.value = current.withRecords(stamped)
+    }
+
+    /** Records that already carry their own stamps (from another phone): saved as they are. */
+    @Synchronized
+    fun absorb(records: List<Synced>) {
+        if (records.isEmpty()) return
+        records.forEach { clock.observe(it.updatedAt) }
+        store.save(records)
+        state.value = current.withRecords(records)
+    }
+
+    /** Make a change with the ledger's rules; a refusal changes nothing. */
+    fun edit(change: (LedgerData) -> List<Synced>): Outcome = try {
+        commit(change(current))
+        Outcome.Done
+    } catch (e: EditError) {
+        Outcome.Refused(e.message ?: "That can't be saved.", e.field)
+    }
+
+    fun clock(): Clock = Clock.now()
+
+    /** A new ledger: preferences and the starter categories. */
+    fun startFresh(name: String, currency: String) {
+        val now = System.currentTimeMillis()
+        commit(listOf(current.settings.copy(displayName = name.trim().take(60), baseCurrency = currency)) + Edits.starterCategories(now))
+    }
+
+    /**
+     * Replace everything with a backup file's contents: what's here now is
+     * deleted (as tombstones, so other phones follow), then the file's records
+     * are saved.
+     */
+    suspend fun restore(text: String): Backup.Read = withContext(Dispatchers.Default) {
+        val read = Backup.read(text)
+        if (read is Backup.Read.Ok) {
+            val keep = read.data.records().map { it::class to it.id }.toSet()
+            val gone = current.live().records().filter { it !is Settings && (it::class to it.id) !in keep }.map { it.stamped(0, device, deleted = true) }
+            commit(gone + read.data.records())
+        }
+        read
+    }
+
+    fun backupText(appVersion: String): String = Backup.write(current, Clock.now().today, System.currentTimeMillis(), appVersion)
+
+    /** Small things this phone remembers for the person (the account last used, …). */
+    fun remember(key: String, value: String?) = prefs.edit { if (value == null) remove(key) else putString(key, value) }
+
+    fun recall(key: String): String? = prefs.getString(key, null)
+
+    private companion object {
+        const val DEVICE = "device"
+    }
+}

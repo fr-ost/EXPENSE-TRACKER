@@ -1,12 +1,9 @@
 # Builds and checks the Android app (android/) on GitHub's machines, which
 # have the Android SDK.
 #
-# It also produces the app people install, once two things exist:
-#   - the ANDROID_SIGNING_KEY secret: the key every copy is signed with
-#     (README, "Android app");
-#   - the site's address: the HISAB_URL repository variable, or hisabUrl in
-#     android/gradle.properties.
-# On main, that app is then published as a release of this repository.
+# With the ANDROID_SIGNING_KEY secret (the key every copy is signed with,
+# README "Android app") it also produces the app people install; on main that
+# app is published as a release of this repository.
 name: Android app
 
 on:
@@ -33,8 +30,6 @@ jobs:
     defaults:
       run:
         working-directory: android
-    env:
-      HISAB_URL: ${{ vars.HISAB_URL }}
     outputs:
       ready: ${{ steps.result.outputs.ready }}
       version: ${{ steps.result.outputs.version }}
@@ -110,27 +105,16 @@ jobs:
       - name: Result
         id: result
         run: |
-          version="1.0.$HISAB_VERSION_CODE"
-          url="${HISAB_URL:-$(sed -n 's/^hisabUrl=//p' gradle.properties | tr -d '[:space:]')}"
+          version="2.0.$HISAB_VERSION_CODE"
           ready=yes
           {
             echo "## Hisab for Android $version"
             echo
-            if [ -z "$url" ]; then
-              ready=no
-              echo "- **The site's address isn't set**, so this build opens a placeholder. Set the \`HISAB_URL\` repository variable (Settings → Secrets and variables → Actions → Variables) or \`hisabUrl\` in \`android/gradle.properties\`."
-            else
-              echo "- Opens $url"
-            fi
             if [ "$HISAB_SIGNED" != yes ]; then
               ready=no
               echo "- **There is no signing key yet** (the \`ANDROID_SIGNING_KEY\` secret), so nothing installable was kept. See \"Android app\" in the README."
-            elif grep -qF "$HISAB_FINGERPRINT" ../src/lib/android.ts; then
-              echo "- Signed with the key the site vouches for."
             else
-              echo "- Signed with a key the site doesn't know yet, so the app will show an address bar. Add this to \`ANDROID_CERTIFICATES\` in \`src/lib/android.ts\`, or to \`ANDROID_CERT_SHA256\` on the server:"
-              echo
-              echo "  \`$HISAB_FINGERPRINT\`"
+              echo "- Signed with the certificate \`$HISAB_FINGERPRINT\`."
             fi
             if [ "$ready" = yes ]; then
               echo "- **hisab.apk** (below, in \"hisab-android\") installs on a phone; **hisab.aab** is what Google Play takes."

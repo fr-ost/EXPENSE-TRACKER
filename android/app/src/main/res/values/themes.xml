@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The app's own screens (automatic SMS import): white, like the site. -->
-    <style name="Theme.Hisab.Screen" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:colorPrimary">@color/ink</item>
-        <item name="android:colorAccent">@color/emerald</item>
+    <!-- The window behind Compose: the site's white, so nothing flashes at start. -->
+    <style name="Theme.Hisab" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/canvas</item>
-        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

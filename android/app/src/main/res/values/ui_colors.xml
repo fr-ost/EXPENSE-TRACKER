@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- The site's own colours for the app's native screens (src/app/globals.css). -->
-<resources>
-    <color name="text_secondary">#FF5C5C66</color>
-    <color name="surface_muted">#FFF4F4F6</color>
-    <color name="border">#FFE6E6EA</color>
-</resources>

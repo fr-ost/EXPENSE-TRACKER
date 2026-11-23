@@ -254,4 +254,48 @@ data class LedgerData(
 
     /** The latest change any record carries. */
     fun latestStamp(): Long = records().maxOfOrNull { it.updatedAt } ?: 0L
+
+    /** Nothing recorded yet: a phone that hasn't been set up. */
+    fun isEmpty(): Boolean = settings.updatedAt == 0L && accounts.isEmpty() && categories.isEmpty()
+
+    /** These records saved over the ones with the same ids (new ones added). */
+    fun withRecords(records: List<Synced>): LedgerData {
+        if (records.isEmpty()) return this
+        fun <T : Synced> List<T>.put(changed: List<T>): List<T> {
+            if (changed.isEmpty()) return this
+            val byId = LinkedHashMap<String, T>()
+            for (record in this) byId[record.id] = record
+            for (record in changed) byId[record.id] = record
+            return byId.values.toList()
+        }
+        return LedgerData(
+            settings = records.filterIsInstance<Settings>().lastOrNull() ?: settings,
+            accounts = accounts.put(records.filterIsInstance<Account>()),
+            categories = categories.put(records.filterIsInstance<Category>()),
+            transactions = transactions.put(records.filterIsInstance<Transaction>()),
+            checkpoints = checkpoints.put(records.filterIsInstance<Checkpoint>()),
+            budgets = budgets.put(records.filterIsInstance<Budget>()),
+            rates = rates.put(records.filterIsInstance<Rate>()),
+            recurring = recurring.put(records.filterIsInstance<Recurring>()),
+        )
+    }
+}
+
+/**
+ * Everything you hold, in the main currency: each currency's total is
+ * converted once, so the parts shown add up to the total. A currency without
+ * a rate is shown but not counted.
+ */
+data class BalanceTotals(val total: Long, val byCurrency: List<Triple<String, Long, String?>>) {
+    companion object {
+        fun of(summaries: List<AccountSummary>, fx: Conversion): BalanceTotals {
+            val sums = LinkedHashMap<String, Long>().apply { put(fx.base, 0L) }
+            for (s in summaries) sums[s.account.currency] = (sums[s.account.currency] ?: 0L) + s.balance
+            val byCurrency = sums.entries
+                .map { (currency, total) -> Triple(currency, total, fx.rates[currency]) }
+                .sortedWith(compareBy<Triple<String, Long, String?>> { it.first != fx.base }.thenBy { it.first })
+            val total = byCurrency.sumOf { (currency, amount, rate) -> if (rate == null) 0L else if (currency == fx.base) amount else Money.convert(amount, rate) }
+            return BalanceTotals(total, byCurrency)
+        }
+    }
 }

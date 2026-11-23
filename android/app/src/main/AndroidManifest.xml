@@ -1,146 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.INTERNET" />
-    <!--
-        Automatic SMS import: new messages (RECEIVE_SMS) and, only when the
-        person asks to bring in the last 30 days, the inbox (READ_SMS). Only
-        messages from banks and wallets about money leave the phone
-        (SmsFilter.kt). Asked for on the set-up screen, after it explains this.
-    -->
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Tablets and Chromebooks without a SIM still install Hisab; they just can't import SMS. -->
+    <!-- Tablets and Chromebooks without a SIM still install Hisab. -->
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
 
     <!--
-        Nothing recorded in Hisab is kept in this app: the site keeps it, and the
-        browser keeps the sign-in. What the app does keep belongs to this phone
-        only, so it is left out of backups and phone-to-phone transfers.
+        Everything Hisab records stays on this phone (and, if the person turns
+        it on, in their own Google Drive). It is left out of Android's own
+        backups and phone-to-phone copies: a backup file or Drive sync moves it.
     -->
     <application
+        android:name=".HisabApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:manageSpaceActivity="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Translucent.NoTitleBar"
+        android:theme="@style/Theme.Hisab"
         android:usesCleartextTraffic="false">
 
-        <!-- This app's half of the handshake with the site; see app/build.gradle.kts. -->
-        <meta-data
-            android:name="asset_statements"
-            android:resource="@string/asset_statements" />
-
-        <!-- "Manage space" in the phone's app settings opens the browser's data for the site. -->
         <activity
-            android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
-            android:excludeFromRecents="true"
-            android:exported="false">
-            <meta-data
-                android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL"
-                android:value="${siteUrl}" />
-        </activity>
-
-        <!--
-            The app icon. It hands the site to the phone's browser, which shows
-            it full screen (a Trusted Web Activity).
-        -->
-        <activity
-            android:name=".LauncherActivity"
-            android:alwaysRetainTaskState="true"
-            android:exported="true">
-
-            <meta-data
-                android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                android:value="${siteUrl}/dashboard" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-                android:resource="@color/canvas" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
-                android:resource="@color/canvas" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
-                android:resource="@drawable/splash" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
-                android:resource="@color/canvas" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_FADE_OUT_DURATION"
-                android:value="300" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
-                android:value="${applicationId}.fileprovider" />
-            <!-- Without a browser that can do this, open the site in an ordinary browser tab: Google sign-in is refused inside an embedded web view. -->
-            <meta-data
-                android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
-                android:value="customtabs" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.METADATA_SHARE_TARGET"
-                android:resource="@string/share_target" />
-
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <!-- "Share" a message to Hisab from another app. -->
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
-            </intent-filter>
         </activity>
-
-        <!--
-            Automatic SMS import: set up from the site (Settings, "Set up on
-            this phone" opens hisab://link?code=…), and seen or turned off
-            from the phone's settings for the app.
-        -->
-        <activity
-            android:name=".SmsSetupActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
-            android:exported="true"
-            android:label="@string/sms_screen_label"
-            android:launchMode="singleTop"
-            android:theme="@style/Theme.Hisab.Screen">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="hisab" android:host="link" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <!-- Every SMS the phone receives; only bank and wallet messages about money go further. -->
-        <receiver
-            android:name=".SmsReceiver"
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter>
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Hands the splash picture to the browser, so it stays up while the site loads. -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/filepaths" />
-        </provider>
     </application>
 </manifest>
