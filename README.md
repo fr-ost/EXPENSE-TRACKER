@@ -53,7 +53,8 @@ has a ledger nobody else can see.
   once or not at all.
 - **Installable app** — install it from Chrome or Edge (desktop and Android)
   or add it to the iPhone home screen. Or use the [Android app](#android-app),
-  which keeps everything on the phone and reads bank SMS by itself.
+  which works offline, keeps everything on the phone and reads bank SMS by
+  itself.
 - **Your own account** — sign in with Google (your account is created the
   first time); everything you record belongs to you alone. An optional PIN
   locks the app after a while without activity. Delete your account, and
@@ -140,8 +141,9 @@ sheet: long-press a bank SMS, **Share → Hisab**, and it is added.
 
 ## Android app
 
-`android/` is **Hisab for Android**, an app of its own that needs no server
-and no account: everything is kept on the phone.
+`android/` is **Hisab for Android**, an app of its own that works completely
+offline: no server, no account, no internet permission — everything is kept
+on the phone.
 
 - **Everything the website does, on the phone** — accounts in any currency,
   entries, transfers that can count as spending, balance updates, Personal /
@@ -162,11 +164,8 @@ and no account: everything is kept on the phone.
 
   It can also read the last 30 days of the inbox, and pasted messages work
   as on the website. Nothing is sent anywhere.
-- **Sync between phones through your own Google Drive** — optional, no
-  server: each phone keeps a copy in Hisab's hidden app folder in your Drive
-  and merges the others' (the later change to each thing wins, deletions
-  included). A new phone: **Restore from Google Drive** on the first screen.
-  Needs a one-time Google Cloud set-up: [docs/google-drive-android.md](docs/google-drive-android.md).
+- **Backup files** — save everything to a file wherever you like, and
+  restore it on this phone or another one. Backups to the cloud come later.
 - **Moving from the website** — download a backup on the website (Settings →
   Backup and restore) and restore it in the app: the same file format.
 - **App lock** — a PIN of its own or the phone's screen lock (fingerprint,
@@ -191,9 +190,7 @@ then `base64 -w 0 hisab-upload.p12` gives the secret's text (use the same
 password for the key and the keystore).
 
 Then run the workflow again (**Actions → Android app → Run workflow**). The
-run's summary says what is still missing, if anything, and prints the
-certificate fingerprints (the SHA-1 is the one Google Drive sync needs);
-when it's complete it keeps **hisab.apk** (installs on a phone) and
+run's summary says what is still missing, if anything; when it's complete it keeps **hisab.apk** (installs on a phone) and
 **hisab.aab** (for Google Play) under the run's **Artifacts**. Builds of
 `main` are also published as a GitHub release, so the latest APK is always
 at the repository's **Releases**.

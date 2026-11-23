@@ -1,17 +1,17 @@
 # Hisab for Android — privacy policy
 
-Hisab for Android is a personal finance ledger that works on your phone.
+Hisab for Android is a personal finance ledger that works on your phone,
+offline.
 This policy says what the app keeps, where, and why. It applies to the
 Android app (`io.github.fr_ost.hisab`); the Hisab website has its own policy.
 
 ## In short
 
 - **Everything you record stays on your phone.** There is no Hisab server
-  and no Hisab account. The developer never receives your data.
+  and no Hisab account, and the app has no permission to use the internet.
+  The developer never receives your data.
 - **SMS are read on your phone, only if you turn it on**, and only those
   from banks and wallets about money. They are never sent anywhere.
-- **Google Drive sync is optional.** When you turn it on, your ledger is
-  copied to *your own* Google Drive, into a folder only Hisab can see.
 - No ads, no analytics, no tracking, no crash reporting, no third-party SDKs
   that collect data.
 
@@ -45,35 +45,17 @@ Android asks:
 - From those messages it records the transaction they describe — amount,
   date, merchant, fee and the balance the bank reports — in your ledger,
   with the message text as the transaction's note.
-- **Messages are read on the phone and never leave it**, except as part of
-  your own ledger if you turn on Google Drive sync (below).
+- **Messages are read on the phone and never leave it.**
 
 You can turn this off at any time in **More → Import SMS**, or take away the
 SMS permission in Android's settings.
 
-## Google Drive sync (optional)
-
-When you turn on **Sync with Google Drive** (or choose **Restore from Google
-Drive** on a new phone), Google asks you to allow Hisab to "see, create and
-delete its own configuration data in your Google Drive". That is the only
-Google permission Hisab asks for: it cannot see or change any of your other
-files in Drive.
-
-Your phone then saves a copy of your ledger (everything listed under "What
-the app keeps on your phone", except waiting SMS and the app lock) to
-Hisab's hidden app folder in your Google Drive, and reads the copies your
-other phones saved there, to keep them the same. The phone talks to Google
-Drive directly; no one else receives the data. Google's privacy policy
-applies to what is stored in your Google account.
-
-You can stop at any time (**More → Sync with Google Drive**) and remove
-Hisab's copy from Drive there. You can also remove Hisab's access in your
-Google Account (Security → Third-party apps with account access).
-
 ## Files you save
 
 Backup files and CSV exports are saved only where you choose, when you
-choose. Restoring reads only the file you pick.
+choose (if you pick a cloud folder, such as Google Drive, in Android's file
+picker, that service's own terms apply to the file). Restoring reads only
+the file you pick.
 
 ## Notifications
 
@@ -89,9 +71,7 @@ advertising.
 
 Delete entries, accounts and everything else in the app; uninstalling the
 app or clearing its storage in Android's settings removes everything on the
-phone. If you used Google Drive sync, remove Hisab's copy from Drive in
-**More → Sync with Google Drive** first, or later from Google Drive's
-settings (**Manage apps → Hisab → Delete hidden app data**).
+phone. Backup files you saved are yours to delete wherever you put them.
 
 ## Children
 

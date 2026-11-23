@@ -79,7 +79,6 @@ sealed interface Screen {
     data object Preferences : Screen
     data object Backup : Screen
     data object Sms : Screen
-    data object Sync : Screen
     data object Recurring : Screen
     data object Reports : Screen
     data object Currencies : Screen
@@ -197,7 +196,6 @@ fun HisabApp() {
                     Screen.Preferences -> PreferencesScreen(book)
                     Screen.Backup -> BackupScreen(book)
                     Screen.Sms -> SmsScreen(book)
-                    Screen.Sync -> SyncScreen(book)
                     Screen.Recurring -> RecurringScreen(book)
                     Screen.Reports -> ReportsScreen(book)
                     Screen.Currencies -> CurrenciesScreen(book)

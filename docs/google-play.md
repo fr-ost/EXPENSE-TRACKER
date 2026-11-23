@@ -5,9 +5,9 @@ Most of it is filling in forms in the [Play Console](https://play.google.com/con
 the answers Hisab needs are below. Do the [Android app](../README.md#android-app)
 set-up in the README first, so GitHub builds a signed `hisab.aab`.
 
-The app works on its own: everything is kept on the phone, SMS are read on
-the phone, and the only network use is the optional sync with the person's
-own Google Drive. There is no server to run.
+The app works on its own and offline: everything is kept on the phone, SMS
+are read on the phone, and it has no internet permission. There is no server
+to run.
 
 ## Before the first upload
 
@@ -18,9 +18,6 @@ own Google Drive. There is no server to run.
   [`docs/privacy-android.md`](privacy-android.md): if the repository is
   public, its GitHub address works as is; otherwise publish the same text on
   any public page you control (GitHub Pages, Google Sites, …).
-- **Google Drive sync** needs the one-time Google Cloud set-up in
-  [`docs/google-drive-android.md`](google-drive-android.md), including an
-  Android client for Play's own signing key (step 6 below).
 
 ## 1. Developer account
 
@@ -49,26 +46,14 @@ new personal account must run a **closed test with at least 12 testers for
 
 ### Data safety
 
-Nothing reaches the developer. The only data that leaves the phone is the
-person's own ledger, copied to **their own Google Drive** when they turn on
-sync. Declare that copy (it is the cautious reading of Play's definition of
-"collected"):
+Nothing leaves the phone: the app has no internet permission, so it can't
+send anything anywhere. Play counts only data sent off the device as
+"collected".
 
-- **Does the app collect or share user data?** Yes, it collects (only with
-  Google Drive sync on); it **shares nothing**.
-- **Encrypted in transit:** yes (HTTPS to Google Drive). **Users can ask for
-  their data to be deleted:** yes — *More → Sync with Google Drive → Remove
-  Hisab's copy from Google Drive*, or Drive's own settings.
-- **Data types** (all *optional*, *not shared*, purpose *App functionality*):
-
-| Category | Type | Why |
-| --- | --- | --- |
-| Financial info | Other financial info | The ledger the person records, synced to their Google Drive |
-| Messages | SMS or MMS | A bank or wallet message is kept as its transaction's note, so it is in the synced ledger |
-| Personal info | Name | Only if the person types one in Preferences; synced with the ledger |
-
-Nothing else: no location, no contacts, no device or advertising ids, no
-analytics, no crash reports.
+- **Does the app collect or share any of the required user data types?**
+  **No.** (SMS and the ledger are read and kept on the device only.)
+- Play then asks nothing more; the summary shows "No data collected" and
+  "No data shared".
 
 ## 4. SMS permission declaration (Policy → App content → Sensitive permissions)
 
@@ -90,7 +75,7 @@ certain uses. Hisab's is one of them.
   > messages from people and verification codes are not. Messages are read
   > on the phone and are never sent to the developer or anyone else. The
   > feature is off until the user turns it on, after a screen that explains
-  > exactly what is read.
+  > exactly what is read. The app has no internet permission.
 
 - **Video:** a short screen recording on a real phone: **More → Import SMS**,
   turning on **Read bank and wallet SMS**, the explanation and **Continue**,
@@ -108,9 +93,8 @@ certain uses. Hisab's is one of them.
 - **Full description:** what Hisab does (accounts, transactions, budgets for
   Personal and Family, recurring entries, reports, several currencies),
   reading bank and wallet SMS (which messages; everything stays on the
-  phone), sync between phones through the person's own Google Drive, backup
-  files and CSV export, the app lock, and that there is no account and no
-  server.
+  phone), backup files and CSV export, the app lock, and that it works
+  offline with no account and no server.
 - **App icon:** 512×512 — `public/icons/icon-512.png`.
 - **Feature graphic:** 1024×500, the logo on the dark ink colour (`#0e0e12`).
 - **Phone screenshots:** at least two — the overview, activity, Import SMS,
@@ -123,11 +107,7 @@ certain uses. Hisab's is one of them.
    `hisab.aab` from the latest **Android app** run on GitHub (its
    **Artifacts**). Add your testers' Google addresses (at least 12) and share
    the opt-in link with them.
-2. Google asks to use **Play App Signing**: accept. Then copy the **app
-   signing key certificate SHA-1** from **Test and release → App integrity →
-   App signing** and create a second Android client with it in Google Cloud
-   ([`docs/google-drive-android.md`](google-drive-android.md)), so Google
-   Drive sync works in copies installed from Play.
+2. Google asks to use **Play App Signing**: accept.
 3. After 14 days of testing, **apply for production** (Dashboard), then
    create a production release with the same bundle.
 
@@ -160,9 +140,7 @@ Before inviting testers, on your own Android phone:
       and the entry and balance are right.
 - [ ] A message from a person, and a verification code: nothing happens.
 - [ ] Read the last 30 days: entries added, the rest waiting for a look.
-- [ ] More → Sync with Google Drive → turn on → Google asks once → synced.
-      On a second phone: Restore from Google Drive → the same ledger; an
-      entry added on one appears on the other after opening it.
+- [ ] Airplane mode the whole time: everything above still works.
 - [ ] App lock with a PIN and with the screen lock; it locks after the time
       away you chose, and not while picking a backup file.
 - [ ] Save a backup file and a CSV export; restore the backup.

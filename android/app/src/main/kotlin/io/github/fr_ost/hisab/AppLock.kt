@@ -99,7 +99,7 @@ class AppLock(context: Context) {
         awaySince = System.currentTimeMillis()
     }
 
-    /** Hisab opened another app for a moment (a file picker, Google's prompt): coming back doesn't lock. */
+    /** Hisab opened another app for a moment (a file picker): coming back doesn't lock. */
     fun expectReturn() {
         returning = true
     }
@@ -116,7 +116,7 @@ class AppLock(context: Context) {
     }
 
     private companion object {
-        /** The longest a visit to a file picker or Google's prompt can last without locking. */
+        /** The longest a visit to a file picker can last without locking. */
         const val MAX_ERRAND = 10 * 60_000L
         const val METHOD = "method"
         const val HASH = "hash"

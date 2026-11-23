@@ -116,7 +116,7 @@ fun LockScreen(lock: AppLock) {
                 TextButton(onClick = { askDevice() }) { Text("Forgot your PIN? Use the phone's screen lock") }
             } else {
                 Text(
-                    "Forgot your PIN? Without a screen lock on this phone, the way back is to clear Hisab's storage in Android's settings, then restore from Google Drive or a backup file.",
+                    "Forgot your PIN? Without a screen lock on this phone, the way back is to clear Hisab's storage in Android's settings, then restore a backup file.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

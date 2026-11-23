@@ -100,10 +100,17 @@ jobs:
           fingerprint="$(sed -n 's/.*certificate SHA-256 digest: //p' "$RUNNER_TEMP/signature.txt" | head -1 | tr a-f A-F | sed 's/../&:/g; s/:$//')"
           [ ${#fingerprint} -eq 95 ] || { echo "::error::Couldn't read the certificate the app is signed with."; exit 1; }
           echo "HISAB_FINGERPRINT=$fingerprint" >> "$GITHUB_ENV"
-          # Google Cloud's Android client (for Drive sync) asks for the SHA-1 one.
-          sha1="$(sed -n 's/.*certificate SHA-1 digest: //p' "$RUNNER_TEMP/signature.txt" | head -1 | tr a-f A-F | sed 's/../&:/g; s/:$//')"
-          echo "HISAB_FINGERPRINT_SHA1=$sha1" >> "$GITHUB_ENV"
           jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tail -3
+
+      - name: Check the app stays offline
+        run: |
+          # Everything stays on the phone: no library may slip in the internet permission.
+          aapt2="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2"
+          "$aapt2" dump permissions app/build/outputs/apk/release/app-release.apk | tee "$RUNNER_TEMP/permissions.txt"
+          if grep -q "android.permission.INTERNET" "$RUNNER_TEMP/permissions.txt"; then
+            echo "::error::The app must work offline, but it asks for the INTERNET permission."
+            exit 1
+          fi
 
       - name: Result
         id: result
@@ -118,7 +125,6 @@ jobs:
               echo "- **There is no signing key yet** (the \`ANDROID_SIGNING_KEY\` secret), so nothing installable was kept. See \"Android app\" in the README."
             else
               echo "- Signed with the certificate \`$HISAB_FINGERPRINT\`."
-              echo "- For Google Drive sync, Google Cloud's Android client takes the package \`io.github.fr_ost.hisab\` and this SHA-1: \`$HISAB_FINGERPRINT_SHA1\` (docs/google-drive-android.md)."
             fi
             if [ "$ready" = yes ]; then
               echo "- **hisab.apk** (below, in \"hisab-android\") installs on a phone; **hisab.aab** is what Google Play takes."

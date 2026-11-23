@@ -127,7 +127,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   with the user (cascade), like sessions; they are not ledger data, so a
   backup and restore leave them out. The Android app in this repository no
   longer links to the site (below); this stays for other clients.
-- The Android app (`android/`) is an app of its own with no server: Compose
+- The Android app (`android/`) is an app of its own, fully offline (no
+  server, no account, no INTERNET permission — keep it that way): Compose
   UI in `android/app`, the ledger rules in plain Kotlin in `android/core`
   (testable on any JVM). It is built and tested only by
   `.github/workflows/android.yml` (the Android SDK and Google's Maven aren't
@@ -145,14 +146,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   stamped by `Repository.commit`. Ids that must agree across phones are
   derived (`Ids.stable`): starter categories, backup rows, SMS entries
   (`sms:<fingerprint>:<part>`, the website's fingerprint), recurring
-  occurrences. Google Drive sync (`android/app/.../drive`, core `SyncFiles`,
-  `docs/google-drive-android.md`) needs no server: one file per phone in the
-  `drive.appdata` folder, merged record by record, later change wins. The
-  app lock and waiting SMS belong to one phone and never sync. Which
+  occurrences — so copies can be merged record by record later (`Sync`,
+  later change wins). Cloud backup/sync is deliberately left for later (an
+  earlier Google Drive sync is in git history, commit 21c1c92). The app lock
+  and waiting SMS belong to one phone and are never in a backup. Which
   messages Hisab reads is decided by `SmsFilter.kt` (a business sender, about
   money, never a code) — keep the app's privacy policy
   (`docs/privacy-android.md`) saying exactly what it reads and that nothing
-  leaves the phone except the person's own Drive sync. Signing keys are
+  leaves the phone. Signing keys are
   secrets, never in the repository. Publishing: `docs/google-play.md`.
 - Displaying money (`formatMoney`) must never throw: it runs during render,
   and amount fields hold partial input like "12.". `ResponsiveSheet` wraps its

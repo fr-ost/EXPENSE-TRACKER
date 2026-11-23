@@ -19,11 +19,12 @@ enum class NumberFormat { SOUTH_ASIAN, INTERNATIONAL }
 enum class CheckpointSource { MANUAL, SMS }
 
 /**
- * Every record Hisab keeps can sync between phones through Google Drive: it
- * has an id that is the same on every phone, when it last changed (a clock
- * every phone moves forward, see SyncClock), which phone changed it, and
- * whether it was deleted — a deleted record is kept as a tombstone so the
- * deletion reaches the other phones too.
+ * Every record Hisab keeps is ready to be combined with another phone's
+ * copy later (a backup feature to come): it has an id that is the same on
+ * every phone, when it last changed (a clock every phone moves forward, see
+ * SyncClock), which phone changed it, and whether it was deleted — a
+ * deleted record is kept as a tombstone so the deletion can reach another
+ * copy too.
  */
 sealed interface Synced {
     val id: String

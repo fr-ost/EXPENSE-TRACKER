@@ -21,7 +21,6 @@ import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Sms
-import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -92,11 +91,6 @@ fun MoreScreen(book: Book) {
             }
             item {
                 Section(null) {
-                    val sync by (LocalContext.current.applicationContext as io.github.fr_ost.hisab.HisabApplication).drive.status.collectAsStateWithLifecycle()
-                    NavRow("Sync with Google Drive", if (sync.enabled) (sync.problem ?: "On") else "Share one ledger between your phones", Icons.Outlined.Sync) {
-                        navigator.open(Screen.Sync)
-                    }
-                    RowDivider()
                     NavRow("Backup and restore", "A file of everything you recorded", Icons.Outlined.CloudSync) { navigator.open(Screen.Backup) }
                     RowDivider()
                     NavRow("Preferences", "Your name, currency and number style", Icons.Outlined.Tune) { navigator.open(Screen.Preferences) }
@@ -105,7 +99,7 @@ fun MoreScreen(book: Book) {
                 }
             }
             item {
-                Text("Hisab ${BuildConfig.VERSION_NAME} · Everything stays on this phone, and in your own Google Drive if you sync.", style = MaterialTheme.typography.bodyMedium,
+                Text("Hisab ${BuildConfig.VERSION_NAME} · Everything stays on this phone.", style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             }
         }

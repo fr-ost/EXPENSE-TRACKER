@@ -10,7 +10,6 @@ import io.github.fr_ost.hisab.core.Ids
 import io.github.fr_ost.hisab.core.LedgerData
 import io.github.fr_ost.hisab.core.Recurrings
 import io.github.fr_ost.hisab.core.Settings
-import io.github.fr_ost.hisab.core.Sync
 import io.github.fr_ost.hisab.core.SyncClock
 import io.github.fr_ost.hisab.core.Synced
 import io.github.fr_ost.hisab.core.Dates
@@ -86,9 +85,6 @@ class Repository(context: Context) {
 
     private val current: LedgerData get() = state.value ?: LedgerData()
 
-    /** Called after each change made on this phone (to sync it). */
-    var onChanged: (() -> Unit)? = null
-
     /** Save records (from an edit, a restore or another phone) as this phone's change. */
     @Synchronized
     fun commit(records: List<Synced>) {
@@ -96,16 +92,6 @@ class Repository(context: Context) {
         val stamped = records.map { it.stamped(clock.next(), device) }
         store.save(stamped)
         state.value = current.withRecords(stamped)
-        onChanged?.invoke()
-    }
-
-    /** Take in what another phone holds: each record's later change wins. Returns how many records changed here. */
-    @Synchronized
-    fun mergeFrom(theirs: LedgerData): Int {
-        val merged = Sync.merge(current, theirs)
-        val changed = Sync.changed(current, merged)
-        absorb(changed)
-        return changed.size
     }
 
     /** Records that already carry their own stamps (from another phone): saved as they are. */

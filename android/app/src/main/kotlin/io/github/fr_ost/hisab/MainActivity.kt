@@ -14,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.fr_ost.hisab.drive.SyncWorker
 import io.github.fr_ost.hisab.ui.HisabApp
 import io.github.fr_ost.hisab.ui.LocalOpens
 import io.github.fr_ost.hisab.ui.LocalRepository
@@ -47,8 +46,6 @@ class MainActivity : FragmentActivity() {
         // With a lock on, the recent-apps screen shows no picture of Hisab.
         if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(app.lock.method == AppLock.Method.NONE)
         app.repository.postRecurring()
-        // Opening Hisab picks up what the other phones changed.
-        if (app.drive.enabled) SyncWorker.soon(this, delaySeconds = 0)
     }
 
     override fun onStop() {
@@ -56,7 +53,7 @@ class MainActivity : FragmentActivity() {
         if (!isChangingConfigurations) app.lock.wentAway()
     }
 
-    // A file picker or Google's prompt opened from Hisab: coming back from it doesn't lock.
+    // A file picker opened from Hisab: coming back from it doesn't lock.
     @Deprecated("Called by the activity-result APIs")
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
         app.lock.expectReturn()
