@@ -1,0 +1,5736 @@
+{
+ "today": "2026-09-28",
+ "cases": [
+  {
+   "text": "You have received Tk 500.00 from 01712345678. Ref 12. Fee Tk 0.00. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1010.14",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "20:03",
+    "counterparty": "01712345678",
+    "reference": "BIR7ZX2T1B",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "You have received Tk 500.00 from 01712345678. Ref 12. Fee Tk 0.00. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1010.14",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "20:03",
+    "counterparty": "01712345678",
+    "reference": "BIR7ZX2T1B",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Received from 01712345678",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": "01712345678",
+    "reference": null,
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Received from 01712345678",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "01712345678",
+    "reference": null,
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Send Money Tk 1,000.00 to 01812345678 successful. Ref Rent. Fee Tk 5.00. Balance Tk 2,345.60. TrxID BIS8AB3C4D at 28/09/2026 09:15",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "send_money",
+    "amount": "1000.00",
+    "currency": "BDT",
+    "fee": "5.00",
+    "balance": "2345.60",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "09:15",
+    "counterparty": "01812345678",
+    "reference": "BIS8AB3C4D",
+    "description": "Sent to 01812345678",
+    "categoryHints": [
+     "Housing",
+     "Rent"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Send Money Tk 1,000.00 to 01812345678 successful. Ref Rent. Fee Tk 5.00. Balance Tk 2,345.60. TrxID BIS8AB3C4D at 28/09/2026 09:15",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "send_money",
+    "amount": "1000.00",
+    "currency": "BDT",
+    "fee": "5.00",
+    "balance": "2345.60",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "09:15",
+    "counterparty": "01812345678",
+    "reference": "BIS8AB3C4D",
+    "description": "Sent to 01812345678",
+    "categoryHints": [
+     "Housing",
+     "Rent"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 28/09/2026 10:05",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "cash_out",
+    "amount": "2000.00",
+    "currency": "BDT",
+    "fee": "37.00",
+    "balance": "500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:05",
+    "counterparty": "01912345678",
+    "reference": "BIT9CD5E6F",
+    "description": "Cash out",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 28/09/2026 10:05",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "cash_out",
+    "amount": "2000.00",
+    "currency": "BDT",
+    "fee": "37.00",
+    "balance": "500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:05",
+    "counterparty": "01912345678",
+    "reference": "BIT9CD5E6F",
+    "description": "Cash out",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Payment Tk 350.00 to Daraz Bangladesh Ltd (01712345678) successful. Balance Tk 1,000.00. TrxID BIU1EF7G8H at 28/09/2026 12:00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "350.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:00",
+    "counterparty": "Daraz Bangladesh Ltd",
+    "reference": "BIU1EF7G8H",
+    "description": "Daraz Bangladesh Ltd",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Payment Tk 350.00 to Daraz Bangladesh Ltd (01712345678) successful. Balance Tk 1,000.00. TrxID BIU1EF7G8H at 28/09/2026 12:00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "350.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:00",
+    "counterparty": "Daraz Bangladesh Ltd",
+    "reference": "BIU1EF7G8H",
+    "description": "Daraz Bangladesh Ltd",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Cash In Tk 5,000.00 from 01712345678 successful. Fee Tk 0.00. Balance Tk 6,000.00. TrxID BIV2GH9J0K at 27/09/2026 18:45",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "cash_in",
+    "amount": "5000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "6000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "18:45",
+    "counterparty": "01712345678",
+    "reference": "BIV2GH9J0K",
+    "description": "Cash in",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Cash In Tk 5,000.00 from 01712345678 successful. Fee Tk 0.00. Balance Tk 6,000.00. TrxID BIV2GH9J0K at 27/09/2026 18:45",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "cash_in",
+    "amount": "5000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "6000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "18:45",
+    "counterparty": "01712345678",
+    "reference": "BIV2GH9J0K",
+    "description": "Cash in",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "You have received deposit from iBanking of Tk 10,000.00 from City Bank. Fee Tk 0.00. Balance Tk 12,000.00. TrxID BIW3JK1L2M at 26/09/2026 11:11",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "add_money",
+    "amount": "10000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": "city",
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-26",
+    "time": "11:11",
+    "counterparty": "iBanking of Tk 10",
+    "reference": "BIW3JK1L2M",
+    "description": "Add money from City Bank",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "You have received deposit from iBanking of Tk 10,000.00 from City Bank. Fee Tk 0.00. Balance Tk 12,000.00. TrxID BIW3JK1L2M at 26/09/2026 11:11",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "add_money",
+    "amount": "10000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": "city",
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-26",
+    "time": "11:11",
+    "counterparty": "iBanking of Tk 10",
+    "reference": "BIW3JK1L2M",
+    "description": "Add money from City Bank",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nRef: N/A\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1234.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "71A2B3C4",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nRef: N/A\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1234.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "71A2B3C4",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Cash Out Successful.\nAmount: Tk 2,000.00\nFee: Tk 23.00\nTxnID: 72B3C4D5\nBalance: Tk 1,211.56\n28/09/2026 15:10",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "cash_out",
+    "amount": "2000.00",
+    "currency": "BDT",
+    "fee": "23.00",
+    "balance": "1211.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "15:10",
+    "counterparty": null,
+    "reference": "72B3C4D5",
+    "description": "Cash out",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Cash Out Successful.\nAmount: Tk 2,000.00\nFee: Tk 23.00\nTxnID: 72B3C4D5\nBalance: Tk 1,211.56\n28/09/2026 15:10",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "cash_out",
+    "amount": "2000.00",
+    "currency": "BDT",
+    "fee": "23.00",
+    "balance": "1211.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "15:10",
+    "counterparty": null,
+    "reference": "72B3C4D5",
+    "description": "Cash out",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Rocket: amount glued to Tk, 12-hour time, sender's wallet after A/C",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "rocket",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Rocket transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Rocket: amount glued to Tk, 12-hour time, sender's wallet after A/C",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "rocket",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "Rocket transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Tk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:1234567890 Date:28-SEP-26 02:30:45 pm.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1234.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "rocket",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "1234567890",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:1234567890 Date:28-SEP-26 02:30:45 pm.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1234.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "rocket",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "1234567890",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer, your A/C 123.***.4567 has been debited by BDT 2,500.00 on 28-09-2026 13:05. Avl Bal BDT 45,000.00. Thank you. DBBL",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "45000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "dbbl",
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "13:05",
+    "counterparty": null,
+    "reference": null,
+    "description": "Dutch-Bangla Bank debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer, your A/C 123.***.4567 has been debited by BDT 2,500.00 on 28-09-2026 13:05. Avl Bal BDT 45,000.00. Thank you. DBBL",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "45000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "dbbl",
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "13:05",
+    "counterparty": null,
+    "reference": null,
+    "description": "Dutch-Bangla Bank debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your Card ending 1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22:10. Available limit BDT 98,750.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1250.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": "98750.00",
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "14:22",
+    "counterparty": "Daraz BD",
+    "reference": null,
+    "description": "Daraz BD",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your Card ending 1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22:10. Available limit BDT 98,750.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1250.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": "98750.00",
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "14:22",
+    "counterparty": "Daraz BD",
+    "reference": null,
+    "description": "Daraz BD",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your A/C ***4567 is debited with BDT 3,000.00 on 28-09-2026 at 10:22:15 (ATM Withdrawal). Available Balance: BDT 12,345.67. BRAC Bank",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "atm",
+    "amount": "3000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12345.67",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "brac",
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:22",
+    "counterparty": null,
+    "reference": null,
+    "description": "ATM withdrawal",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your A/C ***4567 is debited with BDT 3,000.00 on 28-09-2026 at 10:22:15 (ATM Withdrawal). Available Balance: BDT 12,345.67. BRAC Bank",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "atm",
+    "amount": "3000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12345.67",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "brac",
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:22",
+    "counterparty": null,
+    "reference": null,
+    "description": "ATM withdrawal",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Valued Customer, BDT 50,000.00 has been credited to your A/C **5678 on 28-SEP-2026 for Salary. Current balance is BDT 1,20,000.00. City Bank",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "salary",
+    "amount": "50000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "120000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "city",
+    "otherProvider": null,
+    "accountDigits": "5678",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Salary",
+    "categoryHints": [
+     "Salary"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Valued Customer, BDT 50,000.00 has been credited to your A/C **5678 on 28-SEP-2026 for Salary. Current balance is BDT 1,20,000.00. City Bank",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "salary",
+    "amount": "50000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "120000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "city",
+    "otherProvider": null,
+    "accountDigits": "5678",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Salary",
+    "categoryHints": [
+     "Salary"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer, Your EBL Card ****1234 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15. Avl limit BDT 1,50,000.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "12.99",
+    "currency": "USD",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": "150000.00",
+    "provider": "ebl",
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "20:15",
+    "counterparty": "netflix.com",
+    "reference": null,
+    "description": "netflix.com",
+    "categoryHints": [
+     "Subscriptions"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer, Your EBL Card ****1234 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15. Avl limit BDT 1,50,000.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "12.99",
+    "currency": "USD",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": "150000.00",
+    "provider": "ebl",
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "20:15",
+    "counterparty": "netflix.com",
+    "reference": null,
+    "description": "netflix.com",
+    "categoryHints": [
+     "Subscriptions"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your A/C No. XXX12345 Debited BDT 5,000.00 on 28-SEP-2026 ATM Cash Withdrawal. Balance BDT 20,000.00 -IBBL",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "atm",
+    "amount": "5000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "20000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "ibbl",
+    "otherProvider": null,
+    "accountDigits": "2345",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "ATM withdrawal",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your A/C No. XXX12345 Debited BDT 5,000.00 on 28-SEP-2026 ATM Cash Withdrawal. Balance BDT 20,000.00 -IBBL",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "atm",
+    "amount": "5000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "20000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "ibbl",
+    "otherProvider": null,
+    "accountDigits": "2345",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "ATM withdrawal",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Refund of BDT 850.00 from FOODPANDA has been credited to your card ending 1234 on 27-09-2026.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "refund",
+    "amount": "850.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-27",
+    "time": null,
+    "counterparty": "Foodpanda",
+    "reference": null,
+    "description": "Refund from Foodpanda",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Refund of BDT 850.00 from FOODPANDA has been credited to your card ending 1234 on 27-09-2026.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "refund",
+    "amount": "850.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "Foodpanda",
+    "reference": null,
+    "description": "Refund from Foodpanda",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "A/C *4567 Dr BDT 1,200.00 on 28/09/2026 POS SHWAPNO GULSHAN. Bal BDT 9,800.00 Cr",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1200.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "9800.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": "Shwapno Gulshan",
+    "reference": null,
+    "description": "Shwapno Gulshan",
+    "categoryHints": [
+     "Groceries",
+     "Food"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "A/C *4567 Dr BDT 1,200.00 on 28/09/2026 POS SHWAPNO GULSHAN. Bal BDT 9,800.00 Cr",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1200.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "9800.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": "Shwapno Gulshan",
+    "reference": null,
+    "description": "Shwapno Gulshan",
+    "categoryHints": [
+     "Groceries",
+     "Food"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "withdrawal via ATM with a 3-digit account suffix and 2-digit year",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "atm",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "ATM withdrawal",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "withdrawal via ATM with a 3-digit account suffix and 2-digit year",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "atm",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "ATM withdrawal",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Dear Sir, BDT 1,000.00 withdrawn from your A/C 0123***789 via ATM on 28-09-26 11:45. Bal: BDT 10,000.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "atm",
+    "amount": "1000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "10000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "789",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "11:45",
+    "counterparty": null,
+    "reference": null,
+    "description": "ATM withdrawal",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Sir, BDT 1,000.00 withdrawn from your A/C 0123***789 via ATM on 28-09-26 11:45. Bal: BDT 10,000.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "atm",
+    "amount": "1000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "10000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "789",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "11:45",
+    "counterparty": null,
+    "reference": null,
+    "description": "ATM withdrawal",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your A/C ***4567 has been debited by BDT 500.00 on 28-09-2026 10:15. Avl Bal: 12,345.67. Thank you",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12345.67",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:15",
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your A/C ***4567 has been debited by BDT 500.00 on 28-09-2026 10:15. Avl Bal: 12,345.67. Thank you",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12345.67",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:15",
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "BDT 500.00 debited from A/C **4567 on 28-09-2026. Balance as on 28-09-2026",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "BDT 500.00 debited from A/C **4567 on 28-09-2026. Balance as on 28-09-2026",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Card **1234 used for BDT 500.00 at DARAZ on 28-09-2026. Available limit 9,500.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": "Daraz",
+    "reference": null,
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Card **1234 used for BDT 500.00 at DARAZ on 28-09-2026. Available limit 9,500.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": "Daraz",
+    "reference": null,
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "BDT 100.00 debited from your A/C **1234 on 28 Sep at 10:15",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "100.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:15",
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "BDT 100.00 debited from your A/C **1234 on 28 Sep at 10:15",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "100.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:15",
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "BDT 100.00 debited from your A/C **1234 on 30 Dec",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "100.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2025-12-30",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "BDT 100.00 debited from your A/C **1234 on 30 Dec",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "100.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2025-12-30",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 100 debited from your A/C **1234 on 09/28/2026",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "100.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 100 debited from your A/C **1234 on 09/28/2026",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "100.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 100 debited from your A/C **1234 on 05/09/2026",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "100.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-05",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 100 debited from your A/C **1234 on 05/09/2026",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "100.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-05",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 500/- has been debited from your A/C **1234 for POS purchase.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": "purchase",
+    "reference": null,
+    "description": "purchase",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Tk 500/- has been debited from your A/C **1234 for POS purchase.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "purchase",
+    "reference": null,
+    "description": "purchase",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your OTP for transaction of BDT 1,250.00 at DARAZ is 123456. Do not share it with anyone.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "1250.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": "Daraz",
+    "reference": null,
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": "otp",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your OTP for transaction of BDT 1,250.00 at DARAZ is 123456. Do not share it with anyone.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "1250.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "Daraz",
+    "reference": null,
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": "otp",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Get 20% cashback on Daraz payment with bKash! Offer valid till 30 Sep. T&C apply. Dial *247#",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": "bkash",
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2025-09-30",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Payment",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": "promo",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Get 20% cashback on Daraz payment with bKash! Offer valid till 30 Sep. T&C apply. Dial *247#",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": "bkash",
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2025-09-30",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Payment",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": "promo",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your transaction of Tk 500.00 to 01712345678 has failed due to insufficient balance.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": "01712345678",
+    "reference": null,
+    "description": "01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "failed",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your transaction of Tk 500.00 to 01712345678 has failed due to insufficient balance.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "01712345678",
+    "reference": null,
+    "description": "01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "failed",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your credit card bill of BDT 12,500.00 is due on 05-Oct-2026. Minimum due BDT 1,250.00. Please pay by due date.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "bill",
+    "amount": "12500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-10-05",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Bill payment",
+    "categoryHints": [
+     "Bills",
+     "Utilities"
+    ],
+    "ignored": "reminder",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your credit card bill of BDT 12,500.00 is due on 05-Oct-2026. Minimum due BDT 1,250.00. Please pay by due date.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "bill",
+    "amount": "12500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-10-05",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Bill payment",
+    "categoryHints": [
+     "Bills",
+     "Utilities"
+    ],
+    "ignored": "reminder",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your current balance is Tk 1,500.00.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "1500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your current balance is Tk 1,500.00.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "1500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Payment Tk 500.00 to Chaldal successful. Cashback Tk 10.00. Balance Tk 90.00. TrxID BIX4LM5N6P at 28/09/2026 16:00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "90.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "16:00",
+    "counterparty": "Chaldal",
+    "reference": "BIX4LM5N6P",
+    "description": "Chaldal",
+    "categoryHints": [
+     "Groceries",
+     "Food"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Payment Tk 500.00 to Chaldal successful. Cashback Tk 10.00. Balance Tk 90.00. TrxID BIX4LM5N6P at 28/09/2026 16:00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "90.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "16:00",
+    "counterparty": "Chaldal",
+    "reference": "BIX4LM5N6P",
+    "description": "Chaldal",
+    "categoryHints": [
+     "Groceries",
+     "Food"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Payment Tk 350.00 to Daraz (01712345678) successful. Balance Tk 150.00. TrxID BIU1EF7G8H at 28/09/2026 12:00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "350.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "150.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:00",
+    "counterparty": "Daraz",
+    "reference": "BIU1EF7G8H",
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Payment Tk 350.00 to Daraz (01712345678) successful. Balance Tk 150.00. TrxID BIU1EF7G8H at 28/09/2026 12:00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "350.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "150.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:00",
+    "counterparty": "Daraz",
+    "reference": "BIU1EF7G8H",
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 650.00\n28/09/2026 14:30",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "650.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "71A2B3C4",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 650.00\n28/09/2026 14:30",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "650.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "71A2B3C4",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer,\nYour A/C ***4567 has been debited BDT 500.00\non 28-09-2026.\nAvl Bal BDT 1,000.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer,\nYour A/C ***4567 has been debited BDT 500.00\non 28-09-2026.\nAvl Bal BDT 1,000.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Mobile Recharge Tk 50.00 to 01712345678 successful. Balance Tk 450.00. TrxID BIY5NP6Q7R at 28/09/2026 08:00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "recharge",
+    "amount": "50.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "450.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "08:00",
+    "counterparty": "01712345678",
+    "reference": "BIY5NP6Q7R",
+    "description": "Mobile recharge 01712345678",
+    "categoryHints": [
+     "Mobile & internet",
+     "Mobile",
+     "Phone",
+     "Bills"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Mobile Recharge Tk 50.00 to 01712345678 successful. Balance Tk 450.00. TrxID BIY5NP6Q7R at 28/09/2026 08:00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "recharge",
+    "amount": "50.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "450.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "08:00",
+    "counterparty": "01712345678",
+    "reference": "BIY5NP6Q7R",
+    "description": "Mobile recharge 01712345678",
+    "categoryHints": [
+     "Mobile & internet",
+     "Mobile",
+     "Phone",
+     "Bills"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Bill payment successful. Biller: DESCO Postpaid, Account: 12345678, Amount: Tk 1,245.00, Fee: Tk 0.00, TrxID: BIZ6PQ7R8S at 28/09/2026 19:30. Balance Tk 2,000.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "bill",
+    "amount": "1245.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "2000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "19:30",
+    "counterparty": "DESCO Postpaid",
+    "reference": "BIZ6PQ7R8S",
+    "description": "DESCO Postpaid bill",
+    "categoryHints": [
+     "Bills",
+     "Utilities"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Bill payment successful. Biller: DESCO Postpaid, Account: 12345678, Amount: Tk 1,245.00, Fee: Tk 0.00, TrxID: BIZ6PQ7R8S at 28/09/2026 19:30. Balance Tk 2,000.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "bill",
+    "amount": "1245.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "2000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "19:30",
+    "counterparty": "DESCO Postpaid",
+    "reference": "BIZ6PQ7R8S",
+    "description": "DESCO Postpaid bill",
+    "categoryHints": [
+     "Bills",
+     "Utilities"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 2,500.00 has been transferred from your A/C **4567 to bKash A/C 01712345678 on 28-09-2026 12:10. Avl Bal BDT 7,500.00. City Bank",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "transfer",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "7500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "city",
+    "otherProvider": "bkash",
+    "accountDigits": "4567",
+    "counterpartyDigits": "5678",
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:10",
+    "counterparty": "01712345678",
+    "reference": null,
+    "description": "Transfer to 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 2,500.00 has been transferred from your A/C **4567 to bKash A/C 01712345678 on 28-09-2026 12:10. Avl Bal BDT 7,500.00. City Bank",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "transfer",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "7500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "city",
+    "otherProvider": "bkash",
+    "accountDigits": "4567",
+    "counterpartyDigits": "5678",
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:10",
+    "counterparty": "01712345678",
+    "reference": null,
+    "description": "Transfer to 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Fund Transfer of BDT 5,000.00 from your A/C ***4567 to A/C ***8910 is successful on 28/09/2026.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "transfer",
+    "amount": "5000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": "8910",
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Fund transfer",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Fund Transfer of BDT 5,000.00 from your A/C ***4567 to A/C ***8910 is successful on 28/09/2026.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "transfer",
+    "amount": "5000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": "8910",
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Fund transfer",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Congratulations! You got Tk 25.00 cashback for your payment at Shwapno. TrxID BJB8ST9U0V at 28/09/2026 18:02. Balance Tk 525.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "cashback",
+    "amount": "25.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "525.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "18:02",
+    "counterparty": "Shwapno",
+    "reference": "BJB8ST9U0V",
+    "description": "Cashback",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Congratulations! You got Tk 25.00 cashback for your payment at Shwapno. TrxID BJB8ST9U0V at 28/09/2026 18:02. Balance Tk 525.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "cashback",
+    "amount": "25.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "525.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "18:02",
+    "counterparty": "Shwapno",
+    "reference": "BJB8ST9U0V",
+    "description": "Cashback",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your a/c 1234 debited for Tk 1500 on 28-Sep-2026 (POS/DARAZ). Current Bal Tk 3,500",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "3500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": "Daraz",
+    "reference": null,
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your a/c 1234 debited for Tk 1500 on 28-Sep-2026 (POS/DARAZ). Current Bal Tk 3,500",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "3500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": "Daraz",
+    "reference": null,
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "INR 1,500.00 debited from A/c XX1234 on 28-09-26 for UPI txn to swiggy@icici. Avl bal INR 10,000.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "1500.00",
+    "currency": "INR",
+    "fee": null,
+    "balance": "10000.00",
+    "balanceCurrency": "INR",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": "swiggy@icici",
+    "reference": null,
+    "description": "swiggy@icici",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "INR 1,500.00 debited from A/c XX1234 on 28-09-26 for UPI txn to swiggy@icici. Avl bal INR 10,000.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "1500.00",
+    "currency": "INR",
+    "fee": null,
+    "balance": "10000.00",
+    "balanceCurrency": "INR",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": "swiggy@icici",
+    "reference": null,
+    "description": "swiggy@icici",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your bKash account balance is Tk 8,000.00. Thank you.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your bKash account balance is Tk 8,000.00. Thank you.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Dear Customer, your A/C 1234***5678 available balance is BDT 8,000.00 as on 03-10-2026 10:15.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "5678",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-10-03",
+    "time": "10:15",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Dear Customer, your A/C 1234***5678 available balance is BDT 8,000.00 as on 03-10-2026 10:15.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "5678",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-10-03",
+    "time": "10:15",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Avl Bal: BDT 8,000.00 in A/C **5678 on 03-Oct-2026",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "5678",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-10-03",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Avl Bal: BDT 8,000.00 in A/C **5678 on 03-Oct-2026",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "5678",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-10-03",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Nagad: Your account balance is Tk. 8,000.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Nagad transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Nagad: Your account balance is Tk. 8,000.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "Nagad transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Tk 500.00 spent at SHWAPNO on your A/C **4567. Avl Bal Tk 9,500.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "9500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": "Shwapno",
+    "reference": null,
+    "description": "Shwapno",
+    "categoryHints": [
+     "Groceries",
+     "Food"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Tk 500.00 spent at SHWAPNO on your A/C **4567. Avl Bal Tk 9,500.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "9500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "Shwapno",
+    "reference": null,
+    "description": "Shwapno",
+    "categoryHints": [
+     "Groceries",
+     "Food"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "You have received Tk 500.00 from 01712345678. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1010.14",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "20:03",
+    "counterparty": "01712345678",
+    "reference": "BIR7ZX2T1B",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "You have received Tk 500.00 from 01712345678. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1010.14",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "20:03",
+    "counterparty": "01712345678",
+    "reference": "BIR7ZX2T1B",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your a/c 1234 debited for Tk 1500 on 15 Jan (POS/DARAZ). Current Bal Tk 3,500",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "3500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-01-15",
+    "time": null,
+    "counterparty": "Daraz",
+    "reference": null,
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your a/c 1234 debited for Tk 1500 on 15 Jan (POS/DARAZ). Current Bal Tk 3,500",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "3500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-01-15",
+    "time": null,
+    "counterparty": "Daraz",
+    "reference": null,
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 80.00 debited from A/C **1234 on 30 Dec. Avl Bal Tk 20.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "80.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "20.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2025-12-30",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 80.00 debited from A/C **1234 on 30 Dec. Avl Bal Tk 20.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "80.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "20.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2025-12-30",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer, BDT 50,000.00 has been credited to your A/C **4567 on 28-SEP-2026 for Salary. Current balance is BDT 1,00,000.00.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "salary",
+    "amount": "50000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "100000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Salary",
+    "categoryHints": [
+     "Salary"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer, BDT 50,000.00 has been credited to your A/C **4567 on 28-SEP-2026 for Salary. Current balance is BDT 1,00,000.00.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "salary",
+    "amount": "50000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "100000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Salary",
+    "categoryHints": [
+     "Salary"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "You have received deposit from iBanking of Tk 10,000.00 from City Bank. Fee Tk 0.00. Balance Tk 12,537.00. TrxID BIW3JK1L2M at 28/09/2026 11:11",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "add_money",
+    "amount": "10000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12537.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": "city",
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "11:11",
+    "counterparty": "iBanking of Tk 10",
+    "reference": "BIW3JK1L2M",
+    "description": "Add money from City Bank",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "You have received deposit from iBanking of Tk 10,000.00 from City Bank. Fee Tk 0.00. Balance Tk 12,537.00. TrxID BIW3JK1L2M at 28/09/2026 11:11",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "add_money",
+    "amount": "10000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12537.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": "city",
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "11:11",
+    "counterparty": "iBanking of Tk 10",
+    "reference": "BIW3JK1L2M",
+    "description": "Add money from City Bank",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 2,500.00 has been transferred from your A/C **4567 to bKash A/C 01712345678 on 28-09-2026 12:10. Avl Bal BDT 47,500.00. City Bank",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "transfer",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "47500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "city",
+    "otherProvider": "bkash",
+    "accountDigits": "4567",
+    "counterpartyDigits": "5678",
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:10",
+    "counterparty": "01712345678",
+    "reference": null,
+    "description": "Transfer to 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 2,500.00 has been transferred from your A/C **4567 to bKash A/C 01712345678 on 28-09-2026 12:10. Avl Bal BDT 47,500.00. City Bank",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "transfer",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "47500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "city",
+    "otherProvider": "bkash",
+    "accountDigits": "4567",
+    "counterpartyDigits": "5678",
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:10",
+    "counterparty": "01712345678",
+    "reference": null,
+    "description": "Transfer to 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1234.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "71A2B3C4",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1234.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "71A2B3C4",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Send Money Tk 1,000.00 to 01812345678 successful. Fee Tk 5.00. Balance Tk 1,532.00. TrxID BIS8AB3C4D at 28/09/2026 09:15",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "send_money",
+    "amount": "1000.00",
+    "currency": "BDT",
+    "fee": "5.00",
+    "balance": "1532.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "09:15",
+    "counterparty": "01812345678",
+    "reference": "BIS8AB3C4D",
+    "description": "Sent to 01812345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Send Money Tk 1,000.00 to 01812345678 successful. Fee Tk 5.00. Balance Tk 1,532.00. TrxID BIS8AB3C4D at 28/09/2026 09:15",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "send_money",
+    "amount": "1000.00",
+    "currency": "BDT",
+    "fee": "5.00",
+    "balance": "1532.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "09:15",
+    "counterparty": "01812345678",
+    "reference": "BIS8AB3C4D",
+    "description": "Sent to 01812345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your A/C ***9876 at BRAC Bank is debited with BDT 3,000.00 on 28-09-2026 10:22 for bills. Available Balance: BDT 12,000.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "3000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "brac",
+    "otherProvider": null,
+    "accountDigits": "9876",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:22",
+    "counterparty": "BRAC Bank",
+    "reference": null,
+    "description": "BRAC Bank",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your A/C ***9876 at BRAC Bank is debited with BDT 3,000.00 on 28-09-2026 10:22 for bills. Available Balance: BDT 12,000.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "3000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "brac",
+    "otherProvider": null,
+    "accountDigits": "9876",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "10:22",
+    "counterparty": "BRAC Bank",
+    "reference": null,
+    "description": "BRAC Bank",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Avl limit BDT 98,750.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1250.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": "98750.00",
+    "provider": "ebl",
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "14:22",
+    "counterparty": "Daraz BD",
+    "reference": null,
+    "description": "Daraz BD",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Avl limit BDT 98,750.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1250.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": "98750.00",
+    "provider": "ebl",
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "14:22",
+    "counterparty": "Daraz BD",
+    "reference": null,
+    "description": "Daraz BD",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Balance BDT 6,250.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1250.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "6250.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "ebl",
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "14:22",
+    "counterparty": "Daraz BD",
+    "reference": null,
+    "description": "Daraz BD",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Balance BDT 6,250.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "1250.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "6250.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "ebl",
+    "otherProvider": null,
+    "accountDigits": "1234",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "14:22",
+    "counterparty": "Daraz BD",
+    "reference": null,
+    "description": "Daraz BD",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer, your A/C **4567 has been debited by BDT 1,300.00 on 28-09-2026. Avl Bal USD 12.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "1300.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12.00",
+    "balanceCurrency": "USD",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Dear Customer, your A/C **4567 has been debited by BDT 1,300.00 on 28-09-2026. Avl Bal USD 12.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "debited",
+    "amount": "1300.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "12.00",
+    "balanceCurrency": "USD",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Debit",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your City Bank Card ****4567 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "12.99",
+    "currency": "USD",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "city",
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "20:15",
+    "counterparty": "netflix.com",
+    "reference": null,
+    "description": "netflix.com",
+    "categoryHints": [
+     "Subscriptions"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your City Bank Card ****4567 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "12.99",
+    "currency": "USD",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "city",
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-28",
+    "time": "20:15",
+    "counterparty": "netflix.com",
+    "reference": null,
+    "description": "netflix.com",
+    "categoryHints": [
+     "Subscriptions"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk 500/- has been debited from your A/C **4567 for POS purchase.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": "purchase",
+    "reference": null,
+    "description": "purchase",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Tk 500/- has been debited from your A/C **4567 for POS purchase.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "purchase",
+    "reference": null,
+    "description": "purchase",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your bKash account balance is Tk 8,000.00.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your bKash account balance is Tk 8,000.00.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your bKash verification code is 123456.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "otp",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your bKash verification code is 123456.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "otp",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Tk 2,500.00 transferred from your A/C **4567 to bKash",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "transfer",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": "bkash",
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": "bKash",
+    "reference": null,
+    "description": "Transfer to bKash",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Tk 2,500.00 transferred from your A/C **4567 to bKash",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "transfer",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": "bkash",
+    "accountDigits": "4567",
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "bKash",
+    "reference": null,
+    "description": "Transfer to bKash",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "You have received deposit from iBanking of Tk 2,500.00 from City Bank. TrxID X1 at 28/09/2026 12:11",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "add_money",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": "city",
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:11",
+    "counterparty": "iBanking of Tk 2",
+    "reference": null,
+    "description": "Add money from City Bank",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "You have received deposit from iBanking of Tk 2,500.00 from City Bank. TrxID X1 at 28/09/2026 12:11",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "add_money",
+    "amount": "2500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": "city",
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "12:11",
+    "counterparty": "iBanking of Tk 2",
+    "reference": null,
+    "description": "Add money from City Bank",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Send Money Tk 500.00 to 01812345678 successful.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "send_money",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": "01812345678",
+    "reference": null,
+    "description": "Sent to 01812345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Send Money Tk 500.00 to 01812345678 successful.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "send_money",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": "01812345678",
+    "reference": null,
+    "description": "Sent to 01812345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "))[0]).toEqual({ status: ",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "))[0]).toEqual({ status: ",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Card balance BDT 1.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "1.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Card balance BDT 1.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "1.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": true,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Payment Tk 50.00 to Daraz (01712345678) successful. Balance Tk 600.00. TrxID AHEAD0001 at 03/10/2026 15:01",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "50.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "600.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-10-03",
+    "time": "15:01",
+    "counterparty": "Daraz",
+    "reference": "AHEAD0001",
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Payment Tk 50.00 to Daraz (01712345678) successful. Balance Tk 600.00. TrxID AHEAD0001 at 03/10/2026 15:01",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "50.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "600.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-10-03",
+    "time": "15:01",
+    "counterparty": "Daraz",
+    "reference": "AHEAD0001",
+    "description": "Daraz",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "2026-09-28T08:30:00Z",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "08:30",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "2026-09-28T08:30:00Z",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "08:30",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Money Received.\nAmount: Tk 1,000.00\nSender: 01712345678\nRef: lunch\nTxnID: 7A1B2C3D\nBalance: Tk 1,500.00\n28/09/2026 09:15",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "1000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "09:15",
+    "counterparty": "01712345678",
+    "reference": "7A1B2C3D",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Money Received.\nAmount: Tk 1,000.00\nSender: 01712345678\nRef: lunch\nTxnID: 7A1B2C3D\nBalance: Tk 1,500.00\n28/09/2026 09:15",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "1000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "09:15",
+    "counterparty": "01712345678",
+    "reference": "7A1B2C3D",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Your bKash verification code is 123456. Never share your code and PIN with anyone.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "otp",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your bKash verification code is 123456. Never share your code and PIN with anyone.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "otp",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Get up to 20% cashback on bKash payment at Daraz! Offer valid till 30 Sep. T&C: https://bka.sh/offer",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2025-09-30",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Payment",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": "promo",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Get up to 20% cashback on bKash payment at Daraz! Offer valid till 30 Sep. T&C: https://bka.sh/offer",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2025-09-30",
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Payment",
+    "categoryHints": [
+     "Shopping"
+    ],
+    "ignored": "promo",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Dear customer, your bKash account balance is Tk 8,000.00 as of 28/09/2026 13:00.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "13:00",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Dear customer, your bKash account balance is Tk 8,000.00 as of 28/09/2026 13:00.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "8000.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-28",
+    "time": "13:00",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Moved ৳2,000 · Cash out",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "cash_out",
+    "amount": "2000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Cash out",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Moved ৳2,000 · Cash out",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "cash_out",
+    "amount": "2000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "Cash out",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "bKash · fee ৳37 · balance ৳500",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": "37.00",
+    "balance": "500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "bKash · fee ৳37 · balance ৳500",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": "37.00",
+    "balance": "500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Spent ৳500 · Shwapno",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Payment",
+    "categoryHints": [
+     "Groceries",
+     "Food"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "Spent ৳500 · Shwapno",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "payment",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "Payment",
+    "categoryHints": [
+     "Groceries",
+     "Food"
+    ],
+    "ignored": null,
+    "confidence": "medium"
+   }
+  },
+  {
+   "text": "City Bank 4567 · balance ৳9,500",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "9500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "city",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "City Bank transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "City Bank 4567 · balance ৳9,500",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "9500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "city",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "City Bank transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your Nagad account balance is Tk 300.00.",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "300.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Nagad transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Your Nagad account balance is Tk 300.00.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "300.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "nagad",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "Nagad transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Daily spending · balance ৳150",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "150.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Daily spending · balance ৳150",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": "150.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "/transactions?month=2026-09",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "/transactions?month=2026-09",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": null,
+    "currency": null,
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": "no_amount",
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 20/09/2026 10:05",
+   "receivedAt": null,
+   "expected": {
+    "direction": "debit",
+    "channel": "cash_out",
+    "amount": "2000.00",
+    "currency": "BDT",
+    "fee": "37.00",
+    "balance": "500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-20",
+    "time": "10:05",
+    "counterparty": "01912345678",
+    "reference": "BIT9CD5E6F",
+    "description": "Cash out",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 20/09/2026 10:05",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "debit",
+    "channel": "cash_out",
+    "amount": "2000.00",
+    "currency": "BDT",
+    "fee": "37.00",
+    "balance": "500.00",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-20",
+    "time": "10:05",
+    "counterparty": "01912345678",
+    "reference": "BIT9CD5E6F",
+    "description": "Cash out",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Update bKash balance to ৳500.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Update bKash balance to ৳500.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "bKash balance from the SMS saved: ৳500.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "bKash balance from the SMS saved: ৳500.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Tk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:5566778899 Date:20-SEP-26 02:30:45 pm.",
+   "receivedAt": null,
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1234.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "rocket",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-20",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "5566778899",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Tk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:5566778899 Date:20-SEP-26 02:30:45 pm.",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": "credit",
+    "channel": "received",
+    "amount": "500.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": "1234.56",
+    "balanceCurrency": "BDT",
+    "limit": null,
+    "provider": "rocket",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-20",
+    "time": "14:30",
+    "counterparty": "01712345678",
+    "reference": "5566778899",
+    "description": "Received from 01712345678",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "high"
+   }
+  },
+  {
+   "text": "Rocket balance from the SMS saved: ৳1,234.56",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "1234.56",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "rocket",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "Rocket transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Rocket balance from the SMS saved: ৳1,234.56",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "1234.56",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "rocket",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "Rocket transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "bKash balance from the SMS saved: ৳600.00",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "600.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "bKash balance from the SMS saved: ৳600.00",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "600.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": "bkash",
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "bKash transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "$100 in USD (not counted)",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "100.00",
+    "currency": "USD",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "$100 in USD (not counted)",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "100.00",
+    "currency": "USD",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Family: ৳50,000 a month",
+   "receivedAt": null,
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "50000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": null,
+    "time": null,
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  },
+  {
+   "text": "Family: ৳50,000 a month",
+   "receivedAt": {
+    "date": "2026-09-27",
+    "time": "21:40"
+   },
+   "expected": {
+    "direction": null,
+    "channel": "unknown",
+    "amount": "50000.00",
+    "currency": "BDT",
+    "fee": null,
+    "balance": null,
+    "balanceCurrency": null,
+    "limit": null,
+    "provider": null,
+    "otherProvider": null,
+    "accountDigits": null,
+    "counterpartyDigits": null,
+    "isCard": false,
+    "date": "2026-09-27",
+    "time": "21:40",
+    "counterparty": null,
+    "reference": null,
+    "description": "SMS transaction",
+    "categoryHints": [
+     "Other"
+    ],
+    "ignored": null,
+    "confidence": "low"
+   }
+  }
+ ],
+ "split": {
+  "text": "You have received Tk 500.00 from 01712345678. Ref 12. Fee Tk 0.00. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03\n\nReceived from 01712345678\n\nSend Money Tk 1,000.00 to 01812345678 successful. Ref Rent. Fee Tk 5.00. Balance Tk 2,345.60. TrxID BIS8AB3C4D at 28/09/2026 09:15\n\nCash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 28/09/2026 10:05\n\nPayment Tk 350.00 to Daraz Bangladesh Ltd (01712345678) successful. Balance Tk 1,000.00. TrxID BIU1EF7G8H at 28/09/2026 12:00\n\nCash In Tk 5,000.00 from 01712345678 successful. Fee Tk 0.00. Balance Tk 6,000.00. TrxID BIV2GH9J0K at 27/09/2026 18:45\n\nYou have received deposit from iBanking of Tk 10,000.00 from City Bank. Fee Tk 0.00. Balance Tk 12,000.00. TrxID BIW3JK1L2M at 26/09/2026 11:11\n\nMoney Received.\nAmount: Tk 500.00\nSender: 01712345678\nRef: N/A\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30\n\nCash Out Successful.\nAmount: Tk 2,000.00\nFee: Tk 23.00\nTxnID: 72B3C4D5\nBalance: Tk 1,211.56\n28/09/2026 15:10\n\nRocket: amount glued to Tk, 12-hour time, sender's wallet after A/C\n\nTk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:1234567890 Date:28-SEP-26 02:30:45 pm.\n\nDear Customer, your A/C 123.***.4567 has been debited by BDT 2,500.00 on 28-09-2026 13:05. Avl Bal BDT 45,000.00. Thank you. DBBL\n\nYour Card ending 1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22:10. Available limit BDT 98,750.00\n\nYour A/C ***4567 is debited with BDT 3,000.00 on 28-09-2026 at 10:22:15 (ATM Withdrawal). Available Balance: BDT 12,345.67. BRAC Bank\n\nDear Valued Customer, BDT 50,000.00 has been credited to your A/C **5678 on 28-SEP-2026 for Salary. Current balance is BDT 1,20,000.00. City Bank\n\nDear Customer, Your EBL Card ****1234 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15. Avl limit BDT 1,50,000.00\n\nYour A/C No. XXX12345 Debited BDT 5,000.00 on 28-SEP-2026 ATM Cash Withdrawal. Balance BDT 20,000.00 -IBBL\n\nRefund of BDT 850.00 from FOODPANDA has been credited to your card ending 1234 on 27-09-2026.\n\nA/C *4567 Dr BDT 1,200.00 on 28/09/2026 POS SHWAPNO GULSHAN. Bal BDT 9,800.00 Cr\n\nwithdrawal via ATM with a 3-digit account suffix and 2-digit year\n\nDear Sir, BDT 1,000.00 withdrawn from your A/C 0123***789 via ATM on 28-09-26 11:45. Bal: BDT 10,000.00\n\nYour A/C ***4567 has been debited by BDT 500.00 on 28-09-2026 10:15. Avl Bal: 12,345.67. Thank you\n\nBDT 500.00 debited from A/C **4567 on 28-09-2026. Balance as on 28-09-2026\n\nCard **1234 used for BDT 500.00 at DARAZ on 28-09-2026. Available limit 9,500.00\n\nBDT 100.00 debited from your A/C **1234 on 28 Sep at 10:15\n\nBDT 100.00 debited from your A/C **1234 on 30 Dec\n\nTk 100 debited from your A/C **1234 on 09/28/2026\n\nTk 100 debited from your A/C **1234 on 05/09/2026\n\nTk 500/- has been debited from your A/C **1234 for POS purchase.\n\nYour OTP for transaction of BDT 1,250.00 at DARAZ is 123456. Do not share it with anyone.\n\nGet 20% cashback on Daraz payment with bKash! Offer valid till 30 Sep. T&C apply. Dial *247#\n\nYour transaction of Tk 500.00 to 01712345678 has failed due to insufficient balance.\n\nYour credit card bill of BDT 12,500.00 is due on 05-Oct-2026. Minimum due BDT 1,250.00. Please pay by due date.\n\nYour current balance is Tk 1,500.00.\n\nPayment Tk 500.00 to Chaldal successful. Cashback Tk 10.00. Balance Tk 90.00. TrxID BIX4LM5N6P at 28/09/2026 16:00\n\nPayment Tk 350.00 to Daraz (01712345678) successful. Balance Tk 150.00. TrxID BIU1EF7G8H at 28/09/2026 12:00\n\nMoney Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 650.00\n28/09/2026 14:30\n\nDear Customer,\nYour A/C ***4567 has been debited BDT 500.00\non 28-09-2026.\nAvl Bal BDT 1,000.00\n\nMobile Recharge Tk 50.00 to 01712345678 successful. Balance Tk 450.00. TrxID BIY5NP6Q7R at 28/09/2026 08:00\n\nBill payment successful. Biller: DESCO Postpaid, Account: 12345678, Amount: Tk 1,245.00, Fee: Tk 0.00, TrxID: BIZ6PQ7R8S at 28/09/2026 19:30. Balance Tk 2,000.00\n\nTk 2,500.00 has been transferred from your A/C **4567 to bKash A/C 01712345678 on 28-09-2026 12:10. Avl Bal BDT 7,500.00. City Bank\n\nFund Transfer of BDT 5,000.00 from your A/C ***4567 to A/C ***8910 is successful on 28/09/2026.\n\nCongratulations! You got Tk 25.00 cashback for your payment at Shwapno. TrxID BJB8ST9U0V at 28/09/2026 18:02. Balance Tk 525.00\n\nYour a/c 1234 debited for Tk 1500 on 28-Sep-2026 (POS/DARAZ). Current Bal Tk 3,500\n\nINR 1,500.00 debited from A/c XX1234 on 28-09-26 for UPI txn to swiggy@icici. Avl bal INR 10,000.00\n\nYour bKash account balance is Tk 8,000.00. Thank you.\n\nDear Customer, your A/C 1234***5678 available balance is BDT 8,000.00 as on 03-10-2026 10:15.\n\nAvl Bal: BDT 8,000.00 in A/C **5678 on 03-Oct-2026\n\nNagad: Your account balance is Tk. 8,000.00\n\nTk 500.00 spent at SHWAPNO on your A/C **4567. Avl Bal Tk 9,500.00\n\nYou have received Tk 500.00 from 01712345678. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03\n\nYour a/c 1234 debited for Tk 1500 on 15 Jan (POS/DARAZ). Current Bal Tk 3,500\n\nTk 80.00 debited from A/C **1234 on 30 Dec. Avl Bal Tk 20.00\n\nDear Customer, BDT 50,000.00 has been credited to your A/C **4567 on 28-SEP-2026 for Salary. Current balance is BDT 1,00,000.00.\n\nYou have received deposit from iBanking of Tk 10,000.00 from City Bank. Fee Tk 0.00. Balance Tk 12,537.00. TrxID BIW3JK1L2M at 28/09/2026 11:11\n\nTk 2,500.00 has been transferred from your A/C **4567 to bKash A/C 01712345678 on 28-09-2026 12:10. Avl Bal BDT 47,500.00. City Bank\n\nMoney Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30\n\nSend Money Tk 1,000.00 to 01812345678 successful. Fee Tk 5.00. Balance Tk 1,532.00. TrxID BIS8AB3C4D at 28/09/2026 09:15\n\nYour A/C ***9876 at BRAC Bank is debited with BDT 3,000.00 on 28-09-2026 10:22 for bills. Available Balance: BDT 12,000.00\n\nYour EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Avl limit BDT 98,750.00\n\nYour EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Balance BDT 6,250.00\n\nDear Customer, your A/C **4567 has been debited by BDT 1,300.00 on 28-09-2026. Avl Bal USD 12.00\n\nYour City Bank Card ****4567 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15.\n\nTk 500/- has been debited from your A/C **4567 for POS purchase.\n\nYour bKash account balance is Tk 8,000.00.\n\nYour bKash verification code is 123456.\n\nTk 2,500.00 transferred from your A/C **4567 to bKash\n\nYou have received deposit from iBanking of Tk 2,500.00 from City Bank. TrxID X1 at 28/09/2026 12:11\n\nSend Money Tk 500.00 to 01812345678 successful.\n\n))[0]).toEqual({ status: \n\nCard balance BDT 1.00\n\nPayment Tk 50.00 to Daraz (01712345678) successful. Balance Tk 600.00. TrxID AHEAD0001 at 03/10/2026 15:01\n\n2026-09-28T08:30:00Z\n\nMoney Received.\nAmount: Tk 1,000.00\nSender: 01712345678\nRef: lunch\nTxnID: 7A1B2C3D\nBalance: Tk 1,500.00\n28/09/2026 09:15\n\nYour bKash verification code is 123456. Never share your code and PIN with anyone.\n\nGet up to 20% cashback on bKash payment at Daraz! Offer valid till 30 Sep. T&C: https://bka.sh/offer\n\nDear customer, your bKash account balance is Tk 8,000.00 as of 28/09/2026 13:00.\n\nMoved ৳2,000 · Cash out\n\nbKash · fee ৳37 · balance ৳500\n\nSpent ৳500 · Shwapno\n\nCity Bank 4567 · balance ৳9,500\n\nYour Nagad account balance is Tk 300.00.\n\nDaily spending · balance ৳150\n\n/transactions?month=2026-09\n\nCash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 20/09/2026 10:05\n\nUpdate bKash balance to ৳500.00\n\nbKash balance from the SMS saved: ৳500.00\n\nTk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:5566778899 Date:20-SEP-26 02:30:45 pm.\n\nRocket balance from the SMS saved: ৳1,234.56\n\nbKash balance from the SMS saved: ৳600.00\n\n$100 in USD (not counted)\n\nFamily: ৳50,000 a month\n\nCash Out Tk 500.00 to 01912345678 successful. Fee Tk 9.25. Balance Tk 100.00. TrxID A at 28/09/2026 10:05\nPayment Tk 20.00 to Daraz successful. Balance Tk 80.00. TrxID B at 28/09/2026 11:00",
+  "expected": [
+   "You have received Tk 500.00 from 01712345678. Ref 12. Fee Tk 0.00. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03",
+   "Received from 01712345678",
+   "Send Money Tk 1,000.00 to 01812345678 successful. Ref Rent. Fee Tk 5.00. Balance Tk 2,345.60. TrxID BIS8AB3C4D at 28/09/2026 09:15",
+   "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 28/09/2026 10:05",
+   "Payment Tk 350.00 to Daraz Bangladesh Ltd (01712345678) successful. Balance Tk 1,000.00. TrxID BIU1EF7G8H at 28/09/2026 12:00",
+   "Cash In Tk 5,000.00 from 01712345678 successful. Fee Tk 0.00. Balance Tk 6,000.00. TrxID BIV2GH9J0K at 27/09/2026 18:45",
+   "You have received deposit from iBanking of Tk 10,000.00 from City Bank. Fee Tk 0.00. Balance Tk 12,000.00. TrxID BIW3JK1L2M at 26/09/2026 11:11",
+   "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nRef: N/A\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30",
+   "Cash Out Successful.\nAmount: Tk 2,000.00\nFee: Tk 23.00\nTxnID: 72B3C4D5\nBalance: Tk 1,211.56\n28/09/2026 15:10",
+   "Rocket: amount glued to Tk, 12-hour time, sender's wallet after A/C",
+   "Tk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:1234567890 Date:28-SEP-26 02:30:45 pm.",
+   "Dear Customer, your A/C 123.***.4567 has been debited by BDT 2,500.00 on 28-09-2026 13:05. Avl Bal BDT 45,000.00. Thank you. DBBL",
+   "Your Card ending 1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22:10. Available limit BDT 98,750.00",
+   "Your A/C ***4567 is debited with BDT 3,000.00 on 28-09-2026 at 10:22:15 (ATM Withdrawal). Available Balance: BDT 12,345.67. BRAC Bank",
+   "Dear Valued Customer, BDT 50,000.00 has been credited to your A/C **5678 on 28-SEP-2026 for Salary. Current balance is BDT 1,20,000.00. City Bank",
+   "Dear Customer, Your EBL Card ****1234 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15. Avl limit BDT 1,50,000.00",
+   "Your A/C No. XXX12345 Debited BDT 5,000.00 on 28-SEP-2026 ATM Cash Withdrawal. Balance BDT 20,000.00 -IBBL",
+   "Refund of BDT 850.00 from FOODPANDA has been credited to your card ending 1234 on 27-09-2026.",
+   "A/C *4567 Dr BDT 1,200.00 on 28/09/2026 POS SHWAPNO GULSHAN. Bal BDT 9,800.00 Cr",
+   "withdrawal via ATM with a 3-digit account suffix and 2-digit year",
+   "Dear Sir, BDT 1,000.00 withdrawn from your A/C 0123***789 via ATM on 28-09-26 11:45. Bal: BDT 10,000.00",
+   "Your A/C ***4567 has been debited by BDT 500.00 on 28-09-2026 10:15. Avl Bal: 12,345.67. Thank you",
+   "BDT 500.00 debited from A/C **4567 on 28-09-2026. Balance as on 28-09-2026",
+   "Card **1234 used for BDT 500.00 at DARAZ on 28-09-2026. Available limit 9,500.00",
+   "BDT 100.00 debited from your A/C **1234 on 28 Sep at 10:15",
+   "BDT 100.00 debited from your A/C **1234 on 30 Dec",
+   "Tk 100 debited from your A/C **1234 on 09/28/2026",
+   "Tk 100 debited from your A/C **1234 on 05/09/2026",
+   "Tk 500/- has been debited from your A/C **1234 for POS purchase.",
+   "Your OTP for transaction of BDT 1,250.00 at DARAZ is 123456. Do not share it with anyone.",
+   "Get 20% cashback on Daraz payment with bKash! Offer valid till 30 Sep. T&C apply. Dial *247#",
+   "Your transaction of Tk 500.00 to 01712345678 has failed due to insufficient balance.",
+   "Your credit card bill of BDT 12,500.00 is due on 05-Oct-2026. Minimum due BDT 1,250.00. Please pay by due date.",
+   "Your current balance is Tk 1,500.00.",
+   "Payment Tk 500.00 to Chaldal successful. Cashback Tk 10.00. Balance Tk 90.00. TrxID BIX4LM5N6P at 28/09/2026 16:00",
+   "Payment Tk 350.00 to Daraz (01712345678) successful. Balance Tk 150.00. TrxID BIU1EF7G8H at 28/09/2026 12:00",
+   "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 650.00\n28/09/2026 14:30",
+   "Dear Customer,\nYour A/C ***4567 has been debited BDT 500.00\non 28-09-2026.\nAvl Bal BDT 1,000.00",
+   "Mobile Recharge Tk 50.00 to 01712345678 successful. Balance Tk 450.00. TrxID BIY5NP6Q7R at 28/09/2026 08:00",
+   "Bill payment successful. Biller: DESCO Postpaid, Account: 12345678, Amount: Tk 1,245.00, Fee: Tk 0.00, TrxID: BIZ6PQ7R8S at 28/09/2026 19:30. Balance Tk 2,000.00",
+   "Tk 2,500.00 has been transferred from your A/C **4567 to bKash A/C 01712345678 on 28-09-2026 12:10. Avl Bal BDT 7,500.00. City Bank",
+   "Fund Transfer of BDT 5,000.00 from your A/C ***4567 to A/C ***8910 is successful on 28/09/2026.",
+   "Congratulations! You got Tk 25.00 cashback for your payment at Shwapno. TrxID BJB8ST9U0V at 28/09/2026 18:02. Balance Tk 525.00",
+   "Your a/c 1234 debited for Tk 1500 on 28-Sep-2026 (POS/DARAZ). Current Bal Tk 3,500",
+   "INR 1,500.00 debited from A/c XX1234 on 28-09-26 for UPI txn to swiggy@icici. Avl bal INR 10,000.00",
+   "Your bKash account balance is Tk 8,000.00. Thank you.",
+   "Dear Customer, your A/C 1234***5678 available balance is BDT 8,000.00 as on 03-10-2026 10:15.",
+   "Avl Bal: BDT 8,000.00 in A/C **5678 on 03-Oct-2026",
+   "Nagad: Your account balance is Tk. 8,000.00",
+   "Tk 500.00 spent at SHWAPNO on your A/C **4567. Avl Bal Tk 9,500.00",
+   "You have received Tk 500.00 from 01712345678. Balance Tk 1,010.14. TrxID BIR7ZX2T1B at 27/09/2026 20:03",
+   "Your a/c 1234 debited for Tk 1500 on 15 Jan (POS/DARAZ). Current Bal Tk 3,500",
+   "Tk 80.00 debited from A/C **1234 on 30 Dec. Avl Bal Tk 20.00",
+   "Dear Customer, BDT 50,000.00 has been credited to your A/C **4567 on 28-SEP-2026 for Salary. Current balance is BDT 1,00,000.00.",
+   "You have received deposit from iBanking of Tk 10,000.00 from City Bank. Fee Tk 0.00. Balance Tk 12,537.00. TrxID BIW3JK1L2M at 28/09/2026 11:11",
+   "Tk 2,500.00 has been transferred from your A/C **4567 to bKash A/C 01712345678 on 28-09-2026 12:10. Avl Bal BDT 47,500.00. City Bank",
+   "Money Received.\nAmount: Tk 500.00\nSender: 01712345678\nTxnID: 71A2B3C4\nBalance: Tk 1,234.56\n28/09/2026 14:30",
+   "Send Money Tk 1,000.00 to 01812345678 successful. Fee Tk 5.00. Balance Tk 1,532.00. TrxID BIS8AB3C4D at 28/09/2026 09:15",
+   "Your A/C ***9876 at BRAC Bank is debited with BDT 3,000.00 on 28-09-2026 10:22 for bills. Available Balance: BDT 12,000.00",
+   "Your EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Avl limit BDT 98,750.00",
+   "Your EBL Card ****1234 has been used for BDT 1,250.00 at DARAZ BD on 28-Sep-2026 14:22. Balance BDT 6,250.00",
+   "Dear Customer, your A/C **4567 has been debited by BDT 1,300.00 on 28-09-2026. Avl Bal USD 12.00",
+   "Your City Bank Card ****4567 has been charged USD 12.99 at NETFLIX.COM on 28/09/26 20:15.",
+   "Tk 500/- has been debited from your A/C **4567 for POS purchase.",
+   "Your bKash account balance is Tk 8,000.00.",
+   "Your bKash verification code is 123456.",
+   "Tk 2,500.00 transferred from your A/C **4567 to bKash",
+   "You have received deposit from iBanking of Tk 2,500.00 from City Bank. TrxID X1 at 28/09/2026 12:11",
+   "Send Money Tk 500.00 to 01812345678 successful.",
+   "))[0]).toEqual({ status:",
+   "Card balance BDT 1.00",
+   "Payment Tk 50.00 to Daraz (01712345678) successful. Balance Tk 600.00. TrxID AHEAD0001 at 03/10/2026 15:01",
+   "2026-09-28T08:30:00Z",
+   "Money Received.\nAmount: Tk 1,000.00\nSender: 01712345678\nRef: lunch\nTxnID: 7A1B2C3D\nBalance: Tk 1,500.00\n28/09/2026 09:15",
+   "Your bKash verification code is 123456. Never share your code and PIN with anyone.",
+   "Get up to 20% cashback on bKash payment at Daraz! Offer valid till 30 Sep. T&C: https://bka.sh/offer",
+   "Dear customer, your bKash account balance is Tk 8,000.00 as of 28/09/2026 13:00.",
+   "Moved ৳2,000 · Cash out",
+   "bKash · fee ৳37 · balance ৳500",
+   "Spent ৳500 · Shwapno",
+   "City Bank 4567 · balance ৳9,500",
+   "Your Nagad account balance is Tk 300.00.",
+   "Daily spending · balance ৳150",
+   "/transactions?month=2026-09",
+   "Cash Out Tk 2,000.00 to 01912345678 successful. Fee Tk 37.00. Balance Tk 500.00. TrxID BIT9CD5E6F at 20/09/2026 10:05",
+   "Update bKash balance to ৳500.00",
+   "bKash balance from the SMS saved: ৳500.00",
+   "Tk500.00 received from A/C:01712345678-9. Fee:Tk0, Your A/C Balance: Tk1,234.56 TxnId:5566778899 Date:20-SEP-26 02:30:45 pm.",
+   "Rocket balance from the SMS saved: ৳1,234.56",
+   "bKash balance from the SMS saved: ৳600.00",
+   "$100 in USD (not counted)",
+   "Family: ৳50,000 a month",
+   "Cash Out Tk 500.00 to 01912345678 successful. Fee Tk 9.25. Balance Tk 100.00. TrxID A at 28/09/2026 10:05",
+   "Payment Tk 20.00 to Daraz successful. Balance Tk 80.00. TrxID B at 28/09/2026 11:00"
+  ]
+ }
+}
