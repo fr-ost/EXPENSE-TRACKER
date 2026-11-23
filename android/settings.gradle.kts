@@ -27,4 +27,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "hisab-android"
+include(":core")
 include(":app")

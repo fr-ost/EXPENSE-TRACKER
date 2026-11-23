@@ -54,12 +54,12 @@ jobs:
         run: echo "HISAB_VERSION_CODE=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
 
       - name: Check, test and build
-        run: ./gradlew lintDebug testDebugUnitTest assembleDebug
+        run: ./gradlew :core:test lintDebug testDebugUnitTest assembleDebug
 
       - name: Tests that ran
         if: always()
         run: |
-          reports=(app/build/test-results/testDebugUnitTest/*.xml)
+          reports=(core/build/test-results/test/*.xml app/build/test-results/testDebugUnitTest/*.xml)
           [ -e "${reports[0]}" ] || { echo "::error::No unit test results."; exit 1; }
           python3 - "${reports[@]}" >> "$GITHUB_STEP_SUMMARY" <<'PY'
           import sys, xml.etree.ElementTree as ET

@@ -1,5 +1,9 @@
 [versions]
 agp = "9.3.2"
+# The Kotlin compiler for every module (AGP's built-in Kotlin uses this one too).
+kotlin = "2.3.0"
+kotlinxSerialization = "1.9.0"
+kotlinxCoroutines = "1.10.2"
 browserhelper = "2.7.4"
 androidxCore = "1.17.0"
 androidxWork = "2.10.0"
@@ -10,9 +14,15 @@ json = "20260814"
 androidbrowserhelper = { module = "com.google.androidbrowserhelper:androidbrowserhelper", version.ref = "browserhelper" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "androidxWork" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
 # The JVM's own org.json for unit tests: Android's copy only exists on a phone.
 json = { module = "org.json:json", version.ref = "json" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
