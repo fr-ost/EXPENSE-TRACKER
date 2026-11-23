@@ -52,7 +52,8 @@ has a ledger nobody else can see.
   into the same account or another: a restore replaces what is there, all at
   once or not at all.
 - **Installable app** — install it from Chrome or Edge (desktop and Android)
-  or add it to the iPhone home screen.
+  or add it to the iPhone home screen. Or use the [Android app](#android-app),
+  which keeps everything on the phone and reads bank SMS by itself.
 - **Your own account** — sign in with Google (your account is created the
   first time); everything you record belongs to you alone. An optional PIN
   locks the app after a while without activity. Delete your account, and
@@ -99,7 +100,7 @@ has a ledger nobody else can see.
    | `OWNER_EMAIL`          | only when upgrading — see below |
    | `APP_URL`              | optional: the app's address (`https://YOUR-DOMAIN`), if it isn't the one requests arrive at |
    | `CONTACT_EMAIL`        | optional: an address for questions, shown on the privacy policy (`/privacy`) |
-   | `ANDROID_CERT_SHA256`  | for the Android app on Google Play — see [Android app](#android-app) |
+   | `ANDROID_CERT_SHA256`  | optional: only for an Android app that opens this site (the [Android app](#android-app) in this repository works on its own) |
 
 6. **Deploy**, open the domain and choose **Continue with Google**. Your
    account is created the first time you sign in, with the usual categories,
@@ -139,85 +140,66 @@ sheet: long-press a bank SMS, **Share → Hisab**, and it is added.
 
 ## Android app
 
-`android/` is Hisab for Android. Its icon opens the site full screen in the
-phone's browser (a Trusted Web Activity): the same sign-in, the same pages,
-and every change to the site reaches the app without an update. On top of
-that it does what a website can't: **it reads bank and wallet SMS as they
-arrive** (see [Automatic SMS import](#automatic-sms-import)).
+`android/` is **Hisab for Android**, an app of its own that needs no server
+and no account: everything is kept on the phone.
+
+- **Everything the website does, on the phone** — accounts in any currency,
+  entries, transfers that can count as spending, balance updates, Personal /
+  Family, budgets, recurring entries, reports, exchange rates, backup files
+  and CSV export. The ledger rules are the website's, ported to Kotlin
+  (`android/core`) and checked by the website's own tests.
+- **Bank and wallet SMS, read on the phone** — turn it on in **More → Import
+  SMS** (the app says what it reads before Android asks). Only messages from
+  a bank or wallet (a name like "bKash" or a short code, never a person's
+  number) that are about money are read; messages from people and codes
+  never are. Each is read by the website's own reader (`android/core/.../sms`,
+  checked against fixtures the website's reader made):
+  - **clear and certain** — added at once, with its fee and the balance it
+    reports, and a notification says what was added;
+  - **not a transaction** (an advert, a failed payment) — dropped;
+  - **anything else** (no matching account, unclear, something similar
+    already recorded) — waits on Import SMS for a look.
+
+  It can also read the last 30 days of the inbox, and pasted messages work
+  as on the website. Nothing is sent anywhere.
+- **Sync between phones through your own Google Drive** — optional, no
+  server: each phone keeps a copy in Hisab's hidden app folder in your Drive
+  and merges the others' (the later change to each thing wins, deletions
+  included). A new phone: **Restore from Google Drive** on the first screen.
+  Needs a one-time Google Cloud set-up: [docs/google-drive-android.md](docs/google-drive-android.md).
+- **Moving from the website** — download a backup on the website (Settings →
+  Backup and restore) and restore it in the app: the same file format.
+- **App lock** — a PIN of its own or the phone's screen lock (fingerprint,
+  face, the phone's PIN).
 
 GitHub builds it (`.github/workflows/android.yml`) on every push that
-touches `android/`; the result is under the repository's **Actions** tab.
-Before the build makes an app you can install, it needs two things, once:
+touches `android/`, runs every test, and keeps the result under the
+repository's **Actions** tab (the Android SDK isn't needed anywhere else).
+Before the build makes an app you can install, it needs **the signing key**,
+once. Every copy of an Android app is signed, and Google Play only takes
+updates signed with the same key. In the repository's **Settings → Secrets
+and variables → Actions → Secrets → New repository secret**, add
+`ANDROID_SIGNING_KEY` (the text of the key file, in base64) and
+`ANDROID_SIGNING_PASSWORD`. Keep a copy of both somewhere safe, outside
+GitHub. To make a key:
 
-1. **The site's address.** Repository **Settings → Secrets and variables →
-   Actions → Variables → New repository variable**: name `HISAB_URL`, value
-   `https://YOUR-DOMAIN` (no slash at the end).
-2. **The signing key.** Every copy of an Android app is signed, and Google
-   Play only takes updates signed with the same key. In the same place, under
-   **Secrets → New repository secret**, add `ANDROID_SIGNING_KEY` (the text of
-   the key file, in base64) and `ANDROID_SIGNING_PASSWORD`. Keep a copy of
-   both somewhere safe, outside GitHub. To make your own key instead:
+```bash
+keytool -genkeypair -keystore hisab-upload.p12 -storetype PKCS12 -alias hisab -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Hisab"
+```
 
-   ```bash
-   keytool -genkeypair -keystore hisab-upload.p12 -storetype PKCS12 -alias hisab -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Hisab"
-   ```
-
-   then `base64 -w 0 hisab-upload.p12` gives the secret's text (use the same
-   password for the key and the keystore), and put the key's SHA-256
-   fingerprint (`keytool -list -v -keystore hisab-upload.p12`) in
-   `ANDROID_CERTIFICATES` in `src/lib/android.ts` in place of the one there.
+then `base64 -w 0 hisab-upload.p12` gives the secret's text (use the same
+password for the key and the keystore).
 
 Then run the workflow again (**Actions → Android app → Run workflow**). The
-run's summary says what is still missing, if anything; when it's complete it
-keeps **hisab.apk** (installs on a phone) and **hisab.aab** (for Google Play)
-under the run's **Artifacts**. Builds of `main` are also published as a
-GitHub release, so the latest APK is always at the repository's
-**Releases**.
+run's summary says what is still missing, if anything, and prints the
+certificate fingerprints (the SHA-1 is the one Google Drive sync needs);
+when it's complete it keeps **hisab.apk** (installs on a phone) and
+**hisab.aab** (for Google Play) under the run's **Artifacts**. Builds of
+`main` are also published as a GitHub release, so the latest APK is always
+at the repository's **Releases**.
 
-**Without an address bar.** The phone's browser shows the site full screen
-only for an app the site vouches for, at `/.well-known/assetlinks.json`: the
-app's id and the fingerprints of the certificates a genuine copy is signed
-with. The upload key's is in `src/lib/android.ts`. Google Play re-signs apps
-with a key of its own: copy its SHA-256 fingerprint from **Play Console →
-Test and release → App integrity → App signing** into the server's
-`ANDROID_CERT_SHA256` variable (several are separated by commas). Until then,
-copies from Play show a thin address bar.
-
-Publishing on Google Play: see [docs/google-play.md](docs/google-play.md).
-
-## Automatic SMS import
-
-With the Android app, bank and wallet messages are added as they arrive:
-
-1. In the app, open **Settings → Automatic SMS import → Set up on this
-   phone**.
-2. The app shows which Hisab account the messages will go to and exactly what
-   it reads and sends. **Turn on**, then allow SMS when Android asks.
-   Optionally it also brings in the last 30 days' messages.
-
-From then on, each new message from a bank or wallet is read on the phone.
-Only messages from a bank or wallet (sent from a name like "bKash" or a short
-code, never a person's number) that are about money leave the phone;
-messages from people and verification codes never do. The server reads each
-one exactly as a pasted message:
-
-- **clear and certain** — added at once, with its fee and the balance it
-  reports, and the phone shows a notification of what was added;
-- **not a transaction** (an advert, a failed payment) — thrown away, never
-  stored;
-- **anything else** (no matching account, unclear, or something similar is
-  already recorded) — waits on **Import SMS**, where it looks like a pasted
-  message. The menu and the overview say how many wait.
-
-Messages wait on the phone while it's offline, and go when it's back. The
-same message is never added twice — from the phone again, from another
-phone, or pasted. Which account a bank's messages belong to is learned from
-how you recorded earlier ones.
-
-**Turning it off:** remove the phone in **Settings → Automatic SMS import**
-(it stops at its next message), use **Turn off on this phone** in the
-phone's settings for the app (**App info → Additional settings in the app**),
-or take away the SMS permission.
+Publishing on Google Play: see [docs/google-play.md](docs/google-play.md);
+the app's privacy policy is [docs/privacy-android.md](docs/privacy-android.md).
 
 ## Importing from SMS
 

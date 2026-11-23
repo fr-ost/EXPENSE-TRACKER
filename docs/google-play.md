@@ -5,16 +5,22 @@ Most of it is filling in forms in the [Play Console](https://play.google.com/con
 the answers Hisab needs are below. Do the [Android app](../README.md#android-app)
 set-up in the README first, so GitHub builds a signed `hisab.aab`.
 
+The app works on its own: everything is kept on the phone, SMS are read on
+the phone, and the only network use is the optional sync with the person's
+own Google Drive. There is no server to run.
+
 ## Before the first upload
 
 - **The app's id is `io.github.fr_ost.hisab`.** It can never change once the
-  app is on Play. To use another (for example one based on your own domain),
-  change `hisabApplicationId` in `android/gradle.properties` and
-  `ANDROID_PACKAGE` in `src/lib/android.ts` together, before uploading
-  anything.
-- **The site must be live** at the address in `HISAB_URL`, with Google
-  sign-in working, and its OAuth consent screen **published** (in Testing,
-  only listed test users can sign in).
+  app is on Play. To use another, change `hisabApplicationId` in
+  `android/gradle.properties` before uploading anything.
+- **A public privacy policy.** Play needs a web address for it. The policy is
+  [`docs/privacy-android.md`](privacy-android.md): if the repository is
+  public, its GitHub address works as is; otherwise publish the same text on
+  any public page you control (GitHub Pages, Google Sites, …).
+- **Google Drive sync** needs the one-time Google Cloud set-up in
+  [`docs/google-drive-android.md`](google-drive-android.md), including an
+  Android client for Play's own signing key (step 6 below).
 
 ## 1. Developer account
 
@@ -30,8 +36,8 @@ new personal account must run a **closed test with at least 12 testers for
 
 | Form | Answer |
 | --- | --- |
-| Privacy policy | `https://YOUR-DOMAIN/privacy` |
-| App access | All functionality is available without special access: anyone can sign in with a Google account, and a new account is created at the first sign-in. (Automatic SMS import needs an Android phone with a SIM; see the review notes below.) |
+| Privacy policy | The public address of `docs/privacy-android.md` |
+| App access | All functionality is available without special access: there is no sign-in. (Reading SMS needs a phone with a SIM; see the reviewer notes below.) |
 | Ads | No ads |
 | Content rating | Fill in the questionnaire: a utility / productivity app with no violence, no user-to-user communication, no gambling. |
 | Target audience | 18 and over |
@@ -39,24 +45,27 @@ new personal account must run a **closed test with at least 12 testers for
 | Data safety | See below |
 | Financial features | Personal finance → budgeting / expense tracking. No loans, no payments, no banking services, no crypto. |
 | Government app | No |
-| Account deletion | Yes, accounts can be created. Deletion link: `https://YOUR-DOMAIN/delete-account` (deletes everything, immediately). |
+| Account deletion | The app doesn't let people create an account. |
 
 ### Data safety
 
-- **Does the app collect or share user data?** Yes, it collects; it shares
-  nothing (the hosting provider and Google sign-in are service providers,
-  which Play doesn't count as sharing).
-- **Encrypted in transit:** yes. **Users can ask for their data to be
-  deleted:** yes.
-- **Data types collected** (all *not shared*, *not processed ephemerally*,
-  purpose *App functionality* and *Account management* where it fits):
+Nothing reaches the developer. The only data that leaves the phone is the
+person's own ledger, copied to **their own Google Drive** when they turn on
+sync. Declare that copy (it is the cautious reading of Play's definition of
+"collected"):
 
-| Category | Type | Required? | Why |
-| --- | --- | --- | --- |
-| Personal info | Name | Required | Shown in the app; from Google sign-in |
-| Personal info | Email address | Required | Sign-in, shown in Settings |
-| Financial info | Other financial info | Required | The ledger the person records: accounts, transactions, balances, budgets |
-| Messages | SMS or MMS | **Optional** (only with automatic SMS import turned on) | Bank and wallet messages about money, to add their transactions |
+- **Does the app collect or share user data?** Yes, it collects (only with
+  Google Drive sync on); it **shares nothing**.
+- **Encrypted in transit:** yes (HTTPS to Google Drive). **Users can ask for
+  their data to be deleted:** yes — *More → Sync with Google Drive → Remove
+  Hisab's copy from Google Drive*, or Drive's own settings.
+- **Data types** (all *optional*, *not shared*, purpose *App functionality*):
+
+| Category | Type | Why |
+| --- | --- | --- |
+| Financial info | Other financial info | The ledger the person records, synced to their Google Drive |
+| Messages | SMS or MMS | A bank or wallet message is kept as its transaction's note, so it is in the synced ledger |
+| Personal info | Name | Only if the person types one in Preferences; synced with the ledger |
 
 Nothing else: no location, no contacts, no device or advertising ids, no
 analytics, no crash reports.
@@ -70,40 +79,42 @@ certain uses. Hisab's is one of them.
   manage, or budget personal finances, using SMS".
 - **Describe how the app uses the permissions** (paste and adjust):
 
-  > Hisab is a personal finance ledger. With the user's permission, it reads
-  > the SMS alerts that banks and mobile wallets (such as bKash and Nagad)
-  > send when money moves, and adds each transaction, its fee and the account
-  > balance to the user's ledger automatically. RECEIVE_SMS reads new alerts
-  > as they arrive; READ_SMS is used only if the user chooses, at set-up, to
-  > bring in the last 30 days of alerts. On the phone, only messages from
+  > Hisab is a personal finance ledger that works on the phone. With the
+  > user's permission, it reads the SMS alerts that banks and mobile wallets
+  > (such as bKash and Nagad) send when money moves, and records each
+  > transaction, its fee and the account balance in the user's ledger
+  > automatically. RECEIVE_SMS reads new alerts as they arrive; READ_SMS is
+  > used only when the user taps "Read the last 30 days". Only messages from
   > banks and wallets (alphanumeric senders and short codes, never personal
-  > phone numbers) that mention an amount of money are sent to the user's
-  > account; messages from people and verification codes are never read
-  > further or sent. The feature is off until the user turns it on, after a
-  > screen that explains exactly what is read and sent.
+  > phone numbers) that mention an amount of money are read further;
+  > messages from people and verification codes are not. Messages are read
+  > on the phone and are never sent to the developer or anyone else. The
+  > feature is off until the user turns it on, after a screen that explains
+  > exactly what is read.
 
-- **Video:** a short screen recording on a real phone showing: the app's
-  **Settings → Automatic SMS import → Set up on this phone**; the
-  explanation screen and **Turn on**; Android's SMS permission dialog; a
-  bank or wallet SMS arriving; the notification "Spent ৳… · …"; and the
-  transaction in the app. Upload it to YouTube as *unlisted* and give the
-  link.
-- **Prominent disclosure:** the explanation screen (`SmsSetupActivity`) is
-  shown before Android asks, says what is read, what is sent and why, and
-  needs the user to press **Turn on**.
+- **Video:** a short screen recording on a real phone: **More → Import SMS**,
+  turning on **Read bank and wallet SMS**, the explanation and **Continue**,
+  Android's SMS permission dialogs, a bank or wallet SMS arriving, the
+  notification "Spent ৳… · …", and the entry in the app. Upload it to
+  YouTube as *unlisted* and give the link.
+- **Prominent disclosure:** the explanation dialog on Import SMS is shown
+  before Android asks, says what is read and that nothing leaves the phone,
+  and needs the user to press **Continue**.
 
 ## 5. Store listing (Grow → Store presence → Main store listing)
 
 - **Short description** (80 characters): *Your private ledger. Bank and bKash
   SMS added for you, budgets and reports.*
 - **Full description:** what Hisab does (accounts, transactions, budgets for
-  Personal and Family, reports, several currencies), automatic SMS import
-  (which messages, what stays on the phone), Google sign-in, backups to the
-  user's own Google Drive, the app lock, and that the ledger is private.
+  Personal and Family, recurring entries, reports, several currencies),
+  reading bank and wallet SMS (which messages; everything stays on the
+  phone), sync between phones through the person's own Google Drive, backup
+  files and CSV export, the app lock, and that there is no account and no
+  server.
 - **App icon:** 512×512 — `public/icons/icon-512.png`.
 - **Feature graphic:** 1024×500, the logo on the dark ink colour (`#0e0e12`).
-- **Phone screenshots:** at least two — the overview, a transaction list,
-  Import SMS, budgets.
+- **Phone screenshots:** at least two — the overview, activity, Import SMS,
+  reports.
 - **Category:** Finance. **Contact email:** required, shown publicly.
 
 ## 6. Testing, then production
@@ -113,44 +124,45 @@ certain uses. Hisab's is one of them.
    **Artifacts**). Add your testers' Google addresses (at least 12) and share
    the opt-in link with them.
 2. Google asks to use **Play App Signing**: accept. Then copy the **app
-   signing key certificate SHA-256 fingerprint** from **Test and release →
-   App integrity → App signing** into the server's `ANDROID_CERT_SHA256`
-   variable on Railway and redeploy, so copies installed from Play open
-   without an address bar. Check `https://YOUR-DOMAIN/.well-known/assetlinks.json`
-   lists it.
+   signing key certificate SHA-1** from **Test and release → App integrity →
+   App signing** and create a second Android client with it in Google Cloud
+   ([`docs/google-drive-android.md`](google-drive-android.md)), so Google
+   Drive sync works in copies installed from Play.
 3. After 14 days of testing, **apply for production** (Dashboard), then
    create a production release with the same bundle.
 
 Every later version: push to `main`; the **Android app** workflow builds a
 new `hisab.aab` with a higher version number; upload it as a new release.
-Changes to the site itself need no new app version.
 
 ## Notes for Google's reviewers
 
 Paste into **App access → instructions** if asked:
 
-> Sign in with any Google account; a new, empty account is created. To try
-> automatic SMS import on a phone with a SIM: open Settings in the app,
-> choose "Set up on this phone", read the explanation and press "Turn on",
-> allow SMS. Then send the phone an SMS from an alphanumeric sender or short
-> code such as "Tk 500.00 spent at SHWAPNO on your A/C **4567. Avl Bal Tk
-> 9,500.00" — first add an account named "City Bank 4567" (Accounts → New).
-> The transaction appears with a notification. On an emulator:
+> No sign-in: open the app, type a name (optional) and press Start. Add an
+> account under Accounts → + (for example "City Bank 4567", type Bank). To
+> try SMS reading on a phone with a SIM: More → Import SMS → turn on "Read
+> bank and wallet SMS" → Continue → allow. Then send the phone an SMS from an
+> alphanumeric sender or short code such as "Tk 500.00 spent at SHWAPNO on
+> your A/C **4567. Avl Bal Tk 9,500.00". The entry appears with a
+> notification. On an emulator:
 > `adb emu sms send 16216 "Tk 500.00 spent at SHWAPNO on your A/C **4567. Avl Bal Tk 9,500.00"`.
+> Without SMS, paste the same text on Import SMS and tap Read.
 
 ## Checking on a real phone
 
 Before inviting testers, on your own Android phone:
 
-- [ ] Install `hisab.apk` from the latest GitHub release; the app opens the
-      site full screen, with no address bar once the site vouches for it.
-- [ ] Sign in with Google inside the app; close and reopen it — still signed in.
-- [ ] Back button, keyboard over a form, sharing an SMS to Hisab.
-- [ ] Settings → Automatic SMS import → Set up on this phone → the
-      explanation shows your Google address → Turn on → allow SMS.
+- [ ] Install `hisab.apk` from the latest GitHub release; start a new ledger,
+      or restore a backup file downloaded from the website.
+- [ ] Add accounts and entries; balances, Activity, Reports and budgets agree.
+- [ ] More → Import SMS → turn on → allow SMS and notifications.
 - [ ] A real bank or bKash SMS arrives: a notification says what was added,
-      and the transaction and balance are right.
+      and the entry and balance are right.
 - [ ] A message from a person, and a verification code: nothing happens.
-- [ ] Airplane mode, receive an SMS, back online: it is added then.
-- [ ] Remove the phone in Settings; the next SMS isn't sent, and the phone
-      says automatic import stopped.
+- [ ] Read the last 30 days: entries added, the rest waiting for a look.
+- [ ] More → Sync with Google Drive → turn on → Google asks once → synced.
+      On a second phone: Restore from Google Drive → the same ledger; an
+      entry added on one appears on the other after opening it.
+- [ ] App lock with a PIN and with the screen lock; it locks after the time
+      away you chose, and not while picking a backup file.
+- [ ] Save a backup file and a CSV export; restore the backup.
